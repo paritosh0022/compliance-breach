@@ -13,10 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import { Search, Play, Copy, Download } from "lucide-react";
 import type { Device } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -74,32 +72,33 @@ export default function AddComplianceModal({ isOpen, onOpenChange, devices }: Ad
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-4 border-b">
           <DialogTitle className="text-xl">Create Compliance Rule</DialogTitle>
           <DialogDescription>
             Configure and run compliance checks against your devices.
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-            <div>
-                <Label htmlFor="compliance-name">Compliance Name</Label>
-                <Input id="compliance-name" placeholder="e.g., CIS Benchmark Check" />
-            </div>
-            <div>
-                <Label htmlFor="compliance-description">Description</Label>
-                <Input id="compliance-description" placeholder="Optional description for this rule" />
+
+        <div className="p-4 border-b">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <Label htmlFor="compliance-name">Compliance Name</Label>
+                    <Input id="compliance-name" placeholder="e.g., CIS Benchmark Check" />
+                </div>
+                <div>
+                    <Label htmlFor="compliance-description">Description</Label>
+                    <Input id="compliance-description" placeholder="Optional description for this rule" />
+                </div>
             </div>
         </div>
 
-        <Separator className="my-4" />
-
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 overflow-hidden">
-          <Card className="flex flex-col">
-            <CardHeader>
-              <CardTitle className="text-base">Devices ({selectedDevices.length}/{devices.length})</CardTitle>
-               <div className="relative mt-2">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-0 overflow-hidden">
+          {/* Column 1: Devices */}
+          <div className="flex flex-col border-r">
+            <div className="p-4 border-b">
+              <h3 className="font-semibold text-base mb-2">Devices ({selectedDevices.length}/{devices.length})</h3>
+               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search devices..."
@@ -108,51 +107,51 @@ export default function AddComplianceModal({ isOpen, onOpenChange, devices }: Ad
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-hidden p-2">
-              <ScrollArea className="h-full">
-                <div className="space-y-1 p-2">
-                  {filteredDevices.map((device) => (
-                    <div key={device.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
-                      <Checkbox
-                        id={`device-${device.id}`}
-                        checked={selectedDevices.includes(device.id)}
-                        onCheckedChange={() => handleDeviceSelection(device.id)}
-                      />
-                      <label
-                        htmlFor={`device-${device.id}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
-                      >
-                        {device.name}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+            </div>
+            <ScrollArea className="flex-1">
+              <div className="space-y-1 p-2">
+                {filteredDevices.map((device) => (
+                  <div key={device.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
+                    <Checkbox
+                      id={`device-${device.id}`}
+                      checked={selectedDevices.includes(device.id)}
+                      onCheckedChange={() => handleDeviceSelection(device.id)}
+                    />
+                    <label
+                      htmlFor={`device-${device.id}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
+                    >
+                      {device.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
 
-          <Card className="flex flex-col">
-            <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-base font-medium">Command</CardTitle>
+          {/* Column 2: Command */}
+          <div className="flex flex-col border-r">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="font-semibold text-base">Command</h3>
               <Button size="sm" onClick={handleRunCommand} disabled={!command || selectedDevices.length === 0}>
                 <Play className="mr-2 h-4 w-4" />
                 Run
               </Button>
-            </CardHeader>
-            <CardContent className="flex-1 flex">
+            </div>
+            <div className="flex-1">
               <Textarea
                 placeholder="Enter command to run on selected devices, e.g., 'show version'"
-                className="flex-1 resize-none text-sm"
+                className="h-full w-full resize-none border-0 rounded-none p-4 text-sm focus-visible:ring-transparent focus-visible:ring-offset-0"
                 value={command}
                 onChange={(e) => setCommand(e.target.value)}
               />
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card className="flex flex-col">
-            <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-base font-medium">Output</CardTitle>
+          {/* Column 3: Output */}
+          <div className="flex flex-col">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="font-semibold text-base">Output</h3>
               <div className="flex items-center gap-2">
                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopyOutput} disabled={!output}>
                    <Copy className="h-4 w-4" />
@@ -163,19 +162,19 @@ export default function AddComplianceModal({ isOpen, onOpenChange, devices }: Ad
                    <span className="sr-only">Download CSV</span>
                  </Button>
               </div>
-            </CardHeader>
-            <CardContent className="flex-1 flex">
+            </div>
+            <div className="flex-1">
                <Textarea
                 readOnly
                 value={output}
                 placeholder="Command output will be displayed here."
-                className="flex-1 resize-none bg-muted/50 font-mono text-xs"
+                className="h-full w-full resize-none border-0 rounded-none bg-muted/50 p-4 font-mono text-xs focus-visible:ring-transparent focus-visible:ring-offset-0"
               />
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
-        <DialogFooter className="pt-4 border-t">
+        <DialogFooter className="p-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button>Save</Button>
           <Button>Next</Button>
