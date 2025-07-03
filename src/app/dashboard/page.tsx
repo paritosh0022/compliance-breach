@@ -364,12 +364,12 @@ export default function DashboardPage() {
                     <Trash2 className="mr-2" />
                     Delete ({selectedDeviceIds.length})
                   </Button>
-                  <Button variant="outline" onClick={handleExportSelectedDevices}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export ({selectedDeviceIds.length})
-                  </Button>
                 </>
               )}
+              <Button variant="outline" onClick={handleExportSelectedDevices} disabled={selectedDeviceIds.length === 0}>
+                <Download className="mr-2 h-4 w-4" />
+                Export{selectedDeviceIds.length > 0 ? ` (${selectedDeviceIds.length})` : ''}
+              </Button>
             </div>
           </div>
           <DeviceTable 
@@ -402,12 +402,12 @@ export default function DashboardPage() {
                     <Trash2 className="mr-2" />
                     Delete ({selectedJobIds.length})
                   </Button>
-                   <Button variant="outline" onClick={handleExportSelectedJobs}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export ({selectedJobIds.length})
-                  </Button>
                 </>
               )}
+               <Button variant="outline" onClick={handleExportSelectedJobs} disabled={selectedJobIds.length === 0}>
+                <Download className="mr-2 h-4 w-4" />
+                Export{selectedJobIds.length > 0 ? ` (${selectedJobIds.length})` : ''}
+              </Button>
             </div>
           </div>
            <JobTable 
