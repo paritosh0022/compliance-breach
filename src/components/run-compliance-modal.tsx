@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Play, Copy, Download, Eye, X } from "lucide-react";
-import type { Device, Job, ComplianceRun, ComplianceLog } from "@/lib/types";
+import type { Device, Job, ComplianceLog } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "./ui/textarea";
 import { cn } from "@/lib/utils";
@@ -24,19 +24,20 @@ interface RunComplianceModalProps {
   onOpenChange: (isOpen: boolean) => void;
   devices: Device[];
   jobs: Job[];
-  complianceRun?: Omit<ComplianceRun, 'id'>;
   onRunComplete: (logEntry: Omit<ComplianceLog, 'id'>) => void;
   initialSelectedDeviceIds?: string[];
   initialSelectedJobIds?: string[];
 }
 
-export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs, complianceRun, onRunComplete, initialSelectedDeviceIds, initialSelectedJobIds }: RunComplianceModalProps) {
+export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs, onRunComplete, initialSelectedDeviceIds, initialSelectedJobIds }: RunComplianceModalProps) {
   const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
   const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
   const [deviceSearchTerm, setDeviceSearchTerm] = useState("");
   const [jobSearchTerm, setJobSearchTerm] = useState("");
   const [output, setOutput] = useState("");
   const [viewedJob, setViewedJob] = useState<Job | null>(null);
+  const [viewedDevice, setViewedDevice] = useState<Device | null>(null);
+
 
   const { toast } = useToast();
 
@@ -145,7 +146,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
     }
 
     onRunComplete({
-      complianceName: complianceRun?.name || 'Ad-hoc Run',
+      complianceName: 'Ad-hoc Run',
       timestamp: new Date().toISOString(),
       status,
       details: mockOutput,
@@ -162,9 +163,16 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
       setJobSearchTerm("");
       setOutput("");
       setViewedJob(null);
+      setViewedDevice(null);
     }
     onOpenChange(isOpen);
   };
+  
+  const gridColsClass = viewedDevice
+    ? 'md:grid-cols-[1fr_1.5fr_1fr_1fr]'
+    : viewedJob
+    ? 'md:grid-cols-[1fr_1fr_1.5fr_1fr]'
+    : 'md:grid-cols-3';
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChangeAndReset}>
@@ -176,16 +184,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
           </DialogDescription>
         </DialogHeader>
 
-        {complianceRun && (
-          <div className="p-4 border-b bg-muted/50">
-            <p className="text-sm">
-              <span className="font-semibold text-foreground">{complianceRun.name}:</span>
-              <span className="text-muted-foreground ml-2">{complianceRun.description}</span>
-            </p>
-          </div>
-        )}
-
-        <div className={cn("flex-1 grid grid-cols-1 gap-0 overflow-hidden", viewedJob ? 'md:grid-cols-[1fr,1fr,1fr,1.5fr]' : 'md:grid-cols-3')}>
+        <div className={cn("flex-1 grid grid-cols-1 gap-0 overflow-hidden", gridColsClass)}>
           {/* Column 1: Devices */}
           <div className="flex flex-col border-r">
             <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
@@ -213,17 +212,40 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
             <ScrollArea className="flex-1">
               <div className="space-y-1 p-2">
                 {filteredDevices.map((device) => (
-                  <div key={device.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
+                  <div key={device.id} className="group flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
                     <Checkbox id={`comp-device-${device.id}`} checked={selectedDevices.includes(device.id)} onCheckedChange={() => handleDeviceSelection(device.id)} />
                     <label htmlFor={`comp-device-${device.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">
                       {device.name}
                     </label>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => { setViewedDevice(device); setViewedJob(null); }}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
                   </div>
                 ))}
                 {devices.length === 0 && ( <div className="text-center text-sm text-muted-foreground p-4">No devices available.</div> )}
               </div>
             </ScrollArea>
           </div>
+
+          {/* Column 1.5: Device Details (Conditional) */}
+          {viewedDevice && (
+            <div className="flex flex-col border-r bg-muted/30">
+              <div className="p-4 border-b flex items-center justify-between h-[73px]">
+                <h3 className="font-semibold text-base truncate">Details: {viewedDevice.name}</h3>
+                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewedDevice(null)}>
+                    <X className="h-4 w-4" />
+                 </Button>
+              </div>
+              <ScrollArea className="flex-1 p-4">
+                 <div className="p-4 border rounded-lg bg-background/50 space-y-2 text-sm">
+                    <h4 className="font-semibold">Device Details</h4>
+                    <p className="break-words"><strong className="text-muted-foreground">IP Address:</strong> <code>{viewedDevice.ipAddress}</code></p>
+                    <p className="break-words"><strong className="text-muted-foreground">Username:</strong> <code>{viewedDevice.username}</code></p>
+                    <p className="break-words"><strong className="text-muted-foreground">Port:</strong> <code>{viewedDevice.port}</code></p>
+                </div>
+              </ScrollArea>
+            </div>
+          )}
 
           {/* Column 2: Jobs */}
           <div className="flex flex-col border-r">
@@ -257,7 +279,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
                     <label htmlFor={`comp-job-${job.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">
                       {job.name}
                     </label>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => setViewedJob(job)}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => { setViewedJob(job); setViewedDevice(null); }}>
                       <Eye className="h-4 w-4" />
                     </Button>
                   </div>
@@ -267,7 +289,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
             </ScrollArea>
           </div>
 
-          {/* Column 3: Job Details (Conditional) */}
+          {/* Column 2.5: Job Details (Conditional) */}
           {viewedJob && (
             <div className="flex flex-col border-r bg-muted/30">
               <div className="p-4 border-b flex items-center justify-between h-[73px]">

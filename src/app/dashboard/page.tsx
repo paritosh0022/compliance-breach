@@ -17,9 +17,8 @@ import JobTable from '@/components/job-table';
 import AddJobModal from '@/components/add-job-modal';
 import AddJobDetailsModal from '@/components/add-job-details-modal';
 import RunComplianceModal from '@/components/run-compliance-modal';
-import AddComplianceModal from '@/components/add-compliance-modal';
 import ComplianceLogModal from '@/components/compliance-log-modal';
-import type { Device, Job, ComplianceRun, ComplianceLog } from '@/lib/types';
+import type { Device, Job, ComplianceLog } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorageState from '@/hooks/use-local-storage-state';
 
@@ -28,17 +27,14 @@ export default function DashboardPage() {
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
   const [isJobDetailsModalOpen, setIsJobDetailsModalOpen] = useState(false);
   const [isComplianceModalOpen, setIsComplianceModalOpen] = useState(false);
-  const [isAddComplianceModalOpen, setIsAddComplianceModalOpen] = useState(false);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   
   const [activeTab, setActiveTab] = useState('device-list');
   
   const [devices, setDevices] = useLocalStorageState<Device[]>('devices', []);
   const [jobs, setJobs] = useLocalStorageState<Job[]>('jobs', []);
-  const [complianceRuns, setComplianceRuns] = useLocalStorageState<ComplianceRun[]>('complianceRuns', []);
   const [complianceLog, setComplianceLog] = useLocalStorageState<ComplianceLog[]>('complianceLog', []);
 
-  const [currentComplianceRun, setCurrentComplianceRun] = useState<Omit<ComplianceRun, 'id'>>();
   const [currentJobDetails, setCurrentJobDetails] = useState<Omit<Job, 'id' | 'command' | 'template'>>();
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
   const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
@@ -102,23 +98,6 @@ export default function DashboardPage() {
     setJobs(prev => prev.filter(job => !selectedJobIds.includes(job.id)));
     setSelectedJobIds([]);
   }
-  
-  const handleSaveCompliance = (data: Omit<ComplianceRun, 'id'>) => {
-    const newComplianceRun = { ...data, id: crypto.randomUUID() };
-    setComplianceRuns(prev => [...prev, newComplianceRun]);
-    setIsAddComplianceModalOpen(false);
-    toast({
-      title: "Compliance Saved",
-      description: `"${data.name}" has been saved.`,
-    });
-  };
-
-  const handleSaveAndRunCompliance = (data: Omit<ComplianceRun, 'id'>) => {
-    setComplianceRuns(prev => [...prev, { ...data, id: crypto.randomUUID() }]);
-    setCurrentComplianceRun(data);
-    setIsAddComplianceModalOpen(false);
-    setIsComplianceModalOpen(true);
-  };
 
   const handleRunComplianceComplete = (logEntry: Omit<ComplianceLog, 'id'>) => {
     const newLogEntry = { ...logEntry, id: crypto.randomUUID() };
@@ -137,19 +116,6 @@ export default function DashboardPage() {
             <PlusCircle className="mr-2" />
             Add Job
           </Button>
-        );
-      case 'manage-compliance':
-        return (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setIsLogModalOpen(true)}>
-              <BookOpen className="mr-2" />
-              Log
-            </Button>
-            <Button onClick={() => setIsAddComplianceModalOpen(true)}>
-              <PlusCircle className="mr-2" />
-              Add Compliance
-            </Button>
-          </div>
         );
       case 'device-list':
       default:
@@ -181,14 +147,19 @@ export default function DashboardPage() {
     <>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold font-headline">Manage Devices</h1>
-        {getActiveButton(activeTab)}
+        <div className="flex items-center gap-2">
+            {getActiveButton(activeTab)}
+            <Button variant="outline" onClick={() => setIsLogModalOpen(true)}>
+                <BookOpen className="mr-2 h-4 w-4" />
+                View Log
+            </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList>
           <TabsTrigger value="device-list">Device List</TabsTrigger>
           <TabsTrigger value="manage-jobs">Manage Jobs</TabsTrigger>
-          <TabsTrigger value="manage-compliance">Manage Compliance</TabsTrigger>
         </TabsList>
         <TabsContent value="device-list" className="mt-6">
           <div className="flex items-center justify-between gap-4 mb-4">
@@ -256,22 +227,6 @@ export default function DashboardPage() {
               onRunCompliance={(jobId) => handleRunCompliance({ jobs: [jobId] })}
             />
         </TabsContent>
-        <TabsContent value="manage-compliance" className="mt-6">
-           {jobs.length > 0 && devices.length > 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/20 py-20 text-center">
-              <h3 className="text-lg font-semibold text-muted-foreground">Ready to Run Compliance</h3>
-              <p className="text-sm text-muted-foreground">Click the "Add Compliance" button to begin.</p>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/20 py-20 text-center">
-              <h3 className="text-lg font-semibold text-muted-foreground">Prerequisites Missing</h3>
-              <p className="text-sm text-muted-foreground">
-                {devices.length === 0 && "Please add at least one device first."}
-                {devices.length > 0 && jobs.length === 0 && "Please create at least one job first."}
-              </p>
-            </div>
-          )}
-        </TabsContent>
       </Tabs>
       
       <AddDeviceDrawer 
@@ -293,19 +248,11 @@ export default function DashboardPage() {
         jobDetails={currentJobDetails}
       />
 
-      <AddComplianceModal 
-        isOpen={isAddComplianceModalOpen}
-        onOpenChange={setIsAddComplianceModalOpen}
-        onSave={handleSaveCompliance}
-        onSaveAndRun={handleSaveAndRunCompliance}
-      />
-
       <RunComplianceModal
         isOpen={isComplianceModalOpen}
         onOpenChange={handleComplianceModalOpenChange}
         devices={devices}
         jobs={jobs}
-        complianceRun={currentComplianceRun}
         onRunComplete={handleRunComplianceComplete}
         initialSelectedDeviceIds={initialModalSelections.devices}
         initialSelectedJobIds={initialModalSelections.jobs}
