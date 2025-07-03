@@ -193,6 +193,16 @@ export default function DashboardPage() {
       .map(({ id, password, ...rest }) => rest);
     downloadCsv(devicesToExport, 'selected-devices.csv');
   };
+  
+  const handleExportDevice = (id: string) => {
+    const deviceToExport = devices
+      .filter(d => d.id === id)
+      .map(({ id, password, ...rest }) => rest);
+    if (deviceToExport.length > 0) {
+      const deviceName = deviceToExport[0].name.replace(/ /g, '_');
+      downloadCsv(deviceToExport, `${deviceName}-device.csv`);
+    }
+  };
 
   const handleExportSelectedJobs = () => {
     if (selectedJobIds.length === 0) return;
@@ -205,6 +215,21 @@ export default function DashboardPage() {
         template: j.template || '',
       }));
     downloadCsv(jobsToExport, 'selected-jobs.csv');
+  };
+
+  const handleExportJob = (id: string) => {
+    const jobToExport = jobs
+      .filter(j => j.id === id)
+      .map(j => ({
+        name: j.name,
+        description: j.description || '',
+        command: j.command || '',
+        template: j.template || '',
+      }));
+    if (jobToExport.length > 0) {
+      const jobName = jobToExport[0].name.replace(/ /g, '_');
+      downloadCsv(jobToExport, `${jobName}-job.csv`);
+    }
   };
 
   const handleAddDeviceClick = () => {
@@ -308,6 +333,7 @@ export default function DashboardPage() {
             selectedDeviceIds={selectedDeviceIds}
             onSelectedDeviceIdsChange={setSelectedDeviceIds}
             onRunCompliance={(deviceId) => handleRunCompliance({ devices: [deviceId] })}
+            onExport={handleExportDevice}
           />
         </TabsContent>
         <TabsContent value="job-compliance" className="mt-6">
@@ -344,6 +370,7 @@ export default function DashboardPage() {
               selectedJobIds={selectedJobIds}
               onSelectedJobIdsChange={setSelectedJobIds}
               onRunCompliance={(jobId) => handleRunCompliance({ jobs: [jobId] })}
+              onExport={handleExportJob}
             />
         </TabsContent>
       </Tabs>

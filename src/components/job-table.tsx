@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Trash2, Edit, Bot } from "lucide-react";
+import { Trash2, Edit, Bot, Download } from "lucide-react";
 import type { Job } from "@/lib/types";
 
 interface JobTableProps {
@@ -21,9 +21,10 @@ interface JobTableProps {
   selectedJobIds: string[];
   onSelectedJobIdsChange: (ids: string[]) => void;
   onRunCompliance: (id: string) => void;
+  onExport: (id: string) => void;
 }
 
-export default function JobTable({ jobs, onDelete, selectedJobIds, onSelectedJobIdsChange, onRunCompliance }: JobTableProps) {
+export default function JobTable({ jobs, onDelete, selectedJobIds, onSelectedJobIdsChange, onRunCompliance, onExport }: JobTableProps) {
   
   const handleSelectAll = (checked: boolean) => {
     onSelectedJobIdsChange(checked ? jobs.map(j => j.id) : []);
@@ -85,6 +86,17 @@ export default function JobTable({ jobs, onDelete, selectedJobIds, onSelectedJob
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Run Compliance</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => onExport(job.id)}>
+                          <Download className="h-4 w-4" />
+                          <span className="sr-only">Export Job</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Export Job</p>
                       </TooltipContent>
                     </Tooltip>
                     <Tooltip>

@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { MoreHorizontal, Trash2, Edit, Bot } from "lucide-react";
+import { Trash2, Edit, Bot, Download } from "lucide-react";
 import type { Device } from "@/lib/types";
 
 interface DeviceTableProps {
@@ -22,9 +22,10 @@ interface DeviceTableProps {
   selectedDeviceIds: string[];
   onSelectedDeviceIdsChange: (ids: string[]) => void;
   onRunCompliance: (id: string) => void;
+  onExport: (id: string) => void;
 }
 
-export default function DeviceTable({ devices, onDelete, onEdit, selectedDeviceIds, onSelectedDeviceIdsChange, onRunCompliance }: DeviceTableProps) {
+export default function DeviceTable({ devices, onDelete, onEdit, selectedDeviceIds, onSelectedDeviceIdsChange, onRunCompliance, onExport }: DeviceTableProps) {
 
   const handleSelectAll = (checked: boolean) => {
     onSelectedDeviceIdsChange(checked ? devices.map(d => d.id) : []);
@@ -90,6 +91,17 @@ export default function DeviceTable({ devices, onDelete, onEdit, selectedDeviceI
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Run Compliance</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => onExport(device.id)}>
+                          <Download className="h-4 w-4" />
+                          <span className="sr-only">Export Device</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Export Device</p>
                       </TooltipContent>
                     </Tooltip>
                     <Tooltip>
