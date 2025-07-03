@@ -42,6 +42,7 @@ export default function DashboardPage() {
   const [jobs, setJobs] = useLocalStorageState<Job[]>('jobs', []);
   const [complianceLog, setComplianceLog] = useLocalStorageState<ComplianceLog[]>('complianceLog', []);
 
+  const [deviceToEdit, setDeviceToEdit] = useState<Device | null>(null);
   const [currentJobDetails, setCurrentJobDetails] = useState<Omit<Job, 'id' | 'command' | 'template'>>();
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
   const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
@@ -69,12 +70,37 @@ export default function DashboardPage() {
     }
   }
 
-  const handleAddDevice = (device: Omit<Device, 'id'>) => {
-    const newDevice = { ...device, id: crypto.randomUUID() };
-    setDevices((prev) => [...prev, newDevice]);
+  const handleSaveDevice = (deviceData: Omit<Device, 'id' | 'password'> & { password?: string }, id?: string) => {
+    if (id) {
+      setDevices(prev => prev.map(d => {
+        if (d.id === id) {
+          const { password, ...rest } = deviceData;
+          const updatedDevice = { ...d, ...rest };
+          // Only update password if a new one is provided
+          if (password) {
+            updatedDevice.password = password;
+          }
+          return updatedDevice;
+        }
+        return d;
+      }));
+      toast({ title: "Success", description: "Device updated successfully." });
+    } else {
+      const newDevice = { ...deviceData, id: crypto.randomUUID() } as Device;
+      setDevices((prev) => [...prev, newDevice]);
+      toast({ title: "Success", description: "Device added successfully." });
+    }
     setIsDrawerOpen(false);
   };
   
+  const handleEditDeviceClick = (id: string) => {
+    const device = devices.find(d => d.id === id);
+    if (device) {
+      setDeviceToEdit(device);
+      setIsDrawerOpen(true);
+    }
+  };
+
   const handleImportDevices = (newDevices: Omit<Device, 'id'>[]) => {
     const devicesToAdd = newDevices.map(device => ({ ...device, id: crypto.randomUUID() }));
     setDevices(prev => [...prev, ...devicesToAdd]);
@@ -181,6 +207,11 @@ export default function DashboardPage() {
     downloadCsv(jobsToExport, 'selected-jobs.csv');
   };
 
+  const handleAddDeviceClick = () => {
+    setDeviceToEdit(null);
+    setIsDrawerOpen(true);
+  };
+
   const getActiveButton = (activeTab: string) => {
     switch (activeTab) {
       case 'job-compliance':
@@ -202,7 +233,7 @@ export default function DashboardPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onSelect={() => setIsDrawerOpen(true)}>
+              <DropdownMenuItem onSelect={handleAddDeviceClick}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Single Device
               </DropdownMenuItem>
@@ -273,6 +304,7 @@ export default function DashboardPage() {
           <DeviceTable 
             devices={devices} 
             onDelete={handleDeleteDevice}
+            onEdit={handleEditDeviceClick}
             selectedDeviceIds={selectedDeviceIds}
             onSelectedDeviceIdsChange={setSelectedDeviceIds}
             onRunCompliance={(deviceId) => handleRunCompliance({ devices: [deviceId] })}
@@ -319,7 +351,8 @@ export default function DashboardPage() {
       <AddDeviceDrawer 
         isOpen={isDrawerOpen} 
         onOpenChange={setIsDrawerOpen}
-        onAddDevice={handleAddDevice}
+        onSaveDevice={handleSaveDevice}
+        deviceToEdit={deviceToEdit}
       />
 
       <ImportDevicesModal

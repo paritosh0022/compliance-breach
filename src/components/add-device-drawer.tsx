@@ -1,5 +1,7 @@
+
 "use client";
 
+import { useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,28 +26,38 @@ import {
 } from "@/components/ui/form";
 import type { Device } from "@/lib/types";
 
-const deviceSchema = z.object({
+const baseSchema = z.object({
   name: z.string().min(1, "Name is required"),
   ipAddress: z.string().ip({ message: "Invalid IP address" }),
   username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
   port: z.string().refine(val => {
     const portNum = parseInt(val, 10);
     return !isNaN(portNum) && portNum > 0 && portNum < 65536;
   }, "Invalid port number"),
 });
 
-type DeviceFormValues = z.infer<typeof deviceSchema>;
+const addDeviceSchema = baseSchema.extend({
+  password: z.string().min(1, "Password is required"),
+});
+
+const editDeviceSchema = baseSchema.extend({
+  password: z.string().optional(),
+});
+
+type DeviceFormValues = z.infer<typeof addDeviceSchema>;
 
 interface AddDeviceDrawerProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onAddDevice: (device: Omit<Device, 'id'>) => void;
+  onSaveDevice: (device: Omit<Device, 'id' | 'password'> & { password?: string }, id?: string) => void;
+  deviceToEdit?: Device | null;
 }
 
-export default function AddDeviceDrawer({ isOpen, onOpenChange, onAddDevice }: AddDeviceDrawerProps) {
+export default function AddDeviceDrawer({ isOpen, onOpenChange, onSaveDevice, deviceToEdit }: AddDeviceDrawerProps) {
+  const isEditing = !!deviceToEdit;
+  
   const form = useForm<DeviceFormValues>({
-    resolver: zodResolver(deviceSchema),
+    resolver: zodResolver(isEditing ? editDeviceSchema : addDeviceSchema),
     defaultValues: {
       name: "",
       ipAddress: "",
@@ -55,20 +67,53 @@ export default function AddDeviceDrawer({ isOpen, onOpenChange, onAddDevice }: A
     },
   });
 
+  useEffect(() => {
+    if (isOpen) {
+      if (isEditing) {
+        form.reset({
+          name: deviceToEdit.name,
+          ipAddress: deviceToEdit.ipAddress,
+          username: deviceToEdit.username,
+          port: deviceToEdit.port,
+          password: "",
+        });
+      } else {
+        form.reset({
+          name: "",
+          ipAddress: "",
+          username: "",
+          password: "",
+          port: "22",
+        });
+      }
+    }
+  }, [isOpen, isEditing, deviceToEdit, form]);
+
   const onSubmit = (data: DeviceFormValues) => {
-    onAddDevice(data);
-    form.reset();
+    const dataToSave = { ...data };
+    // If editing and password is blank, don't send the password field so it isn't updated
+    if (isEditing && !data.password) {
+      delete (dataToSave as Partial<typeof dataToSave>).password;
+    }
+    onSaveDevice(dataToSave, deviceToEdit?.id);
   };
+  
+  const handleOpenChange = (open: boolean) => {
+    onOpenChange(open);
+    if (!open) {
+      form.reset();
+    }
+  }
 
   return (
-    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+    <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       <SheetContent className="sm:max-w-lg">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
             <SheetHeader>
-              <SheetTitle>Add a New Device</SheetTitle>
+              <SheetTitle>{isEditing ? 'Edit Device' : 'Add a New Device'}</SheetTitle>
               <SheetDescription>
-                Enter the details of the device you want to add.
+                {isEditing ? 'Update the details of the device.' : 'Enter the details of the device you want to add.'}
               </SheetDescription>
             </SheetHeader>
             <div className="flex-1 py-6 space-y-4 overflow-y-auto">
@@ -118,7 +163,7 @@ export default function AddDeviceDrawer({ isOpen, onOpenChange, onAddDevice }: A
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <Input type="password" placeholder={isEditing ? 'Leave blank to keep current password' : ''} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -142,7 +187,7 @@ export default function AddDeviceDrawer({ isOpen, onOpenChange, onAddDevice }: A
               <SheetClose asChild>
                 <Button type="button" variant="outline">Cancel</Button>
               </SheetClose>
-              <Button type="submit">Add Device</Button>
+              <Button type="submit">{isEditing ? 'Save Changes' : 'Add Device'}</Button>
             </SheetFooter>
           </form>
         </Form>

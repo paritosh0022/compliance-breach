@@ -18,12 +18,13 @@ import type { Device } from "@/lib/types";
 interface DeviceTableProps {
   devices: Device[];
   onDelete: (id: string) => void;
+  onEdit: (id: string) => void;
   selectedDeviceIds: string[];
   onSelectedDeviceIdsChange: (ids: string[]) => void;
   onRunCompliance: (id: string) => void;
 }
 
-export default function DeviceTable({ devices, onDelete, selectedDeviceIds, onSelectedDeviceIdsChange, onRunCompliance }: DeviceTableProps) {
+export default function DeviceTable({ devices, onDelete, onEdit, selectedDeviceIds, onSelectedDeviceIdsChange, onRunCompliance }: DeviceTableProps) {
 
   const handleSelectAll = (checked: boolean) => {
     onSelectedDeviceIdsChange(checked ? devices.map(d => d.id) : []);
@@ -93,7 +94,7 @@ export default function DeviceTable({ devices, onDelete, selectedDeviceIds, onSe
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" onClick={() => onEdit(device.id)}>
                           <Edit className="h-4 w-4" />
                           <span className="sr-only">Edit Device</span>
                         </Button>
