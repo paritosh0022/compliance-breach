@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -133,41 +132,27 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
     
     doc.text("Compliance Report", 14, 15);
 
-    const head = [['Job Name', 'Device', 'IP Address', 'Last ran at', 'Status']];
-    
-    const body: any[][] = [];
-    filteredLogs.forEach(group => {
-      group.results.forEach((result, index) => {
-        if (index === 0) {
-          body.push([
-            { content: group.jobName, rowSpan: group.results.length, styles: { valign: 'top' } },
-            result.deviceName,
-            result.deviceIpAddress,
-            { content: format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss"), rowSpan: group.results.length, styles: { valign: 'top' } },
-            result.status
-          ]);
-        } else {
-          body.push([
-            result.deviceName,
-            result.deviceIpAddress,
-            result.status
-          ]);
-        }
-      });
-    });
-
     autoTable(doc, {
-      head: head,
-      body: body,
+      head: [['Job Name', 'Device', 'IP Address', 'Last ran at', 'Status']],
+      body: filteredLogs.flatMap(group => 
+        group.results.map((result, index) => {
+          if (index === 0) {
+            return [
+              { content: group.jobName, rowSpan: group.results.length, styles: { valign: 'top' } },
+              result.deviceName,
+              result.deviceIpAddress,
+              { content: format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss"), rowSpan: group.results.length, styles: { valign: 'top' } },
+              result.status
+            ];
+          }
+          return [
+            result.deviceName,
+            result.deviceIpAddress,
+            result.status
+          ];
+        })
+      ),
       startY: 22,
-      didDrawCell: (data) => {
-        // This is to ensure rowspan works correctly
-        if (data.row.section === 'body' && data.cell.raw && (data.cell.raw as any).rowSpan) {
-            if ((data.cell.raw as any).rowSpan > 1) {
-                doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height * (data.cell.raw as any).rowSpan, 'S');
-            }
-        }
-      }
     });
 
     doc.save('compliance_report.pdf');
@@ -252,7 +237,6 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
           </ScrollArea>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
