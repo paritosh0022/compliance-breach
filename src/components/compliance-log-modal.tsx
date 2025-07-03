@@ -35,6 +35,10 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
     const sortedLogs = [...logs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     return sortedLogs.flatMap(log => {
+      if (!log || !log.results) {
+        return [];
+      }
+
       const jobsInRun = log.results.reduce((acc, result) => {
         if (!acc[result.jobName]) {
           acc[result.jobName] = [];
@@ -123,12 +127,9 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
     }
 
     const { default: jsPDF } = await import('jspdf');
-    // jspdf-autotable is a plugin and extends the jsPDF prototype.
-    // We need to import it to have access to the `autoTable` method.
-    await import('jspdf-autotable');
+    const { default: autoTable } = await import('jspdf-autotable');
 
-    // Cast to any to access the autoTable method dynamically added by the plugin.
-    const doc = new jsPDF() as any;
+    const doc = new jsPDF();
     
     doc.text("Compliance Report", 14, 15);
 
@@ -155,10 +156,18 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
       });
     });
 
-    doc.autoTable({
+    autoTable(doc, {
       head: head,
       body: body,
       startY: 22,
+      didDrawCell: (data) => {
+        // This is to ensure rowspan works correctly
+        if (data.row.section === 'body' && data.cell.raw && (data.cell.raw as any).rowSpan) {
+            if ((data.cell.raw as any).rowSpan > 1) {
+                doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height * (data.cell.raw as any).rowSpan, 'S');
+            }
+        }
+      }
     });
 
     doc.save('compliance_report.pdf');
