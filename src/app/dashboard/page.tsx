@@ -43,7 +43,8 @@ export default function DashboardPage() {
   const [complianceLog, setComplianceLog] = useLocalStorageState<ComplianceLog[]>('complianceLog', []);
 
   const [deviceToEdit, setDeviceToEdit] = useState<Device | null>(null);
-  const [currentJobDetails, setCurrentJobDetails] = useState<Omit<Job, 'id' | 'command' | 'template'>>();
+  const [jobToEdit, setJobToEdit] = useState<Job | null>(null);
+  const [currentJobDetails, setCurrentJobDetails] = useState<Partial<Job>>();
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
   const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
   const [initialModalSelections, setInitialModalSelections] = useState<{
@@ -119,21 +120,61 @@ export default function DashboardPage() {
   }
   
   const handleJobDetailsContinue = (data: Omit<Job, 'id' | 'command' | 'template'>) => {
-    setCurrentJobDetails(data);
+    if (jobToEdit) {
+      setCurrentJobDetails({
+        name: data.name,
+        description: data.description,
+        command: jobToEdit.command,
+        template: jobToEdit.template
+      });
+    } else {
+      setCurrentJobDetails(data);
+    }
     setIsJobDetailsModalOpen(false);
     setIsJobModalOpen(true);
+  };
+
+  const handleSaveJobDetails = (data: Pick<Job, 'name' | 'description'>, id: string) => {
+    setJobs(prev => prev.map(j => j.id === id ? { ...j, ...data } : j));
+    setIsJobDetailsModalOpen(false);
+    setJobToEdit(null);
+    toast({ title: "Success", description: "Job details updated." });
   };
   
   const handleAddJob = (jobData: Pick<Job, 'command' | 'template'>) => {
     if (!currentJobDetails) return;
-    const newJob: Job = { 
-        ...currentJobDetails,
-        ...jobData,
-        id: crypto.randomUUID() 
-    };
-    setJobs((prev) => [...prev, newJob]);
+    
+    if (jobToEdit) {
+      const updatedJob = {
+        ...jobToEdit,
+        name: currentJobDetails.name,
+        description: currentJobDetails.description,
+        command: jobData.command,
+        template: jobData.template,
+      };
+      setJobs(prev => prev.map(j => j.id === jobToEdit.id ? updatedJob : j));
+      toast({ title: "Success", description: "Job updated successfully." });
+      setJobToEdit(null);
+    } else {
+      const newJob: Job = { 
+          ...currentJobDetails,
+          ...jobData,
+          id: crypto.randomUUID() 
+      } as Job;
+      setJobs((prev) => [...prev, newJob]);
+      toast({ title: "Success", description: "Job added successfully." });
+    }
+
     setIsJobModalOpen(false);
     setCurrentJobDetails(undefined);
+  };
+  
+  const handleEditJobClick = (id: string) => {
+    const job = jobs.find(j => j.id === id);
+    if (job) {
+      setJobToEdit(job);
+      setIsJobDetailsModalOpen(true);
+    }
   };
 
   const handleDeleteJob = (id: string) => {
@@ -237,11 +278,16 @@ export default function DashboardPage() {
     setIsDrawerOpen(true);
   };
 
+  const handleAddJobClick = () => {
+    setJobToEdit(null);
+    setIsJobDetailsModalOpen(true);
+  }
+
   const getActiveButton = (activeTab: string) => {
     switch (activeTab) {
       case 'job-compliance':
         return (
-          <Button onClick={() => setIsJobDetailsModalOpen(true)}>
+          <Button onClick={handleAddJobClick}>
             <PlusCircle className="mr-2" />
             Add Job
           </Button>
@@ -367,6 +413,7 @@ export default function DashboardPage() {
            <JobTable 
               jobs={jobs} 
               onDelete={handleDeleteJob} 
+              onEdit={handleEditJobClick}
               selectedJobIds={selectedJobIds}
               onSelectedJobIdsChange={setSelectedJobIds}
               onRunCompliance={(jobId) => handleRunCompliance({ jobs: [jobId] })}
@@ -392,6 +439,8 @@ export default function DashboardPage() {
         isOpen={isJobDetailsModalOpen}
         onOpenChange={setIsJobDetailsModalOpen}
         onContinue={handleJobDetailsContinue}
+        onSave={handleSaveJobDetails}
+        jobToEdit={jobToEdit}
       />
       
       <AddJobModal

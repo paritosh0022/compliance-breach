@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +28,7 @@ interface AddJobModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onAddJob: (jobData: Pick<Job, 'command' | 'template'>) => void;
-  jobDetails?: Omit<Job, 'id' | 'command' | 'template'>;
+  jobDetails?: Partial<Job>;
 }
 
 export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails }: AddJobModalProps) {
@@ -36,6 +37,15 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
   const [command, setCommand] = useState("");
   const [template, setTemplate] = useState("");
   const [isTemplateRun, setIsTemplateRun] = useState(false);
+  
+  const isEditing = jobDetails && jobDetails.command !== undefined;
+
+  useEffect(() => {
+    if (isOpen && jobDetails) {
+      setCommand(jobDetails.command || "");
+      handleTemplateChange(jobDetails.template || "");
+    }
+  }, [isOpen, jobDetails]);
 
   const handleTemplateChange = (newTemplate: string) => {
     setTemplate(newTemplate);
@@ -70,7 +80,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
     <Dialog open={isOpen} onOpenChange={handleOpenChangeAndReset}>
       <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-4 border-b">
-           <DialogTitle className="text-xl">Create Job</DialogTitle>
+           <DialogTitle className="text-xl">{isEditing ? 'Edit Job' : 'Create Job'}</DialogTitle>
         </DialogHeader>
 
         {jobDetails && (
@@ -165,7 +175,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
 
         <DialogFooter className="p-4 border-t">
           <Button variant="outline" onClick={() => handleOpenChangeAndReset(false)}>Cancel</Button>
-          <Button onClick={handleCreateJob}>Create Job</Button>
+          <Button onClick={handleCreateJob}>{isEditing ? 'Save Changes' : 'Create Job'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

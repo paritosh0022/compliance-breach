@@ -1,3 +1,4 @@
+
 "use client";
 
 import { z } from "zod";
@@ -23,6 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import type { Job } from "@/lib/types";
+import { useEffect } from "react";
 
 const jobDetailsSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -35,9 +37,11 @@ interface AddJobDetailsModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onContinue: (data: Omit<Job, 'id' | 'command' | 'template'>) => void;
+  onSave?: (data: Omit<Job, 'id' | 'command' | 'template'>, id: string) => void;
+  jobToEdit?: Job | null;
 }
 
-export default function AddJobDetailsModal({ isOpen, onOpenChange, onContinue }: AddJobDetailsModalProps) {
+export default function AddJobDetailsModal({ isOpen, onOpenChange, onContinue, onSave, jobToEdit }: AddJobDetailsModalProps) {
   const form = useForm<JobDetailsFormValues>({
     resolver: zodResolver(jobDetailsSchema),
     defaultValues: {
@@ -45,10 +49,24 @@ export default function AddJobDetailsModal({ isOpen, onOpenChange, onContinue }:
       description: "",
     },
   });
+  
+  const isEditing = !!jobToEdit;
 
-  const handleContinue = (data: JobDetailsFormValues) => {
+  useEffect(() => {
+    if (isOpen) {
+      if (isEditing) {
+        form.reset({
+          name: jobToEdit.name,
+          description: jobToEdit.description || "",
+        });
+      } else {
+        form.reset({ name: "", description: "" });
+      }
+    }
+  }, [isOpen, isEditing, jobToEdit, form]);
+
+  const handleSubmit = (data: JobDetailsFormValues) => {
     onContinue(data);
-    form.reset();
   };
   
   const handleOpenChangeAndReset = (open: boolean) => {
@@ -62,11 +80,14 @@ export default function AddJobDetailsModal({ isOpen, onOpenChange, onContinue }:
     <Dialog open={isOpen} onOpenChange={handleOpenChangeAndReset}>
       <DialogContent className="sm:max-w-lg">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleContinue)}>
+          <form onSubmit={form.handleSubmit(handleSubmit)}>
             <DialogHeader>
-              <DialogTitle>Create New Job</DialogTitle>
+              <DialogTitle>{isEditing ? 'Edit Job' : 'Create New Job'}</DialogTitle>
               <DialogDescription>
-                First, give your new job a name and an optional description.
+                {isEditing 
+                    ? 'Edit the job name and description below.'
+                    : 'First, give your new job a name and an optional description.'
+                }
               </DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-4">
@@ -98,8 +119,18 @@ export default function AddJobDetailsModal({ isOpen, onOpenChange, onContinue }:
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit">Continue</Button>
+              {isEditing ? (
+                <>
+                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+                  <Button type="button" onClick={form.handleSubmit(data => onSave!(data, jobToEdit.id))}>Save</Button>
+                  <Button type="submit">Continue Edit</Button>
+                </>
+              ) : (
+                <>
+                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                  <Button type="submit">Continue</Button>
+                </>
+              )}
             </DialogFooter>
           </form>
         </Form>

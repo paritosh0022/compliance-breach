@@ -18,13 +18,14 @@ import type { Job } from "@/lib/types";
 interface JobTableProps {
   jobs: Job[];
   onDelete: (id: string) => void;
+  onEdit: (id: string) => void;
   selectedJobIds: string[];
   onSelectedJobIdsChange: (ids: string[]) => void;
   onRunCompliance: (id: string) => void;
   onExport: (id: string) => void;
 }
 
-export default function JobTable({ jobs, onDelete, selectedJobIds, onSelectedJobIdsChange, onRunCompliance, onExport }: JobTableProps) {
+export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSelectedJobIdsChange, onRunCompliance, onExport }: JobTableProps) {
   
   const handleSelectAll = (checked: boolean) => {
     onSelectedJobIdsChange(checked ? jobs.map(j => j.id) : []);
@@ -101,7 +102,7 @@ export default function JobTable({ jobs, onDelete, selectedJobIds, onSelectedJob
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" onClick={() => onEdit(job.id)}>
                           <Edit className="h-4 w-4" />
                           <span className="sr-only">Edit Job</span>
                         </Button>
