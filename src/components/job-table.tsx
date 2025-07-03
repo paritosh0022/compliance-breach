@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +39,9 @@ export default function JobTable({ jobs, onDelete }: JobTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-[40px]">
+              <Checkbox />
+            </TableHead>
             <TableHead>Job Name</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -45,6 +49,9 @@ export default function JobTable({ jobs, onDelete }: JobTableProps) {
         <TableBody>
           {jobs.map((job) => (
             <TableRow key={job.id}>
+              <TableCell>
+                <Checkbox />
+              </TableCell>
               <TableCell className="font-medium">{job.name}</TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>

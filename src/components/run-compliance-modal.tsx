@@ -13,17 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Play, Copy, Download } from "lucide-react";
+import { Search, Play, Copy, Download, Eye, X } from "lucide-react";
 import type { Device, Job } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "./ui/textarea";
+import { cn } from "@/lib/utils";
 
 interface RunComplianceModalProps {
   isOpen: boolean;
@@ -34,15 +28,23 @@ interface RunComplianceModalProps {
 
 export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs }: RunComplianceModalProps) {
   const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
-  const [selectedJobId, setSelectedJobId] = useState<string | undefined>(undefined);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
+  const [deviceSearchTerm, setDeviceSearchTerm] = useState("");
+  const [jobSearchTerm, setJobSearchTerm] = useState("");
   const [output, setOutput] = useState("");
+  const [viewedJob, setViewedJob] = useState<Job | null>(null);
+
   const { toast } = useToast();
 
   const filteredDevices = useMemo(() =>
     devices.filter((device) =>
-      device.name.toLowerCase().includes(searchTerm.toLowerCase())
-    ), [devices, searchTerm]);
+      device.name.toLowerCase().includes(deviceSearchTerm.toLowerCase())
+    ), [devices, deviceSearchTerm]);
+    
+  const filteredJobs = useMemo(() =>
+    jobs.filter((job) =>
+      job.name.toLowerCase().includes(jobSearchTerm.toLowerCase())
+    ), [jobs, jobSearchTerm]);
 
   const handleDeviceSelection = (deviceId: string) => {
     setSelectedDevices((prev) =>
@@ -53,11 +55,19 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
   };
   
   const handleSelectAllDevices = (checked: boolean) => {
-    if (checked) {
-      setSelectedDevices(devices.map(d => d.id));
-    } else {
-      setSelectedDevices([]);
-    }
+    setSelectedDevices(checked ? filteredDevices.map(d => d.id) : []);
+  }
+
+  const handleJobSelection = (jobId: string) => {
+    setSelectedJobIds((prev) =>
+      prev.includes(jobId)
+        ? prev.filter((id) => id !== jobId)
+        : [...prev, jobId]
+    );
+  };
+  
+  const handleSelectAllJobs = (checked: boolean) => {
+    setSelectedJobIds(checked ? filteredJobs.map(j => j.id) : []);
   }
   
   const handleCopyOutput = () => {
@@ -82,23 +92,27 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
   };
 
   const handleRunCompliance = () => {
-    const job = jobs.find(j => j.id === selectedJobId);
-    if (!job) {
-      setOutput("Error: Selected job not found.");
+    const selectedJobs = jobs.filter(j => selectedJobIds.includes(j.id));
+    if (selectedJobs.length === 0) {
+      setOutput("Error: No jobs selected.");
       return;
     }
 
-    let mockOutput = `Running job "${job.name}" on ${selectedDevices.length} device(s)...\n\n`;
+    let mockOutput = `Running ${selectedJobs.length} job(s) on ${selectedDevices.length} device(s)...\n\n`;
     
     selectedDevices.forEach(deviceId => {
       const device = devices.find(d => d.id === deviceId);
-      if (device) {
-        const isSuccess = Math.random() > 0.3; // Simulate success/failure
-        if (isSuccess) {
-          mockOutput += `[${device.name}] - SUCCESS: Compliance check passed.\n`;
-        } else {
-          mockOutput += `[${device.name}] - FAILED: Device did not meet compliance standard 'XYZ-1.2'.\n`;
-        }
+      if(device) {
+        mockOutput += `--- Device: ${device.name} ---\n`;
+        selectedJobs.forEach(job => {
+            const isSuccess = Math.random() > 0.3; // Simulate success/failure
+            if (isSuccess) {
+              mockOutput += `  [Job: ${job.name}] - SUCCESS: Compliance check passed.\n`;
+            } else {
+              mockOutput += `  [Job: ${job.name}] - FAILED: Device did not meet compliance standard 'XYZ-1.2'.\n`;
+            }
+        });
+        mockOutput += `\n`;
       }
     });
 
@@ -108,26 +122,26 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
   const handleOpenChangeAndReset = (isOpen: boolean) => {
     if (!isOpen) {
       setSelectedDevices([]);
-      setSelectedJobId(undefined);
-      setSearchTerm("");
+      setSelectedJobIds([]);
+      setDeviceSearchTerm("");
+      setJobSearchTerm("");
       setOutput("");
+      setViewedJob(null);
     }
     onOpenChange(isOpen);
   };
-  
-  const selectedJob = jobs.find(j => j.id === selectedJobId);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChangeAndReset}>
-      <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0">
+      <DialogContent className="max-w-screen-xl w-[95vw] h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-4 border-b">
           <DialogTitle className="text-xl">Run Compliance Check</DialogTitle>
           <DialogDescription>
-            Select devices and a job to run a compliance check.
+            Select devices and jobs to run a compliance check.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-0 overflow-hidden">
+        <div className={cn("flex-1 grid grid-cols-1 gap-0 overflow-hidden", viewedJob ? 'md:grid-cols-[1fr,1fr,1fr,1.5fr]' : 'md:grid-cols-3')}>
           {/* Column 1: Devices */}
           <div className="flex flex-col border-r">
             <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
@@ -136,97 +150,107 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
                     id="select-all-devices"
                     onCheckedChange={(checked) => handleSelectAllDevices(!!checked)}
                     checked={
-                      selectedDevices.length === devices.length && devices.length > 0
+                      selectedDevices.length === filteredDevices.length && filteredDevices.length > 0
                         ? true
                         : selectedDevices.length > 0
                         ? 'indeterminate'
                         : false
                     }
                  />
-                 <label
-                    htmlFor="select-all-devices"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer whitespace-nowrap"
-                 >
-                    Devices ({selectedDevices.length}/{devices.length})
+                 <label htmlFor="select-all-devices" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer whitespace-nowrap">
+                    Devices ({selectedDevices.length})
                  </label>
               </div>
               <div className="relative w-full max-w-sm">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search devices..."
-                  className="pl-9 h-9"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+                <Input placeholder="Search devices..." className="pl-9 h-9" value={deviceSearchTerm} onChange={(e) => setDeviceSearchTerm(e.target.value)} />
               </div>
             </div>
             <ScrollArea className="flex-1">
               <div className="space-y-1 p-2">
                 {filteredDevices.map((device) => (
                   <div key={device.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
-                    <Checkbox
-                      id={`comp-device-${device.id}`}
-                      checked={selectedDevices.includes(device.id)}
-                      onCheckedChange={() => handleDeviceSelection(device.id)}
-                    />
-                    <label
-                      htmlFor={`comp-device-${device.id}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
-                    >
+                    <Checkbox id={`comp-device-${device.id}`} checked={selectedDevices.includes(device.id)} onCheckedChange={() => handleDeviceSelection(device.id)} />
+                    <label htmlFor={`comp-device-${device.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">
                       {device.name}
                     </label>
                   </div>
                 ))}
-                {devices.length === 0 && (
-                  <div className="text-center text-sm text-muted-foreground p-4">No devices available.</div>
-                )}
+                {devices.length === 0 && ( <div className="text-center text-sm text-muted-foreground p-4">No devices available.</div> )}
               </div>
             </ScrollArea>
           </div>
 
           {/* Column 2: Jobs */}
           <div className="flex flex-col border-r">
-            <div className="p-4 border-b flex items-center justify-between h-[73px]">
-              <h3 className="font-semibold text-base">Select Job</h3>
-              <Button size="sm" onClick={handleRunCompliance} disabled={!selectedJobId || selectedDevices.length === 0}>
-                <Play className="mr-2 h-4 w-4" />
-                Run
-              </Button>
+             <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
+              <div className="flex items-center space-x-3">
+                 <Checkbox
+                    id="select-all-jobs"
+                    onCheckedChange={(checked) => handleSelectAllJobs(!!checked)}
+                    checked={
+                      selectedJobIds.length === filteredJobs.length && filteredJobs.length > 0
+                        ? true
+                        : selectedJobIds.length > 0
+                        ? 'indeterminate'
+                        : false
+                    }
+                 />
+                 <label htmlFor="select-all-jobs" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer whitespace-nowrap">
+                    Jobs ({selectedJobIds.length})
+                 </label>
+              </div>
+              <div className="relative w-full max-w-sm">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search jobs..." className="pl-9 h-9" value={jobSearchTerm} onChange={(e) => setJobSearchTerm(e.target.value)} />
+              </div>
             </div>
-            <div className="flex-1 p-4 space-y-4 overflow-y-auto">
-              {jobs.length > 0 ? (
-                <>
-                  <Select onValueChange={setSelectedJobId} value={selectedJobId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a job" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {jobs.map((job) => (
-                        <SelectItem key={job.id} value={job.id}>
-                          {job.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedJob && (
-                    <div className="p-4 border rounded-lg bg-muted/50 space-y-2">
-                        <h4 className="font-semibold">Job Details</h4>
-                        <p className="text-sm break-words"><strong className="text-muted-foreground">Command:</strong> <code>{selectedJob.command || 'N/A'}</code></p>
-                        <p className="text-sm break-words"><strong className="text-muted-foreground">Template:</strong> <code>{selectedJob.template || 'N/A'}</code></p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                 <div className="text-center text-sm text-muted-foreground pt-10">No jobs available.</div>
-              )}
-            </div>
+            <ScrollArea className="flex-1">
+              <div className="space-y-1 p-2">
+                {filteredJobs.map((job) => (
+                  <div key={job.id} className="group flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
+                    <Checkbox id={`comp-job-${job.id}`} checked={selectedJobIds.includes(job.id)} onCheckedChange={() => handleJobSelection(job.id)} />
+                    <label htmlFor={`comp-job-${job.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">
+                      {job.name}
+                    </label>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => setViewedJob(job)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                {jobs.length === 0 && ( <div className="text-center text-sm text-muted-foreground p-4">No jobs available.</div> )}
+              </div>
+            </ScrollArea>
           </div>
 
-          {/* Column 3: Output */}
+          {/* Column 3: Job Details (Conditional) */}
+          {viewedJob && (
+            <div className="flex flex-col border-r bg-muted/30">
+              <div className="p-4 border-b flex items-center justify-between h-[73px]">
+                <h3 className="font-semibold text-base truncate">Details: {viewedJob.name}</h3>
+                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewedJob(null)}>
+                    <X className="h-4 w-4" />
+                 </Button>
+              </div>
+              <ScrollArea className="flex-1 p-4">
+                 <div className="p-4 border rounded-lg bg-background/50 space-y-2 text-sm">
+                    <h4 className="font-semibold">Job Details</h4>
+                    <p className="break-words"><strong className="text-muted-foreground">Command:</strong> <code>{viewedJob.command || 'N/A'}</code></p>
+                    <p className="break-words"><strong className="text-muted-foreground">Template:</strong> <code>{viewedJob.template || 'N/A'}</code></p>
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+          
+          {/* Last Column: Output */}
           <div className="flex flex-col">
             <div className="p-4 border-b flex items-center justify-between h-[73px]">
               <h3 className="font-semibold text-base">Output</h3>
-              <div className="flex items-center gap-2">
+               <div className="flex items-center gap-2">
+                 <Button size="sm" onClick={handleRunCompliance} disabled={selectedJobIds.length === 0 || selectedDevices.length === 0}>
+                    <Play className="mr-2 h-4 w-4" />
+                    Run
+                  </Button>
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopyOutput} disabled={!output}>
                   <Copy className="h-4 w-4" />
                   <span className="sr-only">Copy Output</span>

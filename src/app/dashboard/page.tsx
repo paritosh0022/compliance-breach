@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import AddDeviceDrawer from '@/components/add-device-drawer';
 import DeviceTable from '@/components/device-table';
 import JobTable from '@/components/job-table';
-import AddJobModal from '@/components/add-compliance-modal';
+import AddJobModal from '@/components/add-job-modal';
 import RunComplianceModal from '@/components/run-compliance-modal';
 import type { Device, Job } from '@/lib/types';
 
@@ -126,6 +126,16 @@ export default function DashboardPage() {
           <DeviceTable devices={devices} onDelete={handleDeleteDevice} />
         </TabsContent>
         <TabsContent value="manage-jobs" className="mt-6">
+           <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search jobs..."
+                className="pl-9"
+              />
+            </div>
+            <Button variant="outline">Export</Button>
+          </div>
            <JobTable jobs={jobs} onDelete={handleDeleteJob} />
         </TabsContent>
         <TabsContent value="manage-compliance" className="mt-6">
