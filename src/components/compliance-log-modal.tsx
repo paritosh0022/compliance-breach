@@ -95,7 +95,7 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
         ip_address: result.deviceIpAddress,
         status: result.status,
         message: result.message,
-        ran_at: format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")
+        last_ran_at: format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")
       }))
     );
 
@@ -148,7 +148,7 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
                     <TableHead>Job Name</TableHead>
                     <TableHead>Device</TableHead>
                     <TableHead>IP Address</TableHead>
-                    <TableHead>Ran At</TableHead>
+                    <TableHead>Last ran at</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
