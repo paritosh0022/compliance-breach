@@ -26,16 +26,14 @@ import { useToast } from "@/hooks/use-toast";
 interface AddJobModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onAddJob: (job: Omit<Job, "id">) => void;
+  onAddJob: (jobData: Pick<Job, 'command' | 'template'>) => void;
+  jobDetails?: Omit<Job, 'id' | 'command' | 'template'>;
 }
 
-export default function AddJobModal({ isOpen, onOpenChange, onAddJob }: AddJobModalProps) {
+export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails }: AddJobModalProps) {
   const [step, setStep] = useState(1);
   const { toast } = useToast();
   
-  // Job-wide state
-  const [jobName, setJobName] = useState("");
-
   // Step 1 State
   const [command, setCommand] = useState("");
   const [output, setOutput] = useState("");
@@ -84,22 +82,12 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob }: AddJobMo
       setTemplate("");
       setTemplateOutput("");
       setIsTemplateRun(false);
-      setJobName("");
     }
     onOpenChange(isOpen);
   };
   
   const handleCreateJob = () => {
-    if (!jobName) {
-      toast({
-        variant: "destructive",
-        title: "Job Name Required",
-        description: "Please enter a name for the job.",
-      });
-      return;
-    }
     onAddJob({
-      name: jobName,
       command: command,
       template: template,
     });
@@ -110,17 +98,17 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob }: AddJobMo
     <Dialog open={isOpen} onOpenChange={handleOpenChangeAndReset}>
       <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-4 border-b">
-           <div className="flex items-center gap-4">
-            <DialogTitle className="text-xl whitespace-nowrap">Create Job (Step {step} of 2)</DialogTitle>
-             <Input 
-                id="job-name" 
-                placeholder="Job Name (e.g., CIS Benchmark Check)" 
-                value={jobName}
-                onChange={(e) => setJobName(e.target.value)}
-                className="h-9"
-             />
-           </div>
+           <DialogTitle className="text-xl">Create Job (Step {step} of 2)</DialogTitle>
         </DialogHeader>
+
+        {jobDetails && (
+          <div className="p-4 border-b bg-muted/50">
+            <p className="text-sm">
+              <span className="font-semibold text-foreground">{jobDetails.name}:</span>
+              <span className="text-muted-foreground ml-2">{jobDetails.description}</span>
+            </p>
+          </div>
+        )}
 
         {step === 1 && (
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-0 overflow-hidden">

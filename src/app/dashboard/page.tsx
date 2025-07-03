@@ -15,6 +15,7 @@ import AddDeviceDrawer from '@/components/add-device-drawer';
 import DeviceTable from '@/components/device-table';
 import JobTable from '@/components/job-table';
 import AddJobModal from '@/components/add-job-modal';
+import AddJobDetailsModal from '@/components/add-job-details-modal';
 import RunComplianceModal from '@/components/run-compliance-modal';
 import AddComplianceModal from '@/components/add-compliance-modal';
 import ComplianceLogModal from '@/components/compliance-log-modal';
@@ -25,6 +26,7 @@ import useLocalStorageState from '@/hooks/use-local-storage-state';
 export default function DashboardPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
+  const [isJobDetailsModalOpen, setIsJobDetailsModalOpen] = useState(false);
   const [isComplianceModalOpen, setIsComplianceModalOpen] = useState(false);
   const [isAddComplianceModalOpen, setIsAddComplianceModalOpen] = useState(false);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
@@ -37,6 +39,7 @@ export default function DashboardPage() {
   const [complianceLog, setComplianceLog] = useLocalStorageState<ComplianceLog[]>('complianceLog', []);
 
   const [currentComplianceRun, setCurrentComplianceRun] = useState<Omit<ComplianceRun, 'id'>>();
+  const [currentJobDetails, setCurrentJobDetails] = useState<Omit<Job, 'id' | 'command' | 'template'>>();
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
   
   const { toast } = useToast();
@@ -56,10 +59,22 @@ export default function DashboardPage() {
     setSelectedDeviceIds([]);
   }
   
-  const handleAddJob = (job: Omit<Job, 'id'>) => {
-    const newJob = { ...job, id: crypto.randomUUID() };
+  const handleJobDetailsContinue = (data: Omit<Job, 'id' | 'command' | 'template'>) => {
+    setCurrentJobDetails(data);
+    setIsJobDetailsModalOpen(false);
+    setIsJobModalOpen(true);
+  };
+  
+  const handleAddJob = (jobData: Pick<Job, 'command' | 'template'>) => {
+    if (!currentJobDetails) return;
+    const newJob: Job = { 
+        ...currentJobDetails,
+        ...jobData,
+        id: crypto.randomUUID() 
+    };
     setJobs((prev) => [...prev, newJob]);
     setIsJobModalOpen(false);
+    setCurrentJobDetails(undefined);
   };
 
   const handleDeleteJob = (id: string) => {
@@ -96,7 +111,7 @@ export default function DashboardPage() {
     switch (activeTab) {
       case 'manage-jobs':
         return (
-          <Button onClick={() => setIsJobModalOpen(true)}>
+          <Button onClick={() => setIsJobDetailsModalOpen(true)}>
             <PlusCircle className="mr-2" />
             Add Job
           </Button>
@@ -226,10 +241,17 @@ export default function DashboardPage() {
         onAddDevice={handleAddDevice}
       />
       
+      <AddJobDetailsModal
+        isOpen={isJobDetailsModalOpen}
+        onOpenChange={setIsJobDetailsModalOpen}
+        onContinue={handleJobDetailsContinue}
+      />
+      
       <AddJobModal
         isOpen={isJobModalOpen} 
         onOpenChange={setIsJobModalOpen}
         onAddJob={handleAddJob}
+        jobDetails={currentJobDetails}
       />
 
       <AddComplianceModal 

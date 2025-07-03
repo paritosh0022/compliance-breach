@@ -10,6 +10,7 @@ export type Device = {
 export type Job = {
   id: string;
   name: string;
+  description?: string;
   command?: string;
   template?: string;
 };
