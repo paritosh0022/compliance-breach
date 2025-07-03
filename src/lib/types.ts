@@ -13,3 +13,9 @@ export type Job = {
   command?: string;
   template?: string;
 };
+
+export type ComplianceRun = {
+  id: string;
+  name: string;
+  description: string;
+};

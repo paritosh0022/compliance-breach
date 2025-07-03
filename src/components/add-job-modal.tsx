@@ -150,11 +150,11 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob }: AddJobMo
                 <h3 className="font-semibold text-base">Output</h3>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopyOutput} disabled={!output}>
-                    <Copy className="h-4 w-4" />
+                    <Copy className="mr-2 h-4 w-4" />
                     <span className="sr-only">Copy Output</span>
                   </Button>
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleDownloadCsv} disabled={!output}>
-                    <Download className="h-4 w-4" />
+                    <Download className="mr-2 h-4 w-4" />
                     <span className="sr-only">Download CSV</span>
                   </Button>
                 </div>
@@ -213,11 +213,11 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob }: AddJobMo
                 <h3 className="font-semibold text-base">Rule Engine</h3>
               </div>
               <fieldset disabled={!isTemplateRun} className="flex-1 p-4 space-y-4 overflow-y-auto">
-                <div className="text-xs text-muted-foreground text-center p-4 border border-dashed rounded-lg">
-                  {isTemplateRun 
-                    ? "Build your rules below."
-                    : "Run a template to enable the rule engine."}
-                </div>
+                {!isTemplateRun && (
+                    <div className="text-xs text-muted-foreground text-center p-4 border border-dashed rounded-lg">
+                        Run a template to enable the rule engine.
+                    </div>
+                )}
                 
                 {/* Mock Rule UI */}
                 <div className="space-y-2">

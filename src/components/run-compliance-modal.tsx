@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Play, Copy, Download, Eye, X } from "lucide-react";
-import type { Device, Job } from "@/lib/types";
+import type { Device, Job, ComplianceRun } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "./ui/textarea";
 import { cn } from "@/lib/utils";
@@ -24,9 +24,10 @@ interface RunComplianceModalProps {
   onOpenChange: (isOpen: boolean) => void;
   devices: Device[];
   jobs: Job[];
+  complianceRun?: Omit<ComplianceRun, 'id'>;
 }
 
-export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs }: RunComplianceModalProps) {
+export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs, complianceRun }: RunComplianceModalProps) {
   const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
   const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
   const [deviceSearchTerm, setDeviceSearchTerm] = useState("");
@@ -140,6 +141,15 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
             Select devices and jobs to run a compliance check.
           </DialogDescription>
         </DialogHeader>
+
+        {complianceRun && (
+          <div className="p-4 border-b bg-muted/50">
+            <p className="text-sm">
+              <span className="font-semibold text-foreground">{complianceRun.name}:</span>
+              <span className="text-muted-foreground ml-2">{complianceRun.description}</span>
+            </p>
+          </div>
+        )}
 
         <div className={cn("flex-1 grid grid-cols-1 gap-0 overflow-hidden", viewedJob ? 'md:grid-cols-[1fr,1fr,1fr,1.5fr]' : 'md:grid-cols-3')}>
           {/* Column 1: Devices */}
