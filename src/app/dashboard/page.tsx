@@ -15,6 +15,7 @@ import AddDeviceDrawer from '@/components/add-device-drawer';
 import DeviceTable from '@/components/device-table';
 import JobTable from '@/components/job-table';
 import AddJobModal from '@/components/add-compliance-modal';
+import RunComplianceModal from '@/components/run-compliance-modal';
 import type { Device, Job } from '@/lib/types';
 
 const getActiveButton = (
@@ -67,7 +68,7 @@ const getActiveButton = (
 export default function DashboardPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
-  const [isComplianceModalOpen, setIsComplianceModalOpen] = useState(false); // Placeholder for future modal
+  const [isComplianceModalOpen, setIsComplianceModalOpen] = useState(false);
   
   const [activeTab, setActiveTab] = useState('device-list');
   const [devices, setDevices] = useState<Device[]>([]);
@@ -101,7 +102,7 @@ export default function DashboardPage() {
           activeTab,
           () => setIsDrawerOpen(true),
           () => setIsJobModalOpen(true),
-          () => setIsComplianceModalOpen(true) // Placeholder for now
+          () => setIsComplianceModalOpen(true)
         )}
       </div>
 
@@ -128,10 +129,20 @@ export default function DashboardPage() {
            <JobTable jobs={jobs} onDelete={handleDeleteJob} />
         </TabsContent>
         <TabsContent value="manage-compliance" className="mt-6">
-           <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/20 py-20 text-center">
-            <h3 className="text-lg font-semibold text-muted-foreground">Compliance Management</h3>
-            <p className="text-sm text-muted-foreground">Select devices and a job to run compliance checks.</p>
-          </div>
+           {jobs.length > 0 && devices.length > 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/20 py-20 text-center">
+              <h3 className="text-lg font-semibold text-muted-foreground">Ready to Run Compliance</h3>
+              <p className="text-sm text-muted-foreground">Click the "Run Compliance" button in the header to begin.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/20 py-20 text-center">
+              <h3 className="text-lg font-semibold text-muted-foreground">Prerequisites Missing</h3>
+              <p className="text-sm text-muted-foreground">
+                {devices.length === 0 && "Please add at least one device first."}
+                {devices.length > 0 && jobs.length === 0 && "Please create at least one job first."}
+              </p>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
       
@@ -146,6 +157,13 @@ export default function DashboardPage() {
         onOpenChange={setIsJobModalOpen}
         devices={devices}
         onAddJob={handleAddJob}
+      />
+
+      <RunComplianceModal
+        isOpen={isComplianceModalOpen}
+        onOpenChange={setIsComplianceModalOpen}
+        devices={devices}
+        jobs={jobs}
       />
     </>
   );
