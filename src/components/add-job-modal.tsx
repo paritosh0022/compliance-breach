@@ -24,7 +24,7 @@ import { Plus, Trash2 } from "lucide-react";
 import type { Job } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "./ui/badge";
-import { ScrollArea } from "./ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AddJobModalProps {
   isOpen: boolean;
@@ -204,78 +204,80 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
               <div className="p-4 border-b flex items-center justify-between h-[60px]">
                 <h3 className="font-semibold text-base">Rule Engine</h3>
               </div>
-              <fieldset disabled={!isTemplateRun} className="flex-1 p-4 space-y-4 overflow-y-auto">
-                {!isTemplateRun && (
-                    <div className="text-center text-sm text-muted-foreground p-4 border border-dashed rounded-lg h-full flex items-center justify-center">
-                        <p>Paste a template to enable the rule engine.</p>
-                    </div>
-                )}
-                
-                {isTemplateRun && (
-                  <>
-                    <div className="space-y-2">
-                      <Label>Condition</Label>
-                      <div className="flex items-center gap-2">
-                        <Select value={condition} onValueChange={(v: 'and' | 'or') => setCondition(v)}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="and">AND</SelectItem>
-                            <SelectItem value="or">OR</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button variant="outline" size="sm" onClick={handleAddGroup}><Plus className="mr-2 h-4 w-4" /> Add Group</Button>
+              <ScrollArea className="flex-1">
+                <fieldset disabled={!isTemplateRun} className="p-4 space-y-4">
+                  {!isTemplateRun && (
+                      <div className="text-center text-sm text-muted-foreground p-4 border border-dashed rounded-lg h-full flex items-center justify-center">
+                          <p>Paste a template to enable the rule engine.</p>
                       </div>
-                    </div>
-                    {groups.map((group, groupIndex) => (
-                      <div key={group.id}>
-                        <div className="p-4 border rounded-lg space-y-4 bg-muted/20 relative">
-                           {groups.length > 1 && (
-                              <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => handleDeleteGroup(group.id)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                                <span className="sr-only">Delete Group</span>
-                              </Button>
-                            )}
-                          {group.rules.map((rule) => (
-                             <div key={rule.id} className="flex items-center gap-2">
-                                <Input 
-                                  placeholder="Variable (e.g., 'version')" 
-                                  value={rule.variable}
-                                  onChange={(e) => handleRuleChange(group.id, rule.id, 'variable', e.target.value)}
-                                />
-                                <Select 
-                                  value={rule.operator}
-                                  onValueChange={(v) => handleRuleChange(group.id, rule.id, 'operator', v)}
-                                >
-                                  <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="contains">Contains</SelectItem>
-                                    <SelectItem value="not-contains">Does not contain</SelectItem>
-                                    <SelectItem value="equals">Equals</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <Input 
-                                  placeholder="Value (e.g., '12.4')" 
-                                  value={rule.value}
-                                  onChange={(e) => handleRuleChange(group.id, rule.id, 'value', e.target.value)}
-                                />
-                                <Button variant="ghost" size="icon" onClick={() => handleDeleteRule(group.id, rule.id)}>
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                   <span className="sr-only">Delete Rule</span>
-                                </Button>
-                              </div>
-                          ))}
-                          <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => handleAddRule(group.id)}><Plus className="mr-2 h-4 w-4" /> Add Rule</Button>
+                  )}
+                  
+                  {isTemplateRun && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Condition</Label>
+                        <div className="flex items-center gap-2">
+                          <Select value={condition} onValueChange={(v: 'and' | 'or') => setCondition(v)}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="and">AND</SelectItem>
+                              <SelectItem value="or">OR</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button variant="outline" size="sm" onClick={handleAddGroup}><Plus className="mr-2 h-4 w-4" /> Add Group</Button>
                         </div>
-                        {groupIndex < groups.length - 1 && (
-                          <div className="flex justify-center my-2">
-                            <Badge variant="secondary" className="uppercase">{condition}</Badge>
-                          </div>
-                        )}
                       </div>
-                    ))}
-                  </>
-                )}
-              </fieldset>
+                      {groups.map((group, groupIndex) => (
+                        <div key={group.id}>
+                          <div className="p-4 border rounded-lg space-y-4 bg-muted/20 relative">
+                            {groups.length > 1 && (
+                                <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => handleDeleteGroup(group.id)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                  <span className="sr-only">Delete Group</span>
+                                </Button>
+                              )}
+                            {group.rules.map((rule) => (
+                              <div key={rule.id} className="flex items-center gap-2">
+                                  <Input 
+                                    placeholder="Variable (e.g., 'version')" 
+                                    value={rule.variable}
+                                    onChange={(e) => handleRuleChange(group.id, rule.id, 'variable', e.target.value)}
+                                  />
+                                  <Select 
+                                    value={rule.operator}
+                                    onValueChange={(v) => handleRuleChange(group.id, rule.id, 'operator', v)}
+                                  >
+                                    <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="contains">Contains</SelectItem>
+                                      <SelectItem value="not-contains">Does not contain</SelectItem>
+                                      <SelectItem value="equals">Equals</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Input 
+                                    placeholder="Value (e.g., '12.4')" 
+                                    value={rule.value}
+                                    onChange={(e) => handleRuleChange(group.id, rule.id, 'value', e.target.value)}
+                                  />
+                                  <Button variant="ghost" size="icon" onClick={() => handleDeleteRule(group.id, rule.id)}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                    <span className="sr-only">Delete Rule</span>
+                                  </Button>
+                                </div>
+                            ))}
+                            <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => handleAddRule(group.id)}><Plus className="mr-2 h-4 w-4" /> Add Rule</Button>
+                          </div>
+                          {groupIndex < groups.length - 1 && (
+                            <div className="flex justify-center my-2">
+                              <Badge variant="secondary" className="uppercase">{condition}</Badge>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </fieldset>
+              </ScrollArea>
             </div>
         </div>
 
