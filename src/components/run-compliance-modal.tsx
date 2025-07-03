@@ -165,13 +165,23 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
     onOpenChange(isOpen);
   };
   
-  const gridColsClass = viewedDevice
-    ? 'md:grid-cols-[1fr_1.5fr_1fr]'
-    : viewedJob
-    ? 'md:grid-cols-[1fr_1fr_1.5fr_1fr]'
-    : 'md:grid-cols-[1fr_1fr_1fr]';
-  
-  const finalGridClass = (viewedJob && viewedDevice) ? 'md:grid-cols-[1fr_1.5fr_1fr_1.5fr_1fr]' : gridColsClass;
+  const getGridClass = () => {
+    if (viewedDevice && viewedJob) {
+      // Devices | Device Details | Jobs | Job Details | Output
+      return 'md:grid-cols-[1fr_1.5fr_1fr_1.5fr_1fr]';
+    }
+    if (viewedDevice) {
+      // Devices | Device Details | Jobs | Output
+      return 'md:grid-cols-[1fr_1.5fr_1fr_1fr]';
+    }
+    if (viewedJob) {
+      // Devices | Jobs | Job Details | Output
+      return 'md:grid-cols-[1fr_1fr_1.5fr_1fr]';
+    }
+    // Devices | Jobs | Output
+    return 'md:grid-cols-[1fr_1fr_1fr]';
+  };
+  const finalGridClass = getGridClass();
 
 
   return (
@@ -345,5 +355,3 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
     </Dialog>
   );
 }
-
-    
