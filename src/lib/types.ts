@@ -19,3 +19,13 @@ export type ComplianceRun = {
   name: string;
   description: string;
 };
+
+export type ComplianceLog = {
+  id: string;
+  complianceName: string;
+  timestamp: string;
+  status: 'Success' | 'Failed' | 'Partial Success';
+  details: string;
+  devicesCount: number;
+  jobsCount: number;
+};

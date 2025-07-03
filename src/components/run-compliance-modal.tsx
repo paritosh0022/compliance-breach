@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Play, Copy, Download, Eye, X } from "lucide-react";
-import type { Device, Job, ComplianceRun } from "@/lib/types";
+import type { Device, Job, ComplianceRun, ComplianceLog } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "./ui/textarea";
 import { cn } from "@/lib/utils";
@@ -25,9 +25,10 @@ interface RunComplianceModalProps {
   devices: Device[];
   jobs: Job[];
   complianceRun?: Omit<ComplianceRun, 'id'>;
+  onRunComplete: (logEntry: Omit<ComplianceLog, 'id'>) => void;
 }
 
-export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs, complianceRun }: RunComplianceModalProps) {
+export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs, complianceRun, onRunComplete }: RunComplianceModalProps) {
   const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
   const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
   const [deviceSearchTerm, setDeviceSearchTerm] = useState("");
@@ -94,12 +95,17 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
 
   const handleRunCompliance = () => {
     const selectedJobs = jobs.filter(j => selectedJobIds.includes(j.id));
-    if (selectedJobs.length === 0) {
-      setOutput("Error: No jobs selected.");
+    if (selectedJobs.length === 0 || selectedDevices.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Selection Required",
+        description: "Please select at least one device and one job.",
+      });
       return;
     }
 
     let mockOutput = `Running ${selectedJobs.length} job(s) on ${selectedDevices.length} device(s)...\n\n`;
+    let failureCount = 0;
     
     selectedDevices.forEach(deviceId => {
       const device = devices.find(d => d.id === deviceId);
@@ -110,6 +116,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
             if (isSuccess) {
               mockOutput += `  [Job: ${job.name}] - SUCCESS: Compliance check passed.\n`;
             } else {
+              failureCount++;
               mockOutput += `  [Job: ${job.name}] - FAILED: Device did not meet compliance standard 'XYZ-1.2'.\n`;
             }
         });
@@ -118,6 +125,20 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
     });
 
     setOutput(mockOutput);
+    
+    let status: ComplianceLog['status'] = 'Success';
+    if (failureCount > 0) {
+      status = failureCount === (selectedDevices.length * selectedJobs.length) ? 'Failed' : 'Partial Success';
+    }
+
+    onRunComplete({
+      complianceName: complianceRun?.name || 'Ad-hoc Run',
+      timestamp: new Date().toISOString(),
+      status,
+      details: mockOutput,
+      devicesCount: selectedDevices.length,
+      jobsCount: selectedJobs.length,
+    });
   };
   
   const handleOpenChangeAndReset = (isOpen: boolean) => {
@@ -162,7 +183,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
                     checked={
                       selectedDevices.length === filteredDevices.length && filteredDevices.length > 0
                         ? true
-                        : selectedDevices.length > 0
+                        : selectedDevices.length > 0 && selectedDevices.length < filteredDevices.length
                         ? 'indeterminate'
                         : false
                     }
@@ -201,7 +222,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
                     checked={
                       selectedJobIds.length === filteredJobs.length && filteredJobs.length > 0
                         ? true
-                        : selectedJobIds.length > 0
+                        : selectedJobIds.length > 0  && selectedJobIds.length < filteredJobs.length
                         ? 'indeterminate'
                         : false
                     }

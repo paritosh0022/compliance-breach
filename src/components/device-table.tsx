@@ -16,16 +16,31 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Trash2, Edit, Eye } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, Bot } from "lucide-react";
 import type { Device } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 
 interface DeviceTableProps {
   devices: Device[];
   onDelete: (id: string) => void;
+  selectedDeviceIds: string[];
+  onSelectedDeviceIdsChange: (ids: string[]) => void;
 }
 
-export default function DeviceTable({ devices, onDelete }: DeviceTableProps) {
+export default function DeviceTable({ devices, onDelete, selectedDeviceIds, onSelectedDeviceIdsChange }: DeviceTableProps) {
+
+  const handleSelectAll = (checked: boolean) => {
+    onSelectedDeviceIdsChange(checked ? devices.map(d => d.id) : []);
+  };
+  
+  const handleSelectRow = (id: string, checked: boolean) => {
+    if (checked) {
+      onSelectedDeviceIdsChange([...selectedDeviceIds, id]);
+    } else {
+      onSelectedDeviceIdsChange(selectedDeviceIds.filter(rowId => rowId !== id));
+    }
+  };
+
   if (devices.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/20 py-20 text-center">
@@ -41,7 +56,10 @@ export default function DeviceTable({ devices, onDelete }: DeviceTableProps) {
         <TableHeader>
           <TableRow>
             <TableHead className="w-[40px]">
-              <Checkbox />
+              <Checkbox
+                checked={selectedDeviceIds.length === devices.length && devices.length > 0}
+                onCheckedChange={handleSelectAll}
+              />
             </TableHead>
             <TableHead>Name</TableHead>
             <TableHead>IP Address</TableHead>
@@ -53,9 +71,12 @@ export default function DeviceTable({ devices, onDelete }: DeviceTableProps) {
         </TableHeader>
         <TableBody>
           {devices.map((device) => (
-            <TableRow key={device.id}>
+            <TableRow key={device.id} data-state={selectedDeviceIds.includes(device.id) ? "selected" : ""}>
               <TableCell>
-                <Checkbox />
+                <Checkbox
+                  checked={selectedDeviceIds.includes(device.id)}
+                  onCheckedChange={(checked) => handleSelectRow(device.id, !!checked)}
+                />
               </TableCell>
               <TableCell className="font-medium">{device.name}</TableCell>
               <TableCell>{device.ipAddress}</TableCell>
@@ -74,8 +95,8 @@ export default function DeviceTable({ devices, onDelete }: DeviceTableProps) {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem>
-                      <Eye className="mr-2 h-4 w-4" />
-                      View
+                      <Bot className="mr-2 h-4 w-4" />
+                      Run Compliance
                     </DropdownMenuItem>
                     <DropdownMenuItem>
                       <Edit className="mr-2 h-4 w-4" />
