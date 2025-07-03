@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChevronDown, PlusCircle, Upload, Search, Trash2, Bot, FileText, Download } from 'lucide-react';
+import { ChevronDown, PlusCircle, Upload, Search, Trash2, Bot, FileText, Download, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import AddDeviceDrawer from '@/components/add-device-drawer';
 import DeviceTable from '@/components/device-table';
@@ -27,6 +27,7 @@ import ImportDevicesModal from '@/components/import-devices-modal';
 import ConfirmDeleteDialog from '@/components/confirm-delete-dialog';
 
 export default function DashboardPage() {
+  const [isClient, setIsClient] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
@@ -50,8 +51,11 @@ export default function DashboardPage() {
   }>({});
   const [itemToDelete, setItemToDelete] = useState<{ ids: string[]; type: 'device' | 'job' } | null>(null);
 
-
   const { toast } = useToast();
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
   
   const handleRunCompliance = (selections: { devices?: string[]; jobs?: string[] }) => {
     setInitialModalSelections(selections);
@@ -211,6 +215,14 @@ export default function DashboardPage() {
         );
     }
   };
+
+  if (!isClient) {
+    return (
+      <div className="flex h-full w-full items-center justify-center p-16">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <>
