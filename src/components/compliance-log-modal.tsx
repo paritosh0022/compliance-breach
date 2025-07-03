@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Papa from 'papaparse';
 import {
   Dialog,
@@ -12,13 +12,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from "@/components/ui/badge";
 import type { ComplianceLog, ComplianceRunResult } from "@/lib/types";
 import { format } from 'date-fns';
-import { Download } from 'lucide-react';
+import { Download, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ReportModalProps {
@@ -27,50 +27,46 @@ interface ReportModalProps {
   logs: ComplianceLog[];
 }
 
-type GroupedReport = {
-    [jobName: string]: (ComplianceRunResult & { timestamp: string })[];
-}
-
 export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalProps) {
   const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
   
-  const reportsByJob = useMemo(() => {
-    const allResultsWithTimestamp = logs.flatMap(log => 
+  const flattenedLogs = useMemo(() => {
+    return logs.flatMap(log => 
       log.results.map(result => ({ ...result, timestamp: log.timestamp }))
-    );
-
-    return allResultsWithTimestamp.reduce<GroupedReport>((acc, result) => {
-        const { jobName } = result;
-        if (!acc[jobName]) {
-            acc[jobName] = [];
-        }
-        acc[jobName].push(result);
-        return acc;
-    }, {});
+    ).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [logs]);
+
+  const filteredLogs = useMemo(() => {
+    if (!searchTerm) return flattenedLogs;
+    const lowercasedFilter = searchTerm.toLowerCase();
+    return flattenedLogs.filter(log =>
+      log.jobName.toLowerCase().includes(lowercasedFilter) ||
+      log.deviceName.toLowerCase().includes(lowercasedFilter) ||
+      log.deviceIpAddress.toLowerCase().includes(lowercasedFilter)
+    );
+  }, [flattenedLogs, searchTerm]);
 
   const getStatusVariant = (status: ComplianceRunResult['status']): 'default' | 'destructive' => {
     return status === 'Success' ? 'default' : 'destructive';
   };
   
   const handleDownload = () => {
-    const allResultsForCsv = logs.flatMap(log => 
-        log.results.map(result => ({ 
-            job_name: result.jobName,
-            device_name: result.deviceName,
-            ip_address: result.deviceIpAddress,
-            status: result.status,
-            message: result.message,
-            timestamp: format(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss")
-        }))
-    );
+    const csvData = filteredLogs.map(result => ({
+      job_name: result.jobName,
+      device_name: result.deviceName,
+      ip_address: result.deviceIpAddress,
+      status: result.status,
+      message: result.message,
+      timestamp: format(new Date(result.timestamp), "yyyy-MM-dd HH:mm:ss")
+    }));
 
-    if (allResultsForCsv.length === 0) {
+    if (csvData.length === 0) {
         toast({ variant: 'destructive', title: 'No data to download.' });
         return;
     }
 
-    const csv = Papa.unparse(allResultsForCsv);
+    const csv = Papa.unparse(csvData);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -88,58 +84,61 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
         <DialogHeader>
           <DialogTitle>Compliance Reports</DialogTitle>
           <DialogDescription>
-            History of all compliance checks, grouped by job.
+            History of all compliance checks.
           </DialogDescription>
         </DialogHeader>
+         <div className="flex items-center justify-between gap-4">
+            <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder="Search by job, device, or IP..."
+                    className="pl-9"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            <Button variant="outline" onClick={handleDownload}>
+                <Download className="mr-2 h-4 w-4" />
+                Download Report
+            </Button>
+        </div>
         <div className="flex-1 min-h-0 border rounded-lg">
           <ScrollArea className="h-full">
-            <Accordion type="multiple" className="w-full">
-              {Object.keys(reportsByJob).length > 0 ? (
-                Object.entries(reportsByJob).map(([jobName, results]) => (
-                  <AccordionItem value={jobName} key={jobName}>
-                    <AccordionTrigger className="px-4 hover:no-underline bg-muted/50">
-                      <div className='flex justify-between w-full pr-4'>
-                        <span className="font-semibold">{jobName}</span>
-                        <Badge variant="secondary">{results.length} runs</Badge>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Device</TableHead>
-                            <TableHead>IP Address</TableHead>
-                            <TableHead>Ran At</TableHead>
-                            <TableHead>Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {results.map((result, index) => (
-                            <TableRow key={`${result.deviceId}-${result.jobId}-${index}`}>
-                              <TableCell className="font-medium">{result.deviceName}</TableCell>
-                              <TableCell>{result.deviceIpAddress}</TableCell>
-                              <TableCell>{format(new Date(result.timestamp), "yyyy-MM-dd HH:mm:ss")}</TableCell>
-                              <TableCell>
-                                <Badge variant={getStatusVariant(result.status)}>{result.status}</Badge>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))
-              ) : (
-                 <div className="text-center text-sm text-muted-foreground p-8">No reports found.</div>
-              )}
-            </Accordion>
+             <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Job Name</TableHead>
+                    <TableHead>Device</TableHead>
+                    <TableHead>IP Address</TableHead>
+                    <TableHead>Ran At</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredLogs.length > 0 ? (
+                    filteredLogs.map((result, index) => (
+                      <TableRow key={`${result.deviceId}-${result.jobId}-${result.timestamp}-${index}`}>
+                        <TableCell className="font-medium">{result.jobName}</TableCell>
+                        <TableCell>{result.deviceName}</TableCell>
+                        <TableCell>{result.deviceIpAddress}</TableCell>
+                        <TableCell>{format(new Date(result.timestamp), "yyyy-MM-dd HH:mm:ss")}</TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusVariant(result.status)}>{result.status}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center">
+                        No results found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
           </ScrollArea>
         </div>
-        <DialogFooter className='!justify-between'>
-          <Button variant="outline" onClick={handleDownload}>
-            <Download className="mr-2 h-4 w-4" />
-            Download Report
-          </Button>
+        <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>

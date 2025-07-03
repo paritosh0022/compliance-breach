@@ -19,10 +19,11 @@ import AddJobModal from '@/components/add-job-modal';
 import AddJobDetailsModal from '@/components/add-job-details-modal';
 import RunComplianceModal from '@/components/run-compliance-modal';
 import ReportModal from '@/components/compliance-log-modal';
-import type { Device, Job, ComplianceLog, ComplianceRunResult } from '@/lib/types';
+import type { Device, Job, ComplianceLog } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorageState from '@/hooks/use-local-storage-state';
 import ImportDevicesModal from '@/components/import-devices-modal';
+import ConfirmDeleteDialog from '@/components/confirm-delete-dialog';
 
 export default function DashboardPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -31,6 +32,7 @@ export default function DashboardPage() {
   const [isJobDetailsModalOpen, setIsJobDetailsModalOpen] = useState(false);
   const [isComplianceModalOpen, setIsComplianceModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   
   const [activeTab, setActiveTab] = useState('device-list');
   
@@ -45,6 +47,8 @@ export default function DashboardPage() {
     devices?: string[];
     jobs?: string[];
   }>({});
+  const [itemToDelete, setItemToDelete] = useState<{ ids: string[]; type: 'device' | 'job' } | null>(null);
+
 
   const { toast } = useToast();
   
@@ -73,12 +77,13 @@ export default function DashboardPage() {
   };
 
   const handleDeleteDevice = (id: string) => {
-    setDevices((prev) => prev.filter(device => device.id !== id));
+    setItemToDelete({ ids: [id], type: 'device' });
+    setIsConfirmDialogOpen(true);
   };
 
   const handleDeleteSelectedDevices = () => {
-    setDevices(prev => prev.filter(device => !selectedDeviceIds.includes(device.id)));
-    setSelectedDeviceIds([]);
+    setItemToDelete({ ids: selectedDeviceIds, type: 'device' });
+    setIsConfirmDialogOpen(true);
   }
   
   const handleJobDetailsContinue = (data: Omit<Job, 'id' | 'command' | 'template'>) => {
@@ -100,13 +105,31 @@ export default function DashboardPage() {
   };
 
   const handleDeleteJob = (id: string) => {
-    setJobs((prev) => prev.filter(job => job.id !== id));
+    setItemToDelete({ ids: [id], type: 'job' });
+    setIsConfirmDialogOpen(true);
   };
   
   const handleDeleteSelectedJobs = () => {
-    setJobs(prev => prev.filter(job => !selectedJobIds.includes(job.id)));
-    setSelectedJobIds([]);
+    setItemToDelete({ ids: selectedJobIds, type: 'job' });
+    setIsConfirmDialogOpen(true);
   }
+
+  const handleConfirmDelete = () => {
+    if (!itemToDelete) return;
+    
+    if (itemToDelete.type === 'device') {
+        setDevices(prev => prev.filter(device => !itemToDelete.ids.includes(device.id)));
+        setSelectedDeviceIds([]);
+    } else if (itemToDelete.type === 'job') {
+        setJobs(prev => prev.filter(job => !itemToDelete.ids.includes(job.id)));
+        setSelectedJobIds([]);
+    }
+
+    setIsConfirmDialogOpen(false);
+    setItemToDelete(null);
+    toast({ title: "Success", description: "The selected item(s) have been deleted." });
+  };
+
 
   const handleRunComplianceComplete = (logEntry: Omit<ComplianceLog, 'id' | 'timestamp'>) => {
     const newLogEntry = { ...logEntry, id: crypto.randomUUID(), timestamp: new Date().toISOString() };
@@ -184,7 +207,7 @@ export default function DashboardPage() {
                 <>
                   <Button variant="outline" onClick={() => handleRunCompliance({ devices: selectedDeviceIds })}>
                     <Bot className="mr-2" />
-                    Run Compliance
+                    Run Compliance ({selectedDeviceIds.length})
                   </Button>
                   <Button variant="destructive" onClick={handleDeleteSelectedDevices}>
                     <Trash2 className="mr-2" />
@@ -217,7 +240,7 @@ export default function DashboardPage() {
                 <>
                   <Button variant="outline" onClick={() => handleRunCompliance({ jobs: selectedJobIds })}>
                     <Bot className="mr-2" />
-                    Run Compliance
+                    Run Compliance ({selectedJobIds.length})
                   </Button>
                   <Button variant="destructive" onClick={handleDeleteSelectedJobs}>
                     <Trash2 className="mr-2" />
@@ -277,6 +300,13 @@ export default function DashboardPage() {
         isOpen={isReportModalOpen}
         onOpenChange={setIsReportModalOpen}
         logs={complianceLog}
+      />
+
+      <ConfirmDeleteDialog
+        isOpen={isConfirmDialogOpen}
+        onOpenChange={setIsConfirmDialogOpen}
+        onConfirm={handleConfirmDelete}
+        itemType={itemToDelete?.type}
       />
     </>
   );
