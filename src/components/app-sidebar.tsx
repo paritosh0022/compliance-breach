@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { groupedComponents, categories } from '@/lib/component-data';
-import { ChevronsUpDown, LayoutGrid } from 'lucide-react';
+import { ChevronsUpDown, LayoutGrid, Layout, FormInput, SquareArrowOutUpRight, Navigation, GalleryVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AppSidebarProps {
@@ -25,11 +25,11 @@ interface AppSidebarProps {
 }
 
 const categoryIcons: Record<string, React.ElementType> = {
-  Layout: require('lucide-react').Layout,
-  Forms: require('lucide-react').FormInput,
-  Overlays: require('lucide-react').SquareArrowOutUpRight,
-  Navigation: require('lucide-react').Navigation,
-  Display: require('lucide-react').GalleryVertical,
+  Layout: Layout,
+  Forms: FormInput,
+  Overlays: SquareArrowOutUpRight,
+  Navigation: Navigation,
+  Display: GalleryVertical,
 };
 
 export default function AppSidebar({ activeCategory, setActiveCategory }: AppSidebarProps) {

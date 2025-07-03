@@ -1,13 +1,15 @@
 import { type ComponentData } from '@/lib/component-data';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import * as icons from 'lucide-react';
 
 interface ComponentCardProps {
   component: ComponentData;
 }
 
 export default function ComponentCard({ component }: ComponentCardProps) {
-  const { name, description, category, icon: Icon } = component;
+  const { name, description, category, icon } = component;
+  const Icon = (icons as any)[icon] || icons.AlertCircle;
   return (
     <Card className="flex h-full transform-gpu flex-col transition-all duration-300 ease-out hover:shadow-lg hover:-translate-y-1">
       <CardHeader className="flex-1">

@@ -1,33 +1,3 @@
-import type { LucideIcon } from 'lucide-react';
-import {
-  AlertCircle,
-  MessageSquare,
-  Layout,
-  PanelTop,
-  FormInput,
-  MousePointerSquare,
-  CheckSquare,
-  RadioTower,
-  ChevronDownSquare,
-  SquareArrowOutUpRight,
-  GalleryVertical,
-  Navigation,
-  Table,
-  Tabs,
-  Text,
-  MessageSquareWarning,
-  Info,
-  CalendarDays,
-  Image,
-  Loader,
-  SlidersHorizontal,
-  Switch,
-  ToggleRight,
-  Badge,
-  User,
-  SeparatorHorizontal
-} from 'lucide-react';
-
 export type ComponentCategory = 'Layout' | 'Forms' | 'Overlays' | 'Navigation' | 'Display';
 
 export type ComponentData = {
@@ -35,7 +5,7 @@ export type ComponentData = {
   description: string;
   category: ComponentCategory;
   href: string;
-  icon: LucideIcon;
+  icon: string;
 };
 
 const componentsList: Omit<ComponentData, 'category' | 'href' | 'icon'>[] = [
@@ -72,43 +42,43 @@ const componentsList: Omit<ComponentData, 'category' | 'href' | 'icon'>[] = [
     { name: 'Tooltip', description: 'A popup that displays information related to an element when the element receives keyboard focus or the mouse hovers over it.' },
 ];
 
-const componentCategories: Record<string, { category: ComponentCategory, icon: LucideIcon }> = {
-  Accordion: { category: 'Display', icon: ChevronDownSquare },
-  Alert: { category: 'Display', icon: AlertCircle },
-  'Alert Dialog': { category: 'Overlays', icon: MessageSquareWarning },
-  Avatar: { category: 'Display', icon: User },
-  Badge: { category: 'Display', icon: Badge },
-  Button: { category: 'Forms', icon: MousePointerSquare },
-  Calendar: { category: 'Forms', icon: CalendarDays },
-  Card: { category: 'Layout', icon: Layout },
-  Carousel: { category: 'Display', icon: Image },
-  Checkbox: { category: 'Forms', icon: CheckSquare },
-  Collapsible: { category: 'Display', icon: ChevronDownSquare },
-  Dialog: { category: 'Overlays', icon: SquareArrowOutUpRight },
-  'Dropdown Menu': { category: 'Navigation', icon: ChevronDownSquare },
-  Input: { category: 'Forms', icon: FormInput },
-  Label: { category: 'Forms', icon: Text },
-  Menubar: { category: 'Navigation', icon: Navigation },
-  Popover: { category: 'Overlays', icon: PanelTop },
-  Progress: { category: 'Display', icon: Loader },
-  'Radio Group': { category: 'Forms', icon: RadioTower },
-  'Scroll Area': { category: 'Layout', icon: GalleryVertical },
-  Select: { category: 'Forms', icon: ChevronDownSquare },
-  Separator: { category: 'Layout', icon: SeparatorHorizontal },
-  Sheet: { category: 'Overlays', icon: PanelTop },
-  Skeleton: { category: 'Display', icon: Layout },
-  Slider: { category: 'Forms', icon: SlidersHorizontal },
-  Switch: { category: 'Forms', icon: Switch },
-  Table: { category: 'Display', icon: Table },
-  Tabs: { category: 'Display', icon: Tabs },
-  Textarea: { category: 'Forms', icon: Text },
-  Toast: { category: 'Overlays', icon: MessageSquare },
-  Tooltip: { category: 'Display', icon: Info },
+const componentCategories: Record<string, { category: ComponentCategory, icon: string }> = {
+  Accordion: { category: 'Display', icon: 'ChevronDownSquare' },
+  Alert: { category: 'Display', icon: 'AlertCircle' },
+  'Alert Dialog': { category: 'Overlays', icon: 'MessageSquareWarning' },
+  Avatar: { category: 'Display', icon: 'User' },
+  Badge: { category: 'Display', icon: 'Badge' },
+  Button: { category: 'Forms', icon: 'MousePointerClick' },
+  Calendar: { category: 'Forms', icon: 'CalendarDays' },
+  Card: { category: 'Layout', icon: 'Layout' },
+  Carousel: { category: 'Display', icon: 'Image' },
+  Checkbox: { category: 'Forms', icon: 'CheckSquare' },
+  Collapsible: { category: 'Display', icon: 'ChevronDownSquare' },
+  Dialog: { category: 'Overlays', icon: 'SquareArrowOutUpRight' },
+  'Dropdown Menu': { category: 'Navigation', icon: 'ChevronDownSquare' },
+  Input: { category: 'Forms', icon: 'FormInput' },
+  Label: { category: 'Forms', icon: 'Text' },
+  Menubar: { category: 'Navigation', icon: 'Navigation' },
+  Popover: { category: 'Overlays', icon: 'PanelTop' },
+  Progress: { category: 'Display', icon: 'Loader' },
+  'Radio Group': { category: 'Forms', icon: 'RadioTower' },
+  'Scroll Area': { category: 'Layout', icon: 'GalleryVertical' },
+  Select: { category: 'Forms', icon: 'ChevronDownSquare' },
+  Separator: { category: 'Layout', icon: 'SeparatorHorizontal' },
+  Sheet: { category: 'Overlays', icon: 'PanelTop' },
+  Skeleton: { category: 'Display', icon: 'Layout' },
+  Slider: { category: 'Forms', icon: 'SlidersHorizontal' },
+  Switch: { category: 'Forms', icon: 'ToggleRight' },
+  Table: { category: 'Display', icon: 'Table' },
+  Tabs: { category: 'Display', icon: 'LayoutPanelTop' },
+  Textarea: { category: 'Forms', icon: 'Text' },
+  Toast: { category: 'Overlays', icon: 'MessageSquare' },
+  Tooltip: { category: 'Display', icon: 'Info' },
 };
 
 
 export const components: ComponentData[] = componentsList.map(comp => {
-  const categoryInfo = componentCategories[comp.name] || { category: 'Display', icon: AlertCircle };
+  const categoryInfo = componentCategories[comp.name] || { category: 'Display', icon: 'AlertCircle' };
   return {
     ...comp,
     ...categoryInfo,
