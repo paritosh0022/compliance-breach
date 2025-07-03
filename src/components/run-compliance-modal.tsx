@@ -186,7 +186,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
 
         <div className={cn("flex-1 grid grid-cols-1 gap-0 overflow-hidden", finalGridClass)}>
           {/* Column 1: Devices */}
-          <div className="flex flex-col border-r">
+          <div className="flex flex-col border-r min-h-0">
             <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
               <div className="flex items-center space-x-3">
                  <Checkbox
@@ -229,7 +229,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
 
           {/* Column 1.5: Device Details (Conditional) */}
           {viewedDevice && (
-            <div className="flex flex-col border-r bg-muted/30">
+            <div className="flex flex-col border-r bg-muted/30 min-h-0">
               <div className="p-4 border-b flex items-center justify-between h-[73px]">
                 <h3 className="font-semibold text-base truncate">Details: {viewedDevice.name}</h3>
                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewedDevice(null)}>
@@ -248,7 +248,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
           )}
 
           {/* Column 2: Jobs */}
-          <div className="flex flex-col border-r">
+          <div className="flex flex-col border-r min-h-0">
              <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
               <div className="flex items-center space-x-3">
                  <Checkbox
@@ -291,7 +291,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
 
           {/* Column 2.5: Job Details (Conditional) */}
           {viewedJob && (
-            <div className="flex flex-col border-r bg-muted/30">
+            <div className="flex flex-col border-r bg-muted/30 min-h-0">
               <div className="p-4 border-b flex items-center justify-between h-[73px]">
                 <h3 className="font-semibold text-base truncate">Details: {viewedJob.name}</h3>
                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewedJob(null)}>
@@ -309,7 +309,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
           )}
           
           {/* Last Column: Output */}
-          <div className="flex flex-col">
+          <div className="flex flex-col min-h-0">
             <div className="p-4 border-b flex items-center justify-between h-[73px]">
               <h3 className="font-semibold text-base">Output</h3>
                <div className="flex items-center gap-2">
@@ -327,7 +327,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
                 </Button>
               </div>
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-h-0">
               <Textarea
                 readOnly
                 value={output}
@@ -345,3 +345,5 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
     </Dialog>
   );
 }
+
+    
