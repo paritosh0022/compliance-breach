@@ -73,36 +73,29 @@ export default function AddComplianceModal({ isOpen, onOpenChange, devices }: Ad
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0">
-        <DialogHeader className="p-4 border-b">
-          <DialogTitle className="text-xl">Create Compliance Rule</DialogTitle>
-          <DialogDescription>
-            Configure and run compliance checks against your devices.
-          </DialogDescription>
+        <DialogHeader className="p-4 border-b space-y-4">
+          <div>
+            <DialogTitle className="text-xl">Create Compliance Rule</DialogTitle>
+            <DialogDescription>
+              Configure and run compliance checks against your devices.
+            </DialogDescription>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input id="compliance-name" placeholder="Compliance Name (e.g., CIS Benchmark Check)" />
+            <Input id="compliance-description" placeholder="Optional description for this rule" />
+          </div>
         </DialogHeader>
-
-        <div className="p-4 border-b">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="compliance-name">Compliance Name</Label>
-                    <Input id="compliance-name" placeholder="e.g., CIS Benchmark Check" />
-                </div>
-                <div>
-                    <Label htmlFor="compliance-description">Description</Label>
-                    <Input id="compliance-description" placeholder="Optional description for this rule" />
-                </div>
-            </div>
-        </div>
 
         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-0 overflow-hidden">
           {/* Column 1: Devices */}
           <div className="flex flex-col border-r">
-            <div className="p-4 border-b">
-              <h3 className="font-semibold text-base mb-2">Devices ({selectedDevices.length}/{devices.length})</h3>
-               <div className="relative">
+            <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
+              <h3 className="font-semibold text-base whitespace-nowrap">Devices ({selectedDevices.length}/{devices.length})</h3>
+               <div className="relative w-full">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search devices..."
-                  className="pl-9"
+                  className="pl-9 h-9"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -131,7 +124,7 @@ export default function AddComplianceModal({ isOpen, onOpenChange, devices }: Ad
 
           {/* Column 2: Command */}
           <div className="flex flex-col border-r">
-            <div className="p-4 border-b flex items-center justify-between">
+            <div className="p-4 border-b flex items-center justify-between h-[73px]">
               <h3 className="font-semibold text-base">Command</h3>
               <Button size="sm" onClick={handleRunCommand} disabled={!command || selectedDevices.length === 0}>
                 <Play className="mr-2 h-4 w-4" />
@@ -150,7 +143,7 @@ export default function AddComplianceModal({ isOpen, onOpenChange, devices }: Ad
 
           {/* Column 3: Output */}
           <div className="flex flex-col">
-            <div className="p-4 border-b flex items-center justify-between">
+            <div className="p-4 border-b flex items-center justify-between h-[73px]">
               <h3 className="font-semibold text-base">Output</h3>
               <div className="flex items-center gap-2">
                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopyOutput} disabled={!output}>
