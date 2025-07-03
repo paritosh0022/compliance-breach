@@ -3,8 +3,6 @@
 
 import React, { useMemo, useState } from 'react';
 import Papa from 'papaparse';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import {
   Dialog,
   DialogContent,
@@ -118,11 +116,14 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
     document.body.removeChild(link);
   };
   
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     if (filteredLogs.length === 0) {
       toast({ variant: 'destructive', title: 'No data to download.' });
       return;
     }
+
+    const { default: jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
 
     const doc = new jsPDF();
     doc.text("Compliance Report", 14, 15);
@@ -130,7 +131,7 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
     const body: any[] = [];
     filteredLogs.forEach(group => {
       group.results.forEach((result, index) => {
-        const rowData = [];
+        const rowData: any[] = [];
         if (index === 0) {
           rowData.push({ content: group.jobName, rowSpan: group.results.length, styles: { valign: 'middle' } });
         }
