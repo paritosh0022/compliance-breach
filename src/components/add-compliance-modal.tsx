@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,11 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Play, Copy, Download, Plus, Trash2 } from "lucide-react";
-import type { Device, Job } from "@/lib/types";
-import { useToast } from "@/hooks/use-toast";
 import {
   Select,
   SelectContent,
@@ -25,15 +20,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Play, Copy, Download, Plus, Trash2 } from "lucide-react";
+import type { Job } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 
 interface AddJobModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  devices: Device[];
   onAddJob: (job: Omit<Job, "id">) => void;
 }
 
-export default function AddJobModal({ isOpen, onOpenChange, devices, onAddJob }: AddJobModalProps) {
+export default function AddJobModal({ isOpen, onOpenChange, onAddJob }: AddJobModalProps) {
   const [step, setStep] = useState(1);
   const { toast } = useToast();
   
@@ -41,23 +38,16 @@ export default function AddJobModal({ isOpen, onOpenChange, devices, onAddJob }:
   const [jobName, setJobName] = useState("");
 
   // Step 1 State
-  const [searchTerm, setSearchTerm] = useState("");
   const [command, setCommand] = useState("");
   const [output, setOutput] = useState("");
-  const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
   
   // Step 2 State
   const [template, setTemplate] = useState("");
   const [ruleOutput, setRuleOutput] = useState("");
   const [isTemplateRun, setIsTemplateRun] = useState(false);
 
-  const filteredDevices = useMemo(() => 
-    devices.filter((device) =>
-      device.name.toLowerCase().includes(searchTerm.toLowerCase())
-    ), [devices, searchTerm]);
-
   const handleRunCommand = () => {
-    setOutput(`Running command: "${command}" on ${selectedDevices.length} device(s)...\n\n(Mock Output)\nConfiguration updated successfully.\nVerification complete.`);
+    setOutput(`Running command: "${command}"...\n\n(Mock Output)\nCommand syntax is valid.\nVerification complete.`);
   };
 
   const handleCopyOutput = () => {
@@ -80,14 +70,6 @@ export default function AddJobModal({ isOpen, onOpenChange, devices, onAddJob }:
       toast({ title: "Success", description: "Output downloaded as CSV." });
     }
   };
-
-  const handleDeviceSelection = (deviceId: string) => {
-    setSelectedDevices((prev) =>
-      prev.includes(deviceId)
-        ? prev.filter((id) => id !== deviceId)
-        : [...prev, deviceId]
-    );
-  };
   
   const handleRunTemplate = () => {
     setRuleOutput(`Running template...\n\n(Mock Output)\nTemplate applied successfully.\nRule engine is now enabled.`);
@@ -98,10 +80,8 @@ export default function AddJobModal({ isOpen, onOpenChange, devices, onAddJob }:
   const handleOpenChangeAndReset = (isOpen: boolean) => {
     if (!isOpen) {
       setStep(1);
-      setSearchTerm("");
       setCommand("");
       setOutput("");
-      setSelectedDevices([]);
       setTemplate("");
       setRuleOutput("");
       setIsTemplateRun(false);
@@ -135,8 +115,8 @@ export default function AddJobModal({ isOpen, onOpenChange, devices, onAddJob }:
             <DialogTitle className="text-xl">Create Job (Step {step} of 2)</DialogTitle>
             <DialogDescription>
               {step === 1
-                ? "Configure and run checks against your devices."
-                : "Define template and rules for validation."}
+                ? "Configure commands to run against your devices."
+                : "Define templates and rules for validation."}
             </DialogDescription>
           </div>
           <Input 
@@ -148,54 +128,19 @@ export default function AddJobModal({ isOpen, onOpenChange, devices, onAddJob }:
         </DialogHeader>
 
         {step === 1 && (
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-0 overflow-hidden">
-            {/* Column 1: Devices */}
-            <div className="flex flex-col border-r">
-              <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
-                <h3 className="font-semibold text-base whitespace-nowrap">Devices ({selectedDevices.length}/{devices.length})</h3>
-                <div className="relative w-full">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search devices..."
-                    className="pl-9 h-9"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-              </div>
-              <ScrollArea className="flex-1">
-                <div className="space-y-1 p-2">
-                  {filteredDevices.map((device) => (
-                    <div key={device.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
-                      <Checkbox
-                        id={`device-${device.id}`}
-                        checked={selectedDevices.includes(device.id)}
-                        onCheckedChange={() => handleDeviceSelection(device.id)}
-                      />
-                      <label
-                        htmlFor={`device-${device.id}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
-                      >
-                        {device.name}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-
-            {/* Column 2: Command */}
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-0 overflow-hidden">
+            {/* Column 1: Command */}
             <div className="flex flex-col border-r">
               <div className="p-4 border-b flex items-center justify-between h-[73px]">
                 <h3 className="font-semibold text-base">Command</h3>
-                <Button size="sm" onClick={handleRunCommand} disabled={!command || selectedDevices.length === 0}>
+                <Button size="sm" onClick={handleRunCommand} disabled={!command}>
                   <Play className="mr-2 h-4 w-4" />
                   Run
                 </Button>
               </div>
               <div className="flex-1">
                 <Textarea
-                  placeholder="Enter command to run on selected devices, e.g., 'show version'"
+                  placeholder="Enter command to run, e.g., 'show version'"
                   className="h-full w-full resize-none border-0 rounded-none p-4 text-sm focus-visible:ring-transparent focus-visible:ring-offset-0"
                   value={command}
                   onChange={(e) => setCommand(e.target.value)}
@@ -203,7 +148,7 @@ export default function AddJobModal({ isOpen, onOpenChange, devices, onAddJob }:
               </div>
             </div>
 
-            {/* Column 3: Output */}
+            {/* Column 2: Output */}
             <div className="flex flex-col">
               <div className="p-4 border-b flex items-center justify-between h-[73px]">
                 <h3 className="font-semibold text-base">Output</h3>

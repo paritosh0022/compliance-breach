@@ -13,8 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Play } from "lucide-react";
+import { Search, Play, Copy, Download } from "lucide-react";
 import type { Device, Job } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 import {
   Select,
   SelectContent,
@@ -36,6 +37,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
   const [selectedJobId, setSelectedJobId] = useState<string | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState("");
   const [output, setOutput] = useState("");
+  const { toast } = useToast();
 
   const filteredDevices = useMemo(() =>
     devices.filter((device) =>
@@ -57,6 +59,27 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
       setSelectedDevices([]);
     }
   }
+  
+  const handleCopyOutput = () => {
+    if (output) {
+      navigator.clipboard.writeText(output);
+      toast({ title: "Success", description: "Output copied to clipboard." });
+    }
+  };
+
+  const handleDownloadCsv = () => {
+    if (output) {
+      const csvContent = "data:text/csv;charset=utf-8," + `"${output.replace(/"/g, '""')}"`;
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "compliance_output.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast({ title: "Success", description: "Output downloaded as CSV." });
+    }
+  };
 
   const handleRunCompliance = () => {
     const job = jobs.find(j => j.id === selectedJobId);
@@ -203,6 +226,16 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
           <div className="flex flex-col">
             <div className="p-4 border-b flex items-center justify-between h-[73px]">
               <h3 className="font-semibold text-base">Output</h3>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopyOutput} disabled={!output}>
+                  <Copy className="h-4 w-4" />
+                  <span className="sr-only">Copy Output</span>
+                </Button>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleDownloadCsv} disabled={!output}>
+                  <Download className="h-4 w-4" />
+                  <span className="sr-only">Download CSV</span>
+                </Button>
+              </div>
             </div>
             <div className="flex-1">
               <Textarea

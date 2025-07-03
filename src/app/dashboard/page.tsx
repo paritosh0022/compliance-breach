@@ -155,7 +155,6 @@ export default function DashboardPage() {
       <AddJobModal
         isOpen={isJobModalOpen} 
         onOpenChange={setIsJobModalOpen}
-        devices={devices}
         onAddJob={handleAddJob}
       />
 
