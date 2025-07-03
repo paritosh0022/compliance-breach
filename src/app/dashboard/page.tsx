@@ -82,6 +82,7 @@ export default function DashboardPage() {
   };
 
   const handleDeleteSelectedDevices = () => {
+    if (selectedDeviceIds.length === 0) return;
     setItemToDelete({ ids: selectedDeviceIds, type: 'device' });
     setIsConfirmDialogOpen(true);
   }
@@ -110,6 +111,7 @@ export default function DashboardPage() {
   };
   
   const handleDeleteSelectedJobs = () => {
+    if (selectedJobIds.length === 0) return;
     setItemToDelete({ ids: selectedJobIds, type: 'job' });
     setIsConfirmDialogOpen(true);
   }
@@ -126,8 +128,8 @@ export default function DashboardPage() {
     }
 
     setIsConfirmDialogOpen(false);
+    toast({ title: "Success", description: `The selected ${itemToDelete.type}(s) have been deleted.` });
     setItemToDelete(null);
-    toast({ title: "Success", description: "The selected item(s) have been deleted." });
   };
 
 
@@ -142,7 +144,7 @@ export default function DashboardPage() {
 
   const getActiveButton = (activeTab: string) => {
     switch (activeTab) {
-      case 'manage-jobs':
+      case 'job-compliance':
         return (
           <Button onClick={() => setIsJobDetailsModalOpen(true)}>
             <PlusCircle className="mr-2" />
@@ -191,7 +193,7 @@ export default function DashboardPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList>
           <TabsTrigger value="device-list">Device List</TabsTrigger>
-          <TabsTrigger value="manage-jobs">Manage Jobs</TabsTrigger>
+          <TabsTrigger value="job-compliance">Job Compliance</TabsTrigger>
         </TabsList>
         <TabsContent value="device-list" className="mt-6">
           <div className="flex items-center justify-between gap-4 mb-4">
@@ -226,7 +228,7 @@ export default function DashboardPage() {
             onRunCompliance={(deviceId) => handleRunCompliance({ devices: [deviceId] })}
           />
         </TabsContent>
-        <TabsContent value="manage-jobs" className="mt-6">
+        <TabsContent value="job-compliance" className="mt-6">
            <div className="flex items-center justify-between gap-4 mb-4">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -307,6 +309,7 @@ export default function DashboardPage() {
         onOpenChange={setIsConfirmDialogOpen}
         onConfirm={handleConfirmDelete}
         itemType={itemToDelete?.type}
+        itemCount={itemToDelete?.ids.length}
       />
     </>
   );

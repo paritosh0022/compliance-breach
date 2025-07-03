@@ -18,13 +18,15 @@ interface ConfirmDeleteDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   onConfirm: () => void;
   itemType?: string;
+  itemCount?: number;
 }
 
 export default function ConfirmDeleteDialog({
   isOpen,
   onOpenChange,
   onConfirm,
-  itemType = "item"
+  itemType = "item",
+  itemCount = 1,
 }: ConfirmDeleteDialogProps) {
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
@@ -32,7 +34,7 @@ export default function ConfirmDeleteDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete the selected {itemType}(s).
+            This action cannot be undone. This will permanently delete the selected {itemCount} {itemType}{itemCount > 1 ? 's' : ''}.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
