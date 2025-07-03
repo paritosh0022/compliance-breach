@@ -74,7 +74,7 @@ export default function AddComplianceModal({ isOpen, onOpenChange, devices }: Ad
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl h-auto max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-7xl h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl">Create Compliance Rule</DialogTitle>
           <DialogDescription>
@@ -95,7 +95,7 @@ export default function AddComplianceModal({ isOpen, onOpenChange, devices }: Ad
 
         <Separator className="my-4" />
 
-        <div className="grid flex-1 grid-cols-1 md:grid-cols-3 gap-6 overflow-hidden">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 overflow-hidden">
           <Card className="flex flex-col">
             <CardHeader>
               <CardTitle className="text-base">Devices ({selectedDevices.length}/{devices.length})</CardTitle>
@@ -175,7 +175,7 @@ export default function AddComplianceModal({ isOpen, onOpenChange, devices }: Ad
           </Card>
         </div>
 
-        <DialogFooter className="pt-4 mt-4 border-t">
+        <DialogFooter className="pt-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button>Save</Button>
           <Button>Next</Button>
