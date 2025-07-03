@@ -58,13 +58,30 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
   const handleTemplateChange = useCallback((newTemplate: string) => {
     setTemplate(newTemplate);
     if (newTemplate.trim() !== "") {
-      if (!isTemplateRun) {
-        setIsTemplateRun(true);
-        toast({ title: "Template Detected", description: "Rule engine has been enabled." });
-      }
-      setGroups(g => {
+      setIsTemplateRun((currentValue) => {
+        if (!currentValue) {
+          toast({
+            title: "Template Detected",
+            description: "Rule engine has been enabled.",
+          });
+        }
+        return true;
+      });
+      setGroups((g) => {
         if (g.length === 0) {
-          return [{ id: crypto.randomUUID(), rules: [{ id: crypto.randomUUID(), variable: '', operator: 'contains', value: '' }] }];
+          return [
+            {
+              id: crypto.randomUUID(),
+              rules: [
+                {
+                  id: crypto.randomUUID(),
+                  variable: "",
+                  operator: "contains",
+                  value: "",
+                },
+              ],
+            },
+          ];
         }
         return g;
       });
@@ -72,7 +89,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
       setIsTemplateRun(false);
       setGroups([]);
     }
-  }, [isTemplateRun, toast]);
+  }, [toast]);
 
   useEffect(() => {
     if (isOpen && jobDetails) {
