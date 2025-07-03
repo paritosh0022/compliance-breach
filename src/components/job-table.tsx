@@ -58,6 +58,7 @@ export default function JobTable({ jobs, onDelete, selectedJobIds, onSelectedJob
               />
             </TableHead>
             <TableHead>Job Name</TableHead>
+            <TableHead>Description</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -71,6 +72,7 @@ export default function JobTable({ jobs, onDelete, selectedJobIds, onSelectedJob
                 />
               </TableCell>
               <TableCell className="font-medium">{job.name}</TableCell>
+              <TableCell>{job.description || 'N/A'}</TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
                   <TooltipProvider>

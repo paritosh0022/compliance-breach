@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from 'react';
+import Papa from 'papaparse';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChevronDown, PlusCircle, Upload, Search, Trash2, Bot, FileText } from 'lucide-react';
+import { ChevronDown, PlusCircle, Upload, Search, Trash2, Bot, FileText, Download } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import AddDeviceDrawer from '@/components/add-device-drawer';
 import DeviceTable from '@/components/device-table';
@@ -142,6 +143,40 @@ export default function DashboardPage() {
     });
   };
 
+  const downloadCsv = (data: any[], filename: string) => {
+    const csv = Papa.unparse(data);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportSelectedDevices = () => {
+    if (selectedDeviceIds.length === 0) return;
+    const devicesToExport = devices
+      .filter(d => selectedDeviceIds.includes(d.id))
+      .map(({ id, password, ...rest }) => rest);
+    downloadCsv(devicesToExport, 'selected-devices.csv');
+  };
+
+  const handleExportSelectedJobs = () => {
+    if (selectedJobIds.length === 0) return;
+    const jobsToExport = jobs
+      .filter(j => selectedJobIds.includes(j.id))
+      .map(j => ({
+        name: j.name,
+        description: j.description || '',
+        command: j.command || '',
+        template: j.template || '',
+      }));
+    downloadCsv(jobsToExport, 'selected-jobs.csv');
+  };
+
   const getActiveButton = (activeTab: string) => {
     switch (activeTab) {
       case 'job-compliance':
@@ -215,9 +250,12 @@ export default function DashboardPage() {
                     <Trash2 className="mr-2" />
                     Delete ({selectedDeviceIds.length})
                   </Button>
+                  <Button variant="outline" onClick={handleExportSelectedDevices}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export ({selectedDeviceIds.length})
+                  </Button>
                 </>
               )}
-               <Button variant="outline">Export</Button>
             </div>
           </div>
           <DeviceTable 
@@ -248,9 +286,12 @@ export default function DashboardPage() {
                     <Trash2 className="mr-2" />
                     Delete ({selectedJobIds.length})
                   </Button>
+                   <Button variant="outline" onClick={handleExportSelectedJobs}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export ({selectedJobIds.length})
+                  </Button>
                 </>
               )}
-               <Button variant="outline">Export</Button>
             </div>
           </div>
            <JobTable 
