@@ -207,14 +207,14 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
                                     {group.jobName}
                                 </TableCell>
                             )}
-                            <TableCell>{result.deviceName}</TableCell>
-                            <TableCell>{result.deviceIpAddress}</TableCell>
+                            <TableCell className="align-top">{result.deviceName}</TableCell>
+                            <TableCell className="align-top">{result.deviceIpAddress}</TableCell>
                              {resultIndex === 0 && (
                                 <TableCell rowSpan={group.results.length} className="align-top">
                                     {format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")}
                                 </TableCell>
                             )}
-                            <TableCell>
+                            <TableCell className="align-top">
                               <Badge variant={getStatusVariant(result.status)}>{result.status}</Badge>
                             </TableCell>
                           </TableRow>
