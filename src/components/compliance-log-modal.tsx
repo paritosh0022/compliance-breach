@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Papa from 'papaparse';
 import {
   Dialog,
@@ -31,35 +31,73 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   
-  const flattenedLogs = useMemo(() => {
-    return logs.flatMap(log => 
-      log.results.map(result => ({ ...result, timestamp: log.timestamp }))
-    ).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const groupedLogs = useMemo(() => {
+    const sortedLogs = [...logs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    return sortedLogs.flatMap(log => {
+      const jobsInRun = log.results.reduce((acc, result) => {
+        if (!acc[result.jobName]) {
+          acc[result.jobName] = [];
+        }
+        acc[result.jobName].push(result);
+        return acc;
+      }, {} as Record<string, ComplianceRunResult[]>);
+
+      return Object.entries(jobsInRun).map(([jobName, results]) => ({
+        id: `${log.id}-${jobName}`,
+        jobName,
+        timestamp: log.timestamp,
+        results,
+      }));
+    });
   }, [logs]);
 
   const filteredLogs = useMemo(() => {
-    if (!searchTerm) return flattenedLogs;
+    if (!searchTerm) return groupedLogs;
     const lowercasedFilter = searchTerm.toLowerCase();
-    return flattenedLogs.filter(log =>
-      log.jobName.toLowerCase().includes(lowercasedFilter) ||
-      log.deviceName.toLowerCase().includes(lowercasedFilter) ||
-      log.deviceIpAddress.toLowerCase().includes(lowercasedFilter)
-    );
-  }, [flattenedLogs, searchTerm]);
 
-  const getStatusVariant = (status: ComplianceRunResult['status']): 'default' | 'destructive' => {
-    return status === 'Success' ? 'default' : 'destructive';
+    const filtered = groupedLogs.map(group => {
+      const filteredResults = group.results.filter(result => 
+        result.deviceName.toLowerCase().includes(lowercasedFilter) ||
+        result.deviceIpAddress.toLowerCase().includes(lowercasedFilter)
+      );
+      
+      if (group.jobName.toLowerCase().includes(lowercasedFilter)) {
+        return group;
+      }
+      
+      if (filteredResults.length > 0) {
+        return { ...group, results: filteredResults };
+      }
+      
+      return null;
+    }).filter((g): g is NonNullable<typeof g> => g !== null);
+
+    return filtered;
+  }, [groupedLogs, searchTerm]);
+
+  const getStatusVariant = (status: ComplianceRunResult['status']): 'default' | 'destructive' | 'secondary' => {
+      switch (status) {
+          case 'Success':
+              return 'default';
+          case 'Failed':
+              return 'destructive';
+          default:
+              return 'secondary';
+      }
   };
   
   const handleDownload = () => {
-    const csvData = filteredLogs.map(result => ({
-      job_name: result.jobName,
-      device_name: result.deviceName,
-      ip_address: result.deviceIpAddress,
-      status: result.status,
-      message: result.message,
-      timestamp: format(new Date(result.timestamp), "yyyy-MM-dd HH:mm:ss")
-    }));
+    const csvData = filteredLogs.flatMap(group => 
+      group.results.map(result => ({
+        job_name: group.jobName,
+        device_name: result.deviceName,
+        ip_address: result.deviceIpAddress,
+        status: result.status,
+        message: result.message,
+        ran_at: format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")
+      }))
+    );
 
     if (csvData.length === 0) {
         toast({ variant: 'destructive', title: 'No data to download.' });
@@ -84,7 +122,7 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
         <DialogHeader>
           <DialogTitle>Compliance Reports</DialogTitle>
           <DialogDescription>
-            History of all compliance checks.
+            History of all compliance checks, grouped by job.
           </DialogDescription>
         </DialogHeader>
          <div className="flex items-center justify-between gap-4">
@@ -116,16 +154,28 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
                 </TableHeader>
                 <TableBody>
                   {filteredLogs.length > 0 ? (
-                    filteredLogs.map((result, index) => (
-                      <TableRow key={`${result.deviceId}-${result.jobId}-${result.timestamp}-${index}`}>
-                        <TableCell className="font-medium">{result.jobName}</TableCell>
-                        <TableCell>{result.deviceName}</TableCell>
-                        <TableCell>{result.deviceIpAddress}</TableCell>
-                        <TableCell>{format(new Date(result.timestamp), "yyyy-MM-dd HH:mm:ss")}</TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusVariant(result.status)}>{result.status}</Badge>
-                        </TableCell>
-                      </TableRow>
+                    filteredLogs.map((group) => (
+                      <React.Fragment key={group.id}>
+                        {group.results.map((result, resultIndex) => (
+                          <TableRow key={`${group.id}-${result.deviceId}`}>
+                            {resultIndex === 0 && (
+                                <TableCell rowSpan={group.results.length} className="font-medium align-top border-r">
+                                    {group.jobName}
+                                </TableCell>
+                            )}
+                            <TableCell>{result.deviceName}</TableCell>
+                            <TableCell>{result.deviceIpAddress}</TableCell>
+                             {resultIndex === 0 && (
+                                <TableCell rowSpan={group.results.length} className="align-top">
+                                    {format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")}
+                                </TableCell>
+                            )}
+                            <TableCell>
+                              <Badge variant={getStatusVariant(result.status)}>{result.status}</Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </React.Fragment>
                     ))
                   ) : (
                     <TableRow>
