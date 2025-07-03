@@ -1,3 +1,4 @@
+
 export type Device = {
   id: string;
   name: string;
@@ -21,12 +22,18 @@ export type ComplianceRun = {
   description: string;
 };
 
+export type ComplianceRunResult = {
+  deviceId: string;
+  deviceName: string;
+  deviceIpAddress: string;
+  jobId: string;
+  jobName: string;
+  status: 'Success' | 'Failed';
+  message: string;
+};
+
 export type ComplianceLog = {
   id: string;
-  complianceName: string;
   timestamp: string;
-  status: 'Success' | 'Failed' | 'Partial Success';
-  details: string;
-  devicesCount: number;
-  jobsCount: number;
+  results: ComplianceRunResult[];
 };

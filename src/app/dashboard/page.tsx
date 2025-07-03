@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -9,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChevronDown, PlusCircle, Upload, Search, Trash2, Bot, BookOpen } from 'lucide-react';
+import { ChevronDown, PlusCircle, Upload, Search, Trash2, Bot, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import AddDeviceDrawer from '@/components/add-device-drawer';
 import DeviceTable from '@/components/device-table';
@@ -17,17 +18,19 @@ import JobTable from '@/components/job-table';
 import AddJobModal from '@/components/add-job-modal';
 import AddJobDetailsModal from '@/components/add-job-details-modal';
 import RunComplianceModal from '@/components/run-compliance-modal';
-import ComplianceLogModal from '@/components/compliance-log-modal';
-import type { Device, Job, ComplianceLog } from '@/lib/types';
+import ReportModal from '@/components/compliance-log-modal';
+import type { Device, Job, ComplianceLog, ComplianceRunResult } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorageState from '@/hooks/use-local-storage-state';
+import ImportDevicesModal from '@/components/import-devices-modal';
 
 export default function DashboardPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
   const [isJobDetailsModalOpen, setIsJobDetailsModalOpen] = useState(false);
   const [isComplianceModalOpen, setIsComplianceModalOpen] = useState(false);
-  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   
   const [activeTab, setActiveTab] = useState('device-list');
   
@@ -63,6 +66,12 @@ export default function DashboardPage() {
     setIsDrawerOpen(false);
   };
   
+  const handleImportDevices = (newDevices: Omit<Device, 'id'>[]) => {
+    const devicesToAdd = newDevices.map(device => ({ ...device, id: crypto.randomUUID() }));
+    setDevices(prev => [...prev, ...devicesToAdd]);
+    setIsImportModalOpen(false);
+  };
+
   const handleDeleteDevice = (id: string) => {
     setDevices((prev) => prev.filter(device => device.id !== id));
   };
@@ -99,12 +108,12 @@ export default function DashboardPage() {
     setSelectedJobIds([]);
   }
 
-  const handleRunComplianceComplete = (logEntry: Omit<ComplianceLog, 'id'>) => {
-    const newLogEntry = { ...logEntry, id: crypto.randomUUID() };
+  const handleRunComplianceComplete = (logEntry: Omit<ComplianceLog, 'id' | 'timestamp'>) => {
+    const newLogEntry = { ...logEntry, id: crypto.randomUUID(), timestamp: new Date().toISOString() };
     setComplianceLog(prev => [newLogEntry, ...prev]);
     toast({
       title: "Compliance Run Finished",
-      description: `Status: ${logEntry.status}`,
+      description: `Check the reports for details.`,
     });
   };
 
@@ -133,7 +142,7 @@ export default function DashboardPage() {
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Single Device
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setIsImportModalOpen(true)}>
                 <Upload className="mr-2 h-4 w-4" />
                 Import from CSV
               </DropdownMenuItem>
@@ -149,9 +158,9 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-semibold font-headline">Manage Devices</h1>
         <div className="flex items-center gap-2">
             {getActiveButton(activeTab)}
-            <Button variant="outline" onClick={() => setIsLogModalOpen(true)}>
-                <BookOpen className="mr-2 h-4 w-4" />
-                View Log
+            <Button variant="outline" onClick={() => setIsReportModalOpen(true)}>
+                <FileText className="mr-2 h-4 w-4" />
+                Reports
             </Button>
         </div>
       </div>
@@ -234,6 +243,12 @@ export default function DashboardPage() {
         onOpenChange={setIsDrawerOpen}
         onAddDevice={handleAddDevice}
       />
+
+      <ImportDevicesModal
+        isOpen={isImportModalOpen}
+        onOpenChange={setIsImportModalOpen}
+        onImport={handleImportDevices}
+      />
       
       <AddJobDetailsModal
         isOpen={isJobDetailsModalOpen}
@@ -258,9 +273,9 @@ export default function DashboardPage() {
         initialSelectedJobIds={initialModalSelections.jobs}
       />
 
-      <ComplianceLogModal 
-        isOpen={isLogModalOpen}
-        onOpenChange={setIsLogModalOpen}
+      <ReportModal 
+        isOpen={isReportModalOpen}
+        onOpenChange={setIsReportModalOpen}
         logs={complianceLog}
       />
     </>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -14,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Play, Copy, Download, Eye, X } from "lucide-react";
-import type { Device, Job, ComplianceLog } from "@/lib/types";
+import type { Device, Job, ComplianceLog, ComplianceRunResult } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "./ui/textarea";
 import { cn } from "@/lib/utils";
@@ -24,7 +25,7 @@ interface RunComplianceModalProps {
   onOpenChange: (isOpen: boolean) => void;
   devices: Device[];
   jobs: Job[];
-  onRunComplete: (logEntry: Omit<ComplianceLog, 'id'>) => void;
+  onRunComplete: (logEntry: Omit<ComplianceLog, 'id' | 'timestamp'>) => void;
   initialSelectedDeviceIds?: string[];
   initialSelectedJobIds?: string[];
 }
@@ -108,8 +109,8 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
   };
 
   const handleRunCompliance = () => {
-    const selectedJobs = jobs.filter(j => selectedJobIds.includes(j.id));
-    if (selectedJobs.length === 0 || selectedDevices.length === 0) {
+    const selectedJobsList = jobs.filter(j => selectedJobIds.includes(j.id));
+    if (selectedJobsList.length === 0 || selectedDevices.length === 0) {
       toast({
         variant: "destructive",
         title: "Selection Required",
@@ -118,40 +119,36 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
       return;
     }
 
-    let mockOutput = `Running ${selectedJobs.length} job(s) on ${selectedDevices.length} device(s)...\n\n`;
-    let failureCount = 0;
+    let rawOutput = `Running ${selectedJobsList.length} job(s) on ${selectedDevices.length} device(s)...\n\n`;
+    const runResults: ComplianceRunResult[] = [];
     
     selectedDevices.forEach(deviceId => {
       const device = devices.find(d => d.id === deviceId);
       if(device) {
-        mockOutput += `--- Device: ${device.name} ---\n`;
-        selectedJobs.forEach(job => {
+        rawOutput += `--- Device: ${device.name} ---\n`;
+        selectedJobsList.forEach(job => {
             const isSuccess = Math.random() > 0.3; // Simulate success/failure
-            if (isSuccess) {
-              mockOutput += `  [Job: ${job.name}] - SUCCESS: Compliance check passed.\n`;
-            } else {
-              failureCount++;
-              mockOutput += `  [Job: ${job.name}] - FAILED: Device did not meet compliance standard 'XYZ-1.2'.\n`;
-            }
+            const message = isSuccess ? `Compliance check passed.` : `Device did not meet compliance standard 'XYZ-1.2'.`;
+            rawOutput += `  [Job: ${job.name}] - ${isSuccess ? 'SUCCESS' : 'FAILED'}: ${message}\n`;
+
+            runResults.push({
+              deviceId: device.id,
+              deviceName: device.name,
+              deviceIpAddress: device.ipAddress,
+              jobId: job.id,
+              jobName: job.name,
+              status: isSuccess ? 'Success' : 'Failed',
+              message,
+            });
         });
-        mockOutput += `\n`;
+        rawOutput += `\n`;
       }
     });
 
-    setOutput(mockOutput);
+    setOutput(rawOutput);
     
-    let status: ComplianceLog['status'] = 'Success';
-    if (failureCount > 0) {
-      status = failureCount === (selectedDevices.length * selectedJobs.length) ? 'Failed' : 'Partial Success';
-    }
-
     onRunComplete({
-      complianceName: 'Ad-hoc Run',
-      timestamp: new Date().toISOString(),
-      status,
-      details: mockOutput,
-      devicesCount: selectedDevices.length,
-      jobsCount: selectedJobs.length,
+      results: runResults,
     });
   };
   
@@ -169,10 +166,13 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
   };
   
   const gridColsClass = viewedDevice
-    ? 'md:grid-cols-[1fr_1.5fr_1fr_1fr]'
+    ? 'md:grid-cols-[1fr_1.5fr_1fr]'
     : viewedJob
     ? 'md:grid-cols-[1fr_1fr_1.5fr_1fr]'
-    : 'md:grid-cols-3';
+    : 'md:grid-cols-[1fr_1fr_1fr]';
+  
+  const finalGridClass = (viewedJob && viewedDevice) ? 'md:grid-cols-[1fr_1.5fr_1fr_1.5fr_1fr]' : gridColsClass;
+
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChangeAndReset}>
@@ -184,7 +184,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
           </DialogDescription>
         </DialogHeader>
 
-        <div className={cn("flex-1 grid grid-cols-1 gap-0 overflow-hidden", gridColsClass)}>
+        <div className={cn("flex-1 grid grid-cols-1 gap-0 overflow-hidden", finalGridClass)}>
           {/* Column 1: Devices */}
           <div className="flex flex-col border-r">
             <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
@@ -193,7 +193,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
                     id="select-all-devices"
                     onCheckedChange={(checked) => handleSelectAllDevices(!!checked)}
                     checked={
-                      selectedDevices.length === filteredDevices.length && filteredDevices.length > 0
+                      filteredDevices.length > 0 && selectedDevices.length === filteredDevices.length
                         ? true
                         : selectedDevices.length > 0 && selectedDevices.length < filteredDevices.length
                         ? 'indeterminate'
@@ -217,7 +217,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
                     <label htmlFor={`comp-device-${device.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">
                       {device.name}
                     </label>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => { setViewedDevice(device); setViewedJob(null); }}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => { setViewedDevice(device); }}>
                       <Eye className="h-4 w-4" />
                     </Button>
                   </div>
@@ -255,7 +255,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
                     id="select-all-jobs"
                     onCheckedChange={(checked) => handleSelectAllJobs(!!checked)}
                     checked={
-                      selectedJobIds.length === filteredJobs.length && filteredJobs.length > 0
+                      filteredJobs.length > 0 && selectedJobIds.length === filteredJobs.length
                         ? true
                         : selectedJobIds.length > 0  && selectedJobIds.length < filteredJobs.length
                         ? 'indeterminate'
@@ -279,7 +279,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
                     <label htmlFor={`comp-job-${job.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">
                       {job.name}
                     </label>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => { setViewedJob(job); setViewedDevice(null); }}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => { setViewedJob(job); }}>
                       <Eye className="h-4 w-4" />
                     </Button>
                   </div>
