@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,7 @@ import {
 import { Plus, Trash2 } from "lucide-react";
 import type { Job } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "./ui/badge";
 
 interface AddJobModalProps {
   isOpen: boolean;
@@ -31,41 +32,98 @@ interface AddJobModalProps {
   jobDetails?: Partial<Job>;
 }
 
+type Rule = {
+  id: string;
+  variable: string;
+  operator: 'contains' | 'not-contains' | 'equals';
+  value: string;
+};
+
+type RuleGroup = {
+  id: string;
+  rules: Rule[];
+};
+
 export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails }: AddJobModalProps) {
   const { toast } = useToast();
   
   const [command, setCommand] = useState("");
   const [template, setTemplate] = useState("");
   const [isTemplateRun, setIsTemplateRun] = useState(false);
+  const [condition, setCondition] = useState<'and' | 'or'>('and');
+  const [groups, setGroups] = useState<RuleGroup[]>([]);
   
   const isEditing = jobDetails && jobDetails.command !== undefined;
 
-  useEffect(() => {
-    if (isOpen && jobDetails) {
-      setCommand(jobDetails.command || "");
-      handleTemplateChange(jobDetails.template || "");
-    }
-  }, [isOpen, jobDetails]);
-
-  const handleTemplateChange = (newTemplate: string) => {
+  const handleTemplateChange = useCallback((newTemplate: string) => {
     setTemplate(newTemplate);
     if (newTemplate.trim() !== "") {
       if (!isTemplateRun) {
         setIsTemplateRun(true);
         toast({ title: "Template Detected", description: "Rule engine has been enabled." });
       }
+      setGroups(g => {
+        if (g.length === 0) {
+          return [{ id: crypto.randomUUID(), rules: [{ id: crypto.randomUUID(), variable: '', operator: 'contains', value: '' }] }];
+        }
+        return g;
+      });
     } else {
       setIsTemplateRun(false);
+      setGroups([]);
     }
+  }, [isTemplateRun, toast]);
+
+  useEffect(() => {
+    if (isOpen && jobDetails) {
+      setCommand(jobDetails.command || "");
+      handleTemplateChange(jobDetails.template || "");
+    }
+  }, [isOpen, jobDetails, handleTemplateChange]);
+
+
+  const handleAddGroup = () => {
+    setGroups(prev => [...prev, { id: crypto.randomUUID(), rules: [{ id: crypto.randomUUID(), variable: '', operator: 'contains', value: '' }] }]);
+  };
+
+  const handleDeleteGroup = (groupId: string) => {
+    setGroups(prev => prev.filter(g => g.id !== groupId));
+  };
+
+  const handleAddRule = (groupId: string) => {
+    setGroups(prev => prev.map(g => 
+        g.id === groupId 
+        ? { ...g, rules: [...g.rules, { id: crypto.randomUUID(), variable: '', operator: 'contains', value: '' }] }
+        : g
+    ));
+  };
+  
+  const handleDeleteRule = (groupId: string, ruleId: string) => {
+    setGroups(prev => prev.map(g => 
+        g.id === groupId
+        ? { ...g, rules: g.rules.filter(r => r.id !== ruleId) }
+        : g
+    ).filter(g => g.rules.length > 0)); // Also remove group if it becomes empty
+  };
+  
+  const handleRuleChange = (groupId: string, ruleId: string, field: 'variable' | 'operator' | 'value', value: string) => {
+    const newOperator = value as Rule['operator'];
+    setGroups(prev => prev.map(g => 
+        g.id === groupId
+        ? { ...g, rules: g.rules.map(r => r.id === ruleId ? { ...r, [field]: field === 'operator' ? newOperator : value } : r) }
+        : g
+    ));
   };
 
   const handleOpenChangeAndReset = (isOpen: boolean) => {
+    onOpenChange(isOpen);
     if (!isOpen) {
       setCommand("");
       setTemplate("");
       setIsTemplateRun(false);
+      setGroups([]);
+      setCondition('and');
     }
-    onOpenChange(isOpen);
   };
   
   const handleCreateJob = () => {
@@ -140,32 +198,63 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
                     <div className="space-y-2">
                       <Label>Condition</Label>
                       <div className="flex items-center gap-2">
-                        <Select defaultValue="and">
+                        <Select value={condition} onValueChange={(v: 'and' | 'or') => setCondition(v)}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="and">AND</SelectItem>
                             <SelectItem value="or">OR</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Button variant="outline" size="sm"><Plus className="mr-2 h-4 w-4" /> Add Group</Button>
+                        <Button variant="outline" size="sm" onClick={handleAddGroup}><Plus className="mr-2 h-4 w-4" /> Add Group</Button>
                       </div>
                     </div>
-                    <div className="p-4 border rounded-lg space-y-4 bg-muted/20">
-                        <div className="flex items-center gap-2">
-                          <Input placeholder="Variable (e.g., 'version')" />
-                          <Select defaultValue="contains">
-                            <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="contains">Contains</SelectItem>
-                              <SelectItem value="not-contains">Does not contain</SelectItem>
-                              <SelectItem value="equals">Equals</SelectItem>
-                            </SelectContent>
-                          </Select>
-                           <Input placeholder="Value (e.g., '12.4')" />
-                          <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    {groups.map((group, groupIndex) => (
+                      <div key={group.id}>
+                        <div className="p-4 border rounded-lg space-y-4 bg-muted/20 relative">
+                           {groups.length > 1 && (
+                              <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => handleDeleteGroup(group.id)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                                <span className="sr-only">Delete Group</span>
+                              </Button>
+                            )}
+                          {group.rules.map((rule) => (
+                             <div key={rule.id} className="flex items-center gap-2">
+                                <Input 
+                                  placeholder="Variable (e.g., 'version')" 
+                                  value={rule.variable}
+                                  onChange={(e) => handleRuleChange(group.id, rule.id, 'variable', e.target.value)}
+                                />
+                                <Select 
+                                  value={rule.operator}
+                                  onValueChange={(v) => handleRuleChange(group.id, rule.id, 'operator', v)}
+                                >
+                                  <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="contains">Contains</SelectItem>
+                                    <SelectItem value="not-contains">Does not contain</SelectItem>
+                                    <SelectItem value="equals">Equals</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Input 
+                                  placeholder="Value (e.g., '12.4')" 
+                                  value={rule.value}
+                                  onChange={(e) => handleRuleChange(group.id, rule.id, 'value', e.target.value)}
+                                />
+                                <Button variant="ghost" size="icon" onClick={() => handleDeleteRule(group.id, rule.id)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                   <span className="sr-only">Delete Rule</span>
+                                </Button>
+                              </div>
+                          ))}
+                          <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => handleAddRule(group.id)}><Plus className="mr-2 h-4 w-4" /> Add Rule</Button>
                         </div>
-                         <Button variant="link" size="sm" className="p-0 h-auto"><Plus className="mr-2 h-4 w-4" /> Add Rule</Button>
-                    </div>
+                        {groupIndex < groups.length - 1 && (
+                          <div className="flex justify-center my-2">
+                            <Badge variant="secondary" className="uppercase">{condition}</Badge>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </>
                 )}
               </fieldset>
