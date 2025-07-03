@@ -9,7 +9,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { Server, LayoutGrid } from 'lucide-react';
+import { Server } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DashboardSidebar() {
@@ -31,14 +31,6 @@ export default function DashboardSidebar() {
                 <span>Manage Devices</span>
               </Link>
             </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-             <SidebarMenuButton asChild tooltip="Component Library">
-               <Link href="/">
-                 <LayoutGrid />
-                 <span>Components</span>
-               </Link>
-             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>
