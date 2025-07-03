@@ -207,7 +207,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               {selectedDeviceIds.length > 0 && (
                 <>
-                  <Button variant="outline" onClick={() => handleRunCompliance({ devices: selectedDeviceIds })}>
+                  <Button onClick={() => handleRunCompliance({ devices: selectedDeviceIds })}>
                     <Bot className="mr-2" />
                     Run Compliance ({selectedDeviceIds.length})
                   </Button>
@@ -240,7 +240,7 @@ export default function DashboardPage() {
              <div className="flex items-center gap-2">
               {selectedJobIds.length > 0 && (
                 <>
-                  <Button variant="outline" onClick={() => handleRunCompliance({ jobs: selectedJobIds })}>
+                  <Button onClick={() => handleRunCompliance({ jobs: selectedJobIds })}>
                     <Bot className="mr-2" />
                     Run Compliance ({selectedJobIds.length})
                   </Button>
