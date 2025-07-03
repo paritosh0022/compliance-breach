@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -26,9 +26,11 @@ interface RunComplianceModalProps {
   jobs: Job[];
   complianceRun?: Omit<ComplianceRun, 'id'>;
   onRunComplete: (logEntry: Omit<ComplianceLog, 'id'>) => void;
+  initialSelectedDeviceIds?: string[];
+  initialSelectedJobIds?: string[];
 }
 
-export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs, complianceRun, onRunComplete }: RunComplianceModalProps) {
+export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs, complianceRun, onRunComplete, initialSelectedDeviceIds, initialSelectedJobIds }: RunComplianceModalProps) {
   const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
   const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
   const [deviceSearchTerm, setDeviceSearchTerm] = useState("");
@@ -37,6 +39,17 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
   const [viewedJob, setViewedJob] = useState<Job | null>(null);
 
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialSelectedDeviceIds) {
+        setSelectedDevices(initialSelectedDeviceIds);
+      }
+      if (initialSelectedJobIds) {
+        setSelectedJobIds(initialSelectedJobIds);
+      }
+    }
+  }, [isOpen, initialSelectedDeviceIds, initialSelectedJobIds]);
 
   const filteredDevices = useMemo(() =>
     devices.filter((device) =>

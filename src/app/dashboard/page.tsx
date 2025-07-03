@@ -41,8 +41,25 @@ export default function DashboardPage() {
   const [currentComplianceRun, setCurrentComplianceRun] = useState<Omit<ComplianceRun, 'id'>>();
   const [currentJobDetails, setCurrentJobDetails] = useState<Omit<Job, 'id' | 'command' | 'template'>>();
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
-  
+  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
+  const [initialModalSelections, setInitialModalSelections] = useState<{
+    devices?: string[];
+    jobs?: string[];
+  }>({});
+
   const { toast } = useToast();
+  
+  const handleRunCompliance = (selections: { devices?: string[]; jobs?: string[] }) => {
+    setInitialModalSelections(selections);
+    setIsComplianceModalOpen(true);
+  };
+  
+  const handleComplianceModalOpenChange = (open: boolean) => {
+    setIsComplianceModalOpen(open);
+    if (!open) {
+        setInitialModalSelections({});
+    }
+  }
 
   const handleAddDevice = (device: Omit<Device, 'id'>) => {
     const newDevice = { ...device, id: crypto.randomUUID() };
@@ -80,6 +97,11 @@ export default function DashboardPage() {
   const handleDeleteJob = (id: string) => {
     setJobs((prev) => prev.filter(job => job.id !== id));
   };
+  
+  const handleDeleteSelectedJobs = () => {
+    setJobs(prev => prev.filter(job => !selectedJobIds.includes(job.id)));
+    setSelectedJobIds([]);
+  }
   
   const handleSaveCompliance = (data: Omit<ComplianceRun, 'id'>) => {
     const newComplianceRun = { ...data, id: crypto.randomUUID() };
@@ -180,11 +202,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               {selectedDeviceIds.length > 0 && (
                 <>
-                  <Button variant="outline" onClick={() => {
-                    // This would open the run compliance modal with selected devices
-                    // For now, let's just show a toast
-                     toast({ title: `Running compliance for ${selectedDeviceIds.length} devices.`});
-                  }}>
+                  <Button variant="outline" onClick={() => handleRunCompliance({ devices: selectedDeviceIds })}>
                     <Bot className="mr-2" />
                     Run Compliance
                   </Button>
@@ -202,6 +220,7 @@ export default function DashboardPage() {
             onDelete={handleDeleteDevice}
             selectedDeviceIds={selectedDeviceIds}
             onSelectedDeviceIdsChange={setSelectedDeviceIds}
+            onRunCompliance={(deviceId) => handleRunCompliance({ devices: [deviceId] })}
           />
         </TabsContent>
         <TabsContent value="manage-jobs" className="mt-6">
@@ -213,9 +232,29 @@ export default function DashboardPage() {
                 className="pl-9"
               />
             </div>
-            <Button variant="outline">Export</Button>
+             <div className="flex items-center gap-2">
+              {selectedJobIds.length > 0 && (
+                <>
+                  <Button variant="outline" onClick={() => handleRunCompliance({ jobs: selectedJobIds })}>
+                    <Bot className="mr-2" />
+                    Run Compliance
+                  </Button>
+                  <Button variant="destructive" onClick={handleDeleteSelectedJobs}>
+                    <Trash2 className="mr-2" />
+                    Delete ({selectedJobIds.length})
+                  </Button>
+                </>
+              )}
+               <Button variant="outline">Export</Button>
+            </div>
           </div>
-           <JobTable jobs={jobs} onDelete={handleDeleteJob} />
+           <JobTable 
+              jobs={jobs} 
+              onDelete={handleDeleteJob} 
+              selectedJobIds={selectedJobIds}
+              onSelectedJobIdsChange={setSelectedJobIds}
+              onRunCompliance={(jobId) => handleRunCompliance({ jobs: [jobId] })}
+            />
         </TabsContent>
         <TabsContent value="manage-compliance" className="mt-6">
            {jobs.length > 0 && devices.length > 0 ? (
@@ -263,11 +302,13 @@ export default function DashboardPage() {
 
       <RunComplianceModal
         isOpen={isComplianceModalOpen}
-        onOpenChange={setIsComplianceModalOpen}
+        onOpenChange={handleComplianceModalOpenChange}
         devices={devices}
         jobs={jobs}
         complianceRun={currentComplianceRun}
         onRunComplete={handleRunComplianceComplete}
+        initialSelectedDeviceIds={initialModalSelections.devices}
+        initialSelectedJobIds={initialModalSelections.jobs}
       />
 
       <ComplianceLogModal 

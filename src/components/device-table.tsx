@@ -25,9 +25,10 @@ interface DeviceTableProps {
   onDelete: (id: string) => void;
   selectedDeviceIds: string[];
   onSelectedDeviceIdsChange: (ids: string[]) => void;
+  onRunCompliance: (id: string) => void;
 }
 
-export default function DeviceTable({ devices, onDelete, selectedDeviceIds, onSelectedDeviceIdsChange }: DeviceTableProps) {
+export default function DeviceTable({ devices, onDelete, selectedDeviceIds, onSelectedDeviceIdsChange, onRunCompliance }: DeviceTableProps) {
 
   const handleSelectAll = (checked: boolean) => {
     onSelectedDeviceIdsChange(checked ? devices.map(d => d.id) : []);
@@ -94,7 +95,7 @@ export default function DeviceTable({ devices, onDelete, selectedDeviceIds, onSe
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => onRunCompliance(device.id)}>
                       <Bot className="mr-2 h-4 w-4" />
                       Run Compliance
                     </DropdownMenuItem>
