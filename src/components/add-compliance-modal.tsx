@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Play, Copy, Download, Plus, Trash2 } from "lucide-react";
-import type { Device } from "@/lib/types";
+import type { Device, Job } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -26,16 +26,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface AddComplianceModalProps {
+interface AddJobModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   devices: Device[];
+  onAddJob: (job: Omit<Job, "id">) => void;
 }
 
-export default function AddComplianceModal({ isOpen, onOpenChange, devices }: AddComplianceModalProps) {
+export default function AddJobModal({ isOpen, onOpenChange, devices, onAddJob }: AddJobModalProps) {
   const [step, setStep] = useState(1);
   const { toast } = useToast();
   
+  // Job-wide state
+  const [jobName, setJobName] = useState("");
+
   // Step 1 State
   const [searchTerm, setSearchTerm] = useState("");
   const [command, setCommand] = useState("");
@@ -69,7 +73,7 @@ export default function AddComplianceModal({ isOpen, onOpenChange, devices }: Ad
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
-      link.setAttribute("download", "compliance_output.csv");
+      link.setAttribute("download", "command_output.csv");
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -91,10 +95,8 @@ export default function AddComplianceModal({ isOpen, onOpenChange, devices }: Ad
     toast({ title: "Success", description: "Template run successfully." });
   };
   
-  // Reset state when modal is closed or opened
   const handleOpenChangeAndReset = (isOpen: boolean) => {
     if (!isOpen) {
-      // Reset all state to initial values
       setStep(1);
       setSearchTerm("");
       setCommand("");
@@ -103,8 +105,26 @@ export default function AddComplianceModal({ isOpen, onOpenChange, devices }: Ad
       setTemplate("");
       setRuleOutput("");
       setIsTemplateRun(false);
+      setJobName("");
     }
     onOpenChange(isOpen);
+  };
+  
+  const handleCreateJob = () => {
+    if (!jobName) {
+      toast({
+        variant: "destructive",
+        title: "Job Name Required",
+        description: "Please enter a name for the job.",
+      });
+      return;
+    }
+    onAddJob({
+      name: jobName,
+      command: command,
+      template: template,
+    });
+    handleOpenChangeAndReset(false);
   };
 
   return (
@@ -112,17 +132,19 @@ export default function AddComplianceModal({ isOpen, onOpenChange, devices }: Ad
       <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-4 border-b space-y-4">
           <div>
-            <DialogTitle className="text-xl">Create Compliance Rule (Step {step} of 2)</DialogTitle>
+            <DialogTitle className="text-xl">Create Job (Step {step} of 2)</DialogTitle>
             <DialogDescription>
               {step === 1
-                ? "Configure and run compliance checks against your devices."
-                : "Define template and rules for compliance validation."}
+                ? "Configure and run checks against your devices."
+                : "Define template and rules for validation."}
             </DialogDescription>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input id="compliance-name" placeholder="Compliance Name (e.g., CIS Benchmark Check)" />
-            <Input id="compliance-description" placeholder="Optional description for this rule" />
-          </div>
+          <Input 
+            id="job-name" 
+            placeholder="Job Name (e.g., CIS Benchmark Check)" 
+            value={jobName}
+            onChange={(e) => setJobName(e.target.value)}
+          />
         </DialogHeader>
 
         {step === 1 && (
@@ -296,14 +318,11 @@ export default function AddComplianceModal({ isOpen, onOpenChange, devices }: Ad
         <DialogFooter className="p-4 border-t">
           <Button variant="outline" onClick={() => handleOpenChangeAndReset(false)}>Cancel</Button>
           {step === 1 ? (
-            <>
-              <Button>Save</Button>
-              <Button onClick={() => setStep(2)}>Next</Button>
-            </>
+            <Button onClick={() => setStep(2)}>Next</Button>
           ) : (
             <>
               <Button variant="outline" onClick={() => setStep(1)}>Previous</Button>
-              <Button>Submit</Button>
+              <Button onClick={handleCreateJob}>Create Job</Button>
             </>
           )}
         </DialogFooter>

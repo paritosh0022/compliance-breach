@@ -9,28 +9,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Trash2, Edit, Eye } from "lucide-react";
-import type { Device } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
+import { MoreHorizontal, Trash2, Edit } from "lucide-react";
+import type { Job } from "@/lib/types";
 
-interface DeviceTableProps {
-  devices: Device[];
+interface JobTableProps {
+  jobs: Job[];
   onDelete: (id: string) => void;
 }
 
-export default function DeviceTable({ devices, onDelete }: DeviceTableProps) {
-  if (devices.length === 0) {
+export default function JobTable({ jobs, onDelete }: JobTableProps) {
+  if (jobs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/20 py-20 text-center">
-        <h3 className="text-lg font-semibold text-muted-foreground">No Devices Added</h3>
-        <p className="text-sm text-muted-foreground">Get started by adding a new device.</p>
+        <h3 className="text-lg font-semibold text-muted-foreground">No Jobs Created</h3>
+        <p className="text-sm text-muted-foreground">Get started by creating a new job.</p>
       </div>
     );
   }
@@ -40,30 +38,14 @@ export default function DeviceTable({ devices, onDelete }: DeviceTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[40px]">
-              <Checkbox />
-            </TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>IP Address</TableHead>
-            <TableHead>Username</TableHead>
-            <TableHead>Port</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead>Job Name</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {devices.map((device) => (
-            <TableRow key={device.id}>
-              <TableCell>
-                <Checkbox />
-              </TableCell>
-              <TableCell className="font-medium">{device.name}</TableCell>
-              <TableCell>{device.ipAddress}</TableCell>
-              <TableCell>{device.username}</TableCell>
-              <TableCell>{device.port}</TableCell>
-              <TableCell>
-                <Badge variant="default">Connected</Badge>
-              </TableCell>
+          {jobs.map((job) => (
+            <TableRow key={job.id}>
+              <TableCell className="font-medium">{job.name}</TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -74,15 +56,11 @@ export default function DeviceTable({ devices, onDelete }: DeviceTableProps) {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem>
-                      <Eye className="mr-2 h-4 w-4" />
-                      View
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
                       <Edit className="mr-2 h-4 w-4" />
                       Edit
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onSelect={() => onDelete(device.id)}
+                      onSelect={() => onDelete(job.id)}
                       className="text-destructive focus:text-destructive"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />

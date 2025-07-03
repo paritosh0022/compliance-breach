@@ -6,3 +6,10 @@ export type Device = {
   password?: string;
   port: string;
 };
+
+export type Job = {
+  id: string;
+  name: string;
+  command?: string;
+  template?: string;
+};
