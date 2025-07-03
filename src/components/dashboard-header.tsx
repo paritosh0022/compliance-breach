@@ -12,8 +12,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function DashboardHeader() {
+  const router = useRouter();
+
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn');
+    router.push('/login');
+  };
+
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
       <SidebarTrigger className="md:hidden" />
@@ -39,7 +47,7 @@ export default function DashboardHeader() {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>
+          <DropdownMenuItem onSelect={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
             <span>Log out</span>
           </DropdownMenuItem>
