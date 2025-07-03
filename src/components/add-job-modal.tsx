@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -57,6 +57,19 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
   const [expandedPanel, setExpandedPanel] = useState<'command' | 'template' | 'rule' | null>(null);
   
   const isEditing = jobDetails && jobDetails.command !== undefined;
+
+  const gridLayoutClass = useMemo(() => {
+    switch (expandedPanel) {
+      case 'command':
+        return 'md:grid-cols-[3fr_1fr_1fr]'; // Command: 60%, Template: 20%, Rule: 20%
+      case 'template':
+        return 'md:grid-cols-[2fr_5fr_3fr]'; // Command: 20%, Template: 50%, Rule: 30%
+      case 'rule':
+        return 'md:grid-cols-[2fr_3fr_5fr]'; // Command: 20%, Template: 30%, Rule: 50%
+      default:
+        return 'md:grid-cols-3';
+    }
+  }, [expandedPanel]);
 
   const handleTemplateChange = useCallback((newTemplate: string) => {
     setTemplate(newTemplate);
@@ -173,10 +186,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
 
         <div className={cn(
             "flex-1 grid grid-cols-1 gap-0 overflow-hidden transition-all duration-300 ease-in-out",
-            expandedPanel === 'command' ? 'md:grid-cols-[1fr_0fr_0fr]' :
-            expandedPanel === 'template' ? 'md:grid-cols-[0fr_2fr_1fr]' :
-            expandedPanel === 'rule' ? 'md:grid-cols-[0fr_1fr_2fr]' :
-            'md:grid-cols-3'
+            gridLayoutClass
           )}
         >
             {/* Column 1: Command */}
