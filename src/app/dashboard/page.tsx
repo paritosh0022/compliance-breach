@@ -185,7 +185,7 @@ export default function DashboardPage() {
             {getActiveButton(activeTab)}
             <Button variant="outline" onClick={() => setIsReportModalOpen(true)}>
                 <FileText className="mr-2 h-4 w-4" />
-                Reports
+                Compliance Report
             </Button>
         </div>
       </div>

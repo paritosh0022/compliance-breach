@@ -123,30 +123,40 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
     }
 
     const { default: jsPDF } = await import('jspdf');
-    const { default: autoTable } = await import('jspdf-autotable');
+    // jspdf-autotable is a plugin and extends the jsPDF prototype.
+    // We need to import it to have access to the `autoTable` method.
+    await import('jspdf-autotable');
 
-    const doc = new jsPDF();
+    // Cast to any to access the autoTable method dynamically added by the plugin.
+    const doc = new jsPDF() as any;
+    
     doc.text("Compliance Report", 14, 15);
 
-    const body: any[] = [];
+    const head = [['Job Name', 'Device', 'IP Address', 'Last ran at', 'Status']];
+    
+    const body: any[][] = [];
     filteredLogs.forEach(group => {
       group.results.forEach((result, index) => {
-        const rowData: any[] = [];
         if (index === 0) {
-          rowData.push({ content: group.jobName, rowSpan: group.results.length, styles: { valign: 'middle' } });
+          body.push([
+            { content: group.jobName, rowSpan: group.results.length, styles: { valign: 'top' } },
+            result.deviceName,
+            result.deviceIpAddress,
+            { content: format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss"), rowSpan: group.results.length, styles: { valign: 'top' } },
+            result.status
+          ]);
+        } else {
+          body.push([
+            result.deviceName,
+            result.deviceIpAddress,
+            result.status
+          ]);
         }
-        rowData.push(result.deviceName);
-        rowData.push(result.deviceIpAddress);
-        if (index === 0) {
-          rowData.push({ content: format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss"), rowSpan: group.results.length, styles: { valign: 'middle' } });
-        }
-        rowData.push({ content: result.status, styles: { halign: 'center' } });
-        body.push(rowData);
       });
     });
 
-    autoTable(doc, {
-      head: [['Job Name', 'Device', 'IP Address', 'Last ran at', 'Status']],
+    doc.autoTable({
+      head: head,
       body: body,
       startY: 22,
     });
@@ -158,7 +168,7 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Compliance Reports</DialogTitle>
+          <DialogTitle>Compliance Report</DialogTitle>
           <DialogDescription>
             History of all compliance checks, grouped by job.
           </DialogDescription>
