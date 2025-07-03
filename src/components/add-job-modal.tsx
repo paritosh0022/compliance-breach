@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -20,11 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Expand, Minimize2 } from "lucide-react";
 import type { Job } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 interface AddJobModalProps {
   isOpen: boolean;
@@ -53,6 +53,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
   const [isTemplateRun, setIsTemplateRun] = useState(false);
   const [condition, setCondition] = useState<'and' | 'or'>('and');
   const [groups, setGroups] = useState<RuleGroup[]>([]);
+  const [isRuleEngineExpanded, setIsRuleEngineExpanded] = useState(false);
   
   const isEditing = jobDetails && jobDetails.command !== undefined;
 
@@ -141,6 +142,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
       setIsTemplateRun(false);
       setGroups([]);
       setCondition('and');
+      setIsRuleEngineExpanded(false);
     }
   };
   
@@ -159,7 +161,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
            <DialogTitle className="text-xl">{isEditing ? 'Edit Job' : 'Create Job'}</DialogTitle>
         </DialogHeader>
 
-        {jobDetails && (
+        {jobDetails && !isRuleEngineExpanded && (
           <div className="p-4 border-b bg-muted/50">
             <p className="text-sm">
               <span className="font-semibold text-foreground">{jobDetails.name}:</span>
@@ -168,9 +170,13 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
           </div>
         )}
 
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-0 overflow-hidden">
+        <div className={cn(
+            "flex-1 grid grid-cols-1 md:grid-cols-3 gap-0 overflow-hidden",
+            isRuleEngineExpanded && "md:grid-cols-[0fr_0fr_1fr]"
+          )}
+        >
             {/* Column 1: Command */}
-            <div className="flex flex-col border-r">
+            <div className="flex flex-col border-r overflow-hidden transition-all duration-500 ease-in-out">
               <div className="p-4 border-b flex items-center justify-between h-[60px]">
                 <h3 className="font-semibold text-base">Command</h3>
               </div>
@@ -185,7 +191,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
             </div>
 
             {/* Column 2: Template */}
-            <div className="flex flex-col border-r">
+            <div className="flex flex-col border-r overflow-hidden transition-all duration-500 ease-in-out">
                <div className="p-4 border-b flex items-center justify-between h-[60px]">
                 <h3 className="font-semibold text-base">Template</h3>
               </div>
@@ -200,9 +206,13 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
             </div>
             
             {/* Column 3: Rule Engine */}
-            <div className="flex flex-col">
+            <div className="flex flex-col min-h-0">
               <div className="p-4 border-b flex items-center justify-between h-[60px]">
                 <h3 className="font-semibold text-base">Rule Engine</h3>
+                 <Button variant="ghost" size="icon" onClick={() => setIsRuleEngineExpanded(v => !v)} className="h-8 w-8">
+                  {isRuleEngineExpanded ? <Minimize2 className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
+                  <span className="sr-only">{isRuleEngineExpanded ? 'Minimize Rule Engine' : 'Expand Rule Engine'}</span>
+                </Button>
               </div>
               <ScrollArea className="flex-1">
                 <fieldset disabled={!isTemplateRun} className="p-4 space-y-4">
