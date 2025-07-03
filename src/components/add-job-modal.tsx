@@ -172,15 +172,15 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
         )}
 
         <div className={cn(
-            "flex-1 grid grid-cols-1 gap-0 overflow-hidden",
+            "flex-1 grid grid-cols-1 gap-0 overflow-hidden transition-all duration-300 ease-in-out",
             expandedPanel === 'command' ? 'md:grid-cols-[1fr_0fr_0fr]' :
-            expandedPanel === 'template' ? 'md:grid-cols-[0fr_1fr_0fr]' :
-            expandedPanel === 'rule' ? 'md:grid-cols-[0fr_0fr_1fr]' :
+            expandedPanel === 'template' ? 'md:grid-cols-[0fr_2fr_1fr]' :
+            expandedPanel === 'rule' ? 'md:grid-cols-[0fr_1fr_2fr]' :
             'md:grid-cols-3'
           )}
         >
             {/* Column 1: Command */}
-            <div className="flex flex-col border-r overflow-hidden transition-all duration-500 ease-in-out">
+            <div className="flex flex-col border-r overflow-hidden min-h-0">
               <div className="p-4 border-b flex items-center justify-between h-[60px]">
                 <h3 className="font-semibold text-base">Command</h3>
                 <Button variant="ghost" size="icon" onClick={() => setExpandedPanel(expandedPanel === 'command' ? null : 'command')} className="h-8 w-8">
@@ -199,7 +199,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
             </div>
 
             {/* Column 2: Template */}
-            <div className="flex flex-col border-r overflow-hidden transition-all duration-500 ease-in-out">
+            <div className="flex flex-col border-r overflow-hidden min-h-0">
                <div className="p-4 border-b flex items-center justify-between h-[60px]">
                 <h3 className="font-semibold text-base">Template</h3>
                 <Button variant="ghost" size="icon" onClick={() => setExpandedPanel(expandedPanel === 'template' ? null : 'template')} className="h-8 w-8">
@@ -218,7 +218,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
             </div>
             
             {/* Column 3: Rule Engine */}
-            <div className="flex flex-col min-h-0">
+            <div className="flex flex-col overflow-hidden min-h-0">
               <div className="p-4 border-b flex items-center justify-between h-[60px]">
                 <h3 className="font-semibold text-base">Rule Engine</h3>
                  <Button variant="ghost" size="icon" onClick={() => setExpandedPanel(expandedPanel === 'rule' ? null : 'rule')} className="h-8 w-8">
@@ -312,5 +312,3 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
     </Dialog>
   );
 }
-
-    
