@@ -234,6 +234,20 @@ export default function DashboardPage() {
       .map(({ id, password, ...rest }) => rest);
     downloadCsv(devicesToExport, 'selected-devices.csv');
   };
+
+  const handleExportAllDevices = () => {
+    if (devices.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "No Devices",
+            description: "There are no devices to export.",
+        });
+        return;
+    }
+    const devicesToExport = devices
+      .map(({ id, password, ...rest }) => rest);
+    downloadCsv(devicesToExport, 'all-devices.csv');
+  };
   
   const handleExportDevice = (id: string) => {
     const deviceToExport = devices
@@ -256,6 +270,25 @@ export default function DashboardPage() {
         template: j.template || '',
       }));
     downloadCsv(jobsToExport, 'selected-jobs.csv');
+  };
+
+  const handleExportAllJobs = () => {
+    if (jobs.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "No Jobs",
+            description: "There are no jobs to export.",
+        });
+        return;
+    }
+    const jobsToExport = jobs
+      .map(j => ({
+        name: j.name,
+        description: j.description || '',
+        command: j.command || '',
+        template: j.template || '',
+      }));
+    downloadCsv(jobsToExport, 'all-jobs.csv');
   };
 
   const handleExportJob = (id: string) => {
@@ -366,9 +399,9 @@ export default function DashboardPage() {
                   </Button>
                 </>
               )}
-              <Button variant="outline" onClick={handleExportSelectedDevices} disabled={selectedDeviceIds.length === 0}>
+              <Button variant="outline" onClick={() => selectedDeviceIds.length > 0 ? handleExportSelectedDevices() : handleExportAllDevices()}>
                 <Download className="mr-2 h-4 w-4" />
-                Export{selectedDeviceIds.length > 0 ? ` (${selectedDeviceIds.length})` : ''}
+                {selectedDeviceIds.length > 0 ? `Export (${selectedDeviceIds.length})` : 'Export All'}
               </Button>
             </div>
           </div>
@@ -404,9 +437,9 @@ export default function DashboardPage() {
                   </Button>
                 </>
               )}
-               <Button variant="outline" onClick={handleExportSelectedJobs} disabled={selectedJobIds.length === 0}>
+               <Button variant="outline" onClick={() => selectedJobIds.length > 0 ? handleExportSelectedJobs() : handleExportAllJobs()}>
                 <Download className="mr-2 h-4 w-4" />
-                Export{selectedJobIds.length > 0 ? ` (${selectedJobIds.length})` : ''}
+                {selectedJobIds.length > 0 ? `Export (${selectedJobIds.length})` : 'Export All'}
               </Button>
             </div>
           </div>
