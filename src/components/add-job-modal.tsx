@@ -24,6 +24,7 @@ import { Plus, Trash2 } from "lucide-react";
 import type { Job } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "./ui/badge";
+import { ScrollArea } from "./ui/scroll-area";
 
 interface AddJobModalProps {
   isOpen: boolean;
