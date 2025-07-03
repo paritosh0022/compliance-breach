@@ -14,7 +14,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MoreHorizontal, Trash2, Edit, Bot } from "lucide-react";
 import type { Device } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
 
 interface DeviceTableProps {
   devices: Device[];
@@ -62,7 +61,6 @@ export default function DeviceTable({ devices, onDelete, selectedDeviceIds, onSe
             <TableHead>IP Address</TableHead>
             <TableHead>Username</TableHead>
             <TableHead>Port</TableHead>
-            <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -79,9 +77,6 @@ export default function DeviceTable({ devices, onDelete, selectedDeviceIds, onSe
               <TableCell>{device.ipAddress}</TableCell>
               <TableCell>{device.username}</TableCell>
               <TableCell>{device.port}</TableCell>
-              <TableCell>
-                <Badge variant="default">Connected</Badge>
-              </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
                   <TooltipProvider>

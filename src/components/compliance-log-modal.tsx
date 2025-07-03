@@ -3,6 +3,8 @@
 
 import React, { useMemo, useState } from 'react';
 import Papa from 'papaparse';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   Dialog,
   DialogContent,
@@ -87,7 +89,7 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
       }
   };
   
-  const handleDownload = () => {
+  const handleDownloadCsv = () => {
     const csvData = filteredLogs.flatMap(group => 
       group.results.map(result => ({
         job_name: group.jobName,
@@ -116,6 +118,41 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
     document.body.removeChild(link);
   };
   
+  const handleDownloadPdf = () => {
+    if (filteredLogs.length === 0) {
+      toast({ variant: 'destructive', title: 'No data to download.' });
+      return;
+    }
+
+    const doc = new jsPDF();
+    doc.text("Compliance Report", 14, 15);
+
+    const body: any[] = [];
+    filteredLogs.forEach(group => {
+      group.results.forEach((result, index) => {
+        const rowData = [];
+        if (index === 0) {
+          rowData.push({ content: group.jobName, rowSpan: group.results.length, styles: { valign: 'middle' } });
+        }
+        rowData.push(result.deviceName);
+        rowData.push(result.deviceIpAddress);
+        if (index === 0) {
+          rowData.push({ content: format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss"), rowSpan: group.results.length, styles: { valign: 'middle' } });
+        }
+        rowData.push({ content: result.status, styles: { halign: 'center' } });
+        body.push(rowData);
+      });
+    });
+
+    autoTable(doc, {
+      head: [['Job Name', 'Device', 'IP Address', 'Last ran at', 'Status']],
+      body: body,
+      startY: 22,
+    });
+
+    doc.save('compliance_report.pdf');
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl h-[80vh] flex flex-col">
@@ -135,10 +172,16 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
-            <Button variant="outline" onClick={handleDownload}>
-                <Download className="mr-2 h-4 w-4" />
-                Download Report
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handleDownloadCsv}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download CSV
+              </Button>
+              <Button variant="outline" onClick={handleDownloadPdf}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download PDF
+              </Button>
+            </div>
         </div>
         <div className="flex-1 min-h-0 border rounded-lg">
           <ScrollArea className="h-full">
