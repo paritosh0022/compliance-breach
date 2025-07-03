@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Link from 'next/link';
 import {
   Sidebar,
   SidebarHeader,
@@ -15,8 +16,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { groupedComponents, categories } from '@/lib/component-data';
-import { ChevronsUpDown, LayoutGrid, Layout, FormInput, SquareArrowOutUpRight, Navigation, GalleryVertical } from 'lucide-react';
+import { groupedComponents } from '@/lib/component-data';
+import { ChevronsUpDown, LayoutGrid, Layout, FormInput, SquareArrowOutUpRight, Navigation, GalleryVertical, Server } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AppSidebarProps {
@@ -40,6 +41,14 @@ export default function AppSidebar({ activeCategory, setActiveCategory }: AppSid
       </SidebarHeader>
       <SidebarContent className="p-2">
         <SidebarMenu>
+          <SidebarMenuItem>
+             <SidebarMenuButton asChild tooltip="Dashboard">
+               <Link href="/dashboard">
+                 <Server />
+                 <span>Dashboard</span>
+               </Link>
+             </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={() => setActiveCategory('All Components')}
