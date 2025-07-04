@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AddJobModalProps {
   isOpen: boolean;
@@ -57,19 +58,23 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
   const [expandedPanel, setExpandedPanel] = useState<'command' | 'template' | 'rule' | null>(null);
   
   const isEditing = jobDetails && jobDetails.command !== undefined;
+  const isMobile = useIsMobile();
 
   const gridLayoutClass = useMemo(() => {
+    if (isMobile) {
+      return 'grid-cols-1';
+    }
     switch (expandedPanel) {
       case 'command':
-        return 'md:grid-cols-[3fr_1fr_1fr]'; // Command: 60%, Template: 20%, Rule: 20%
+        return 'md:grid-cols-[3fr_1fr_1fr]';
       case 'template':
-        return 'md:grid-cols-[2fr_5fr_3fr]'; // Command: 20%, Template: 50%, Rule: 30%
+        return 'md:grid-cols-[2fr_5fr_3fr]';
       case 'rule':
-        return 'md:grid-cols-[2fr_3fr_5fr]'; // Command: 20%, Template: 30%, Rule: 50%
+        return 'md:grid-cols-[2fr_3fr_5fr]';
       default:
         return 'md:grid-cols-3';
     }
-  }, [expandedPanel]);
+  }, [expandedPanel, isMobile]);
 
   const handleTemplateChange = useCallback((newTemplate: string) => {
     setTemplate(newTemplate);
@@ -113,6 +118,12 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
       handleTemplateChange(jobDetails.template || "");
     }
   }, [isOpen, jobDetails, handleTemplateChange]);
+
+  useEffect(() => {
+    if (isMobile) {
+      setExpandedPanel(null);
+    }
+  }, [isMobile]);
 
 
   const handleAddGroup = () => {
@@ -193,10 +204,12 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
             <div className="flex flex-col border-r overflow-hidden min-h-0">
               <div className="p-4 border-b flex items-center justify-between h-[60px]">
                 <h3 className="font-semibold text-base">Command</h3>
-                <Button variant="ghost" size="icon" onClick={() => setExpandedPanel(expandedPanel === 'command' ? null : 'command')} className="h-8 w-8">
-                  {expandedPanel === 'command' ? <Minimize2 className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
-                  <span className="sr-only">{expandedPanel === 'command' ? 'Minimize Command' : 'Expand Command'}</span>
-                </Button>
+                {!isMobile && (
+                  <Button variant="ghost" size="icon" onClick={() => setExpandedPanel(expandedPanel === 'command' ? null : 'command')} className="h-8 w-8">
+                    {expandedPanel === 'command' ? <Minimize2 className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
+                    <span className="sr-only">{expandedPanel === 'command' ? 'Minimize Command' : 'Expand Command'}</span>
+                  </Button>
+                )}
               </div>
               <div className="flex-1 min-h-0">
                 <Textarea
@@ -212,10 +225,12 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
             <div className="flex flex-col border-r overflow-hidden min-h-0">
                <div className="p-4 border-b flex items-center justify-between h-[60px]">
                 <h3 className="font-semibold text-base">Template</h3>
-                <Button variant="ghost" size="icon" onClick={() => setExpandedPanel(expandedPanel === 'template' ? null : 'template')} className="h-8 w-8">
-                  {expandedPanel === 'template' ? <Minimize2 className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
-                  <span className="sr-only">{expandedPanel === 'template' ? 'Minimize Template' : 'Expand Template'}</span>
-                </Button>
+                {!isMobile && (
+                  <Button variant="ghost" size="icon" onClick={() => setExpandedPanel(expandedPanel === 'template' ? null : 'template')} className="h-8 w-8">
+                    {expandedPanel === 'template' ? <Minimize2 className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
+                    <span className="sr-only">{expandedPanel === 'template' ? 'Minimize Template' : 'Expand Template'}</span>
+                  </Button>
+                )}
               </div>
               <div className="flex-1 min-h-0">
                 <Textarea
@@ -231,10 +246,12 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
             <div className="flex flex-col overflow-hidden min-h-0">
               <div className="p-4 border-b flex items-center justify-between h-[60px]">
                 <h3 className="font-semibold text-base">Rule Engine</h3>
+                {!isMobile && (
                  <Button variant="ghost" size="icon" onClick={() => setExpandedPanel(expandedPanel === 'rule' ? null : 'rule')} className="h-8 w-8">
                   {expandedPanel === 'rule' ? <Minimize2 className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
                   <span className="sr-only">{expandedPanel === 'rule' ? 'Minimize Rule Engine' : 'Expand Rule Engine'}</span>
                 </Button>
+                )}
               </div>
               <ScrollArea className="flex-1">
                 <fieldset disabled={!isTemplateRun} className="p-4 space-y-4">
