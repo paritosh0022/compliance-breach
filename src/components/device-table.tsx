@@ -78,7 +78,6 @@ export default function DeviceTable({ devices, onDelete, onEdit, selectedDeviceI
               <Checkbox
                 checked={selectedDeviceIds.length === devices.length && devices.length > 0}
                 onCheckedChange={handleSelectAll}
-                disabled={isComplianceRunning}
               />
             </TableHead>
             <TableHead>Name</TableHead>
@@ -95,7 +94,6 @@ export default function DeviceTable({ devices, onDelete, onEdit, selectedDeviceI
                 <Checkbox
                   checked={selectedDeviceIds.includes(device.id)}
                   onCheckedChange={(checked) => handleSelectRow(device.id, !!checked)}
-                  disabled={isComplianceRunning}
                 />
               </TableCell>
               <TableCell className="font-medium">{device.name}</TableCell>
