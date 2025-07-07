@@ -55,12 +55,32 @@ export default function DashboardPage() {
   const [selectedJobIds, setSelectedJobIds] = useState([]);
   const [initialModalSelections, setInitialModalSelections] = useState({});
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [deviceSearchTerm, setDeviceSearchTerm] = useState("");
+  const [jobSearchTerm, setJobSearchTerm] = useState("");
 
   const { toast } = useToast();
 
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  const filteredDevices = devices.filter(device => {
+    const searchTermLower = deviceSearchTerm.toLowerCase();
+    return (
+      device.name.toLowerCase().includes(searchTermLower) ||
+      device.ipAddress.toLowerCase().includes(searchTermLower) ||
+      device.username.toLowerCase().includes(searchTermLower) ||
+      device.port.toString().includes(searchTermLower)
+    );
+  });
+
+  const filteredJobs = jobs.filter(job => {
+    const searchTermLower = jobSearchTerm.toLowerCase();
+    return (
+      job.name.toLowerCase().includes(searchTermLower) ||
+      (job.description && job.description.toLowerCase().includes(searchTermLower))
+    );
+  });
   
   const handleRunCompliance = (selections) => {
     setInitialModalSelections(selections);
@@ -370,6 +390,8 @@ export default function DashboardPage() {
               <Input
                 placeholder="Search devices..."
                 className="pl-9"
+                value={deviceSearchTerm}
+                onChange={(e) => setDeviceSearchTerm(e.target.value)}
               />
             </div>
             <div className="flex items-center gap-2">
@@ -406,7 +428,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <DeviceTable 
-            devices={devices} 
+            devices={filteredDevices} 
             onDelete={handleDeleteDevice}
             onEdit={handleEditDeviceClick}
             selectedDeviceIds={selectedDeviceIds}
@@ -423,6 +445,8 @@ export default function DashboardPage() {
               <Input
                 placeholder="Search jobs..."
                 className="pl-9"
+                value={jobSearchTerm}
+                onChange={(e) => setJobSearchTerm(e.target.value)}
               />
             </div>
              <div className="flex items-center gap-2">
@@ -459,7 +483,7 @@ export default function DashboardPage() {
             </div>
           </div>
            <JobTable 
-              jobs={jobs} 
+              jobs={filteredJobs} 
               onDelete={handleDeleteJob} 
               onEdit={handleEditJobClick}
               selectedJobIds={selectedJobIds}
@@ -523,3 +547,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    
