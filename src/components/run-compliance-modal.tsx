@@ -27,6 +27,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
   const [output, setOutput] = useState("");
   const [viewedJob, setViewedJob] = useState(null);
   const [viewedDevice, setViewedDevice] = useState(null);
+  const [isRunning, setIsRunning] = useState(false);
 
 
   const { toast } = useToast();
@@ -108,37 +109,45 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
       return;
     }
 
-    let rawOutput = `Running ${selectedJobsList.length} job(s) on ${selectedDevices.length} device(s)...\n\n`;
-    const runResults = [];
-    
-    selectedDevices.forEach(deviceId => {
-      const device = devices.find(d => d.id === deviceId);
-      if(device) {
-        rawOutput += `--- Device: ${device.name} ---\n`;
-        selectedJobsList.forEach(job => {
-            const isSuccess = Math.random() > 0.3; // Simulate success/failure
-            const message = isSuccess ? `Compliance check passed.` : `Device did not meet compliance standard 'XYZ-1.2'.`;
-            rawOutput += `  [Job: ${job.name}] - ${isSuccess ? 'SUCCESS' : 'FAILED'}: ${message}\n`;
+    setIsRunning(true);
+    setOutput("");
 
-            runResults.push({
-              deviceId: device.id,
-              deviceName: device.name,
-              deviceIpAddress: device.ipAddress,
-              jobId: job.id,
-              jobName: job.name,
-              status: isSuccess ? 'Success' : 'Failed',
-              message,
-            });
-        });
-        rawOutput += `\n`;
-      }
-    });
+    // Simulate API call and processing
+    setTimeout(() => {
+      let rawOutput = `Running ${selectedJobsList.length} job(s) on ${selectedDevices.length} device(s)...\n\n`;
+      const runResults = [];
+      
+      selectedDevices.forEach(deviceId => {
+        const device = devices.find(d => d.id === deviceId);
+        if(device) {
+          rawOutput += `--- Device: ${device.name} ---\n`;
+          selectedJobsList.forEach(job => {
+              const isSuccess = Math.random() > 0.3; // Simulate success/failure
+              const message = isSuccess ? `Compliance check passed.` : `Device did not meet compliance standard 'XYZ-1.2'.`;
+              rawOutput += `  [Job: ${job.name}] - ${isSuccess ? 'SUCCESS' : 'FAILED'}: ${message}\n`;
 
-    setOutput(rawOutput);
-    
-    onRunComplete({
-      results: runResults,
-    });
+              runResults.push({
+                deviceId: device.id,
+                deviceName: device.name,
+                deviceIpAddress: device.ipAddress,
+                jobId: job.id,
+                jobName: job.name,
+                status: isSuccess ? 'Success' : 'Failed',
+                message,
+              });
+          });
+          rawOutput += `\n`;
+        }
+      });
+
+      setOutput(rawOutput);
+      
+      onRunComplete({
+        results: runResults,
+      });
+
+      setIsRunning(false);
+    }, 2500);
   };
   
   const handleOpenChangeAndReset = (isOpen) => {
@@ -150,32 +159,29 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
       setOutput("");
       setViewedJob(null);
       setViewedDevice(null);
+      setIsRunning(false);
     }
     onOpenChange(isOpen);
   };
   
   const getGridClass = () => {
+    let classParts = ['md:grid-cols-3'];
+    if (viewedDevice || viewedJob) {
+      classParts = ['md:grid-cols-[1fr_1.5fr_1fr_1fr]'];
+    }
     if (viewedDevice && viewedJob) {
-      // Devices | Device Details | Jobs | Job Details | Output
-      return 'md:grid-cols-[1fr_1.5fr_1fr_1.5fr_1fr]';
+      classParts = ['md:grid-cols-[1fr_1.5fr_1fr_1.5fr_1fr]'];
     }
-    if (viewedDevice) {
-      // Devices | Device Details | Jobs | Output
-      return 'md:grid-cols-[1fr_1.5fr_1fr_1fr]';
-    }
-    if (viewedJob) {
-      // Devices | Jobs | Job Details | Output
-      return 'md:grid-cols-[1fr_1fr_1.5fr_1fr]';
-    }
-    // Devices | Jobs | Output
-    return 'md:grid-cols-[1fr_1fr_1fr]';
+
+    // Default view with one column on mobile
+    return cn('grid-cols-1', ...classParts);
   };
   const finalGridClass = getGridClass();
 
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChangeAndReset}>
-      <DialogContent className="max-w-screen-xl w-[95vw] h-[90vh] flex flex-col p-0">
+      <DialogContent className="max-w-screen-2xl w-[95vw] h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-4 border-b">
           <DialogTitle className="text-xl">Run Compliance Check</DialogTitle>
           <DialogDescription>
@@ -183,9 +189,9 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
           </DialogDescription>
         </DialogHeader>
 
-        <div className={cn("flex-1 grid grid-cols-1 gap-0 overflow-hidden", finalGridClass)}>
+        <div className={cn("flex-1 grid gap-0 overflow-hidden", finalGridClass)}>
           {/* Column 1: Devices */}
-          <div className="flex flex-col border-r min-h-0">
+          <fieldset disabled={isRunning} className="flex flex-col border-r min-h-0 disabled:opacity-50 transition-opacity">
             <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
               <div className="flex items-center space-x-3">
                  <Checkbox
@@ -224,7 +230,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
                 {devices.length === 0 && ( <div className="text-center text-sm text-muted-foreground p-4">No devices available.</div> )}
               </div>
             </ScrollArea>
-          </div>
+          </fieldset>
 
           {/* Column 1.5: Device Details (Conditional) */}
           {viewedDevice && (
@@ -247,7 +253,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
           )}
 
           {/* Column 2: Jobs */}
-          <div className="flex flex-col border-r min-h-0">
+          <fieldset disabled={isRunning} className="flex flex-col border-r min-h-0 disabled:opacity-50 transition-opacity">
              <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
               <div className="flex items-center space-x-3">
                  <Checkbox
@@ -286,7 +292,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
                 {jobs.length === 0 && ( <div className="text-center text-sm text-muted-foreground p-4">No jobs available.</div> )}
               </div>
             </ScrollArea>
-          </div>
+          </fieldset>
 
           {/* Column 2.5: Job Details (Conditional) */}
           {viewedJob && (
@@ -312,20 +318,24 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
             <div className="p-4 border-b flex items-center justify-between h-[73px]">
               <h3 className="font-semibold text-base">Output</h3>
                <div className="flex items-center gap-2">
-                 <Button size="sm" onClick={handleRunCompliance} disabled={selectedJobIds.length === 0 || selectedDevices.length === 0}>
-                    <Play className="mr-2 h-4 w-4" />
-                    Run
+                 <Button size="sm" onClick={handleRunCompliance} disabled={selectedJobIds.length === 0 || selectedDevices.length === 0 || isRunning}>
+                    {isRunning ? "Running..." : <><Play className="mr-2 h-4 w-4" />Run</>}
                   </Button>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopyOutput} disabled={!output}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopyOutput} disabled={!output || isRunning}>
                   <Copy className="h-4 w-4" />
                   <span className="sr-only">Copy Output</span>
                 </Button>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleDownloadCsv} disabled={!output}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleDownloadCsv} disabled={!output || isRunning}>
                   <Download className="h-4 w-4" />
                   <span className="sr-only">Download CSV</span>
                 </Button>
               </div>
             </div>
+            {isRunning && (
+              <div className="relative h-1 w-full overflow-hidden bg-primary/20">
+                  <div className="h-full w-full animate-progress-indeterminate bg-primary" />
+              </div>
+            )}
             <div className="flex-1 min-h-0">
               <Textarea
                 readOnly
