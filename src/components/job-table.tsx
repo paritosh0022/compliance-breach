@@ -78,7 +78,6 @@ export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSel
               <Checkbox
                 checked={selectedJobIds.length === jobs.length && jobs.length > 0}
                 onCheckedChange={handleSelectAll}
-                disabled={isComplianceRunning}
               />
             </TableHead>
             <TableHead>Job Name</TableHead>
@@ -93,7 +92,6 @@ export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSel
                 <Checkbox
                   checked={selectedJobIds.includes(job.id)}
                   onCheckedChange={(checked) => handleSelectRow(job.id, !!checked)}
-                  disabled={isComplianceRunning}
                 />
               </TableCell>
               <TableCell className="font-medium">{job.name}</TableCell>
@@ -110,7 +108,6 @@ export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSel
                       <Bot className="h-4 w-4" />
                     </ActionButton>
                     <ActionButton
-                      isRunning={isComplianceRunning}
                       onAction={() => onExport(job.id)}
                       tooltipText="Export Job"
                       disabledTooltipText="Compliance is running"
@@ -143,3 +140,5 @@ export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSel
     </div>
   );
 }
+
+    

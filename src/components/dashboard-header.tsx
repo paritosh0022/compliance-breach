@@ -41,14 +41,14 @@ export default function DashboardHeader() {
         };
       case 'completed':
         return {
-          text: 'Completed',
+          text: 'Compliance Completed',
           icon: <CheckCircle2 className="mr-2 h-4 w-4" />,
           variant: 'default',
           className: 'bg-green-500 hover:bg-green-600 text-white',
         };
       case 'failed':
         return {
-          text: 'Failed',
+          text: 'Compliance Failed',
           icon: <XCircle className="mr-2 h-4 w-4" />,
           variant: 'destructive',
         };
@@ -105,3 +105,5 @@ export default function DashboardHeader() {
     </header>
   );
 }
+
+    

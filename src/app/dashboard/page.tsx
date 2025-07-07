@@ -25,6 +25,7 @@ import useLocalStorageState from '@/hooks/use-local-storage-state';
 import ImportDevicesModal from '@/components/import-devices-modal';
 import ConfirmDeleteDialog from '@/components/confirm-delete-dialog';
 import { useDashboard } from '@/contexts/DashboardContext';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function DashboardPage() {
   const {
@@ -373,16 +374,30 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-2">
               {selectedDeviceIds.length > 0 && (
-                <>
-                  <Button onClick={() => handleRunCompliance({ devices: selectedDeviceIds })} disabled={isComplianceRunning}>
-                    <Bot className="mr-2" />
-                    Run Compliance ({selectedDeviceIds.length})
-                  </Button>
-                  <Button variant="destructive" onClick={handleDeleteSelectedDevices} disabled={isComplianceRunning}>
-                    <Trash2 className="mr-2" />
-                    Delete ({selectedDeviceIds.length})
-                  </Button>
-                </>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>
+                        <Button onClick={() => handleRunCompliance({ devices: selectedDeviceIds })} disabled={isComplianceRunning}>
+                          <Bot className="mr-2" />
+                          Run Compliance ({selectedDeviceIds.length})
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {isComplianceRunning && <TooltipContent><p>Compliance is running</p></TooltipContent>}
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>
+                        <Button variant="destructive" onClick={handleDeleteSelectedDevices} disabled={isComplianceRunning}>
+                          <Trash2 className="mr-2" />
+                          Delete ({selectedDeviceIds.length})
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {isComplianceRunning && <TooltipContent><p>Compliance is running</p></TooltipContent>}
+                  </Tooltip>
+                </TooltipProvider>
               )}
               <Button variant="outline" onClick={() => selectedDeviceIds.length > 0 ? handleExportSelectedDevices() : handleExportAllDevices()}>
                 <Download className="mr-2 h-4 w-4" />
@@ -412,16 +427,30 @@ export default function DashboardPage() {
             </div>
              <div className="flex items-center gap-2">
               {selectedJobIds.length > 0 && (
-                <>
-                  <Button onClick={() => handleRunCompliance({ jobs: selectedJobIds })} disabled={isComplianceRunning}>
-                    <Bot className="mr-2" />
-                    Run Compliance ({selectedJobIds.length})
-                  </Button>
-                  <Button variant="destructive" onClick={handleDeleteSelectedJobs} disabled={isComplianceRunning}>
-                    <Trash2 className="mr-2" />
-                    Delete ({selectedJobIds.length})
-                  </Button>
-                </>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>
+                        <Button onClick={() => handleRunCompliance({ jobs: selectedJobIds })} disabled={isComplianceRunning}>
+                          <Bot className="mr-2" />
+                          Run Compliance ({selectedJobIds.length})
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {isComplianceRunning && <TooltipContent><p>Compliance is running</p></TooltipContent>}
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>
+                        <Button variant="destructive" onClick={handleDeleteSelectedJobs} disabled={isComplianceRunning}>
+                          <Trash2 className="mr-2" />
+                          Delete ({selectedJobIds.length})
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {isComplianceRunning && <TooltipContent><p>Compliance is running</p></TooltipContent>}
+                  </Tooltip>
+                </TooltipProvider>
               )}
                <Button variant="outline" onClick={() => selectedJobIds.length > 0 ? handleExportSelectedJobs() : handleExportAllJobs()}>
                 <Download className="mr-2 h-4 w-4" />
@@ -494,3 +523,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    
