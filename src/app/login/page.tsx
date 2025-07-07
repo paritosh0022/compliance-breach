@@ -44,12 +44,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleReset = () => {
-    localStorage.removeItem('masterPassword');
-    localStorage.removeItem('isLoggedIn');
-    router.push('/setup');
-  };
-
   if (!isClient) {
       return null;
   }
@@ -82,11 +76,6 @@ export default function LoginPage() {
               Login
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm">
-            <Button variant="link" className="px-0 font-normal h-auto" onClick={handleReset}>
-              Forgot your password? Reset it.
-            </Button>
-          </div>
         </CardContent>
       </Card>
     </main>
