@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -20,12 +21,7 @@ import { groupedComponents } from '@/lib/component-data';
 import { ChevronsUpDown, LayoutGrid, Layout, FormInput, SquareArrowOutUpRight, Navigation, GalleryVertical, Server } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface AppSidebarProps {
-  activeCategory: string | null;
-  setActiveCategory: (category: string | null) => void;
-}
-
-const categoryIcons: Record<string, React.ElementType> = {
+const categoryIcons = {
   Layout: Layout,
   Forms: FormInput,
   Overlays: SquareArrowOutUpRight,
@@ -33,7 +29,7 @@ const categoryIcons: Record<string, React.ElementType> = {
   Display: GalleryVertical,
 };
 
-export default function AppSidebar({ activeCategory, setActiveCategory }: AppSidebarProps) {
+export default function AppSidebar({ activeCategory, setActiveCategory }) {
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
@@ -108,7 +104,7 @@ export default function AppSidebar({ activeCategory, setActiveCategory }: AppSid
 }
 
 // A helper function to manage active state more granularly if needed in future
-function filteredByComponent(name: string) {
+function filteredByComponent(name) {
     // This could be enhanced to filter by individual component
     return true;
 }

@@ -13,25 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Trash2, Edit, Bot, Download } from "lucide-react";
-import type { Job } from "@/lib/types";
 
-interface JobTableProps {
-  jobs: Job[];
-  onDelete: (id: string) => void;
-  onEdit: (id: string) => void;
-  selectedJobIds: string[];
-  onSelectedJobIdsChange: (ids: string[]) => void;
-  onRunCompliance: (id: string) => void;
-  onExport: (id: string) => void;
-}
-
-export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSelectedJobIdsChange, onRunCompliance, onExport }: JobTableProps) {
+export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSelectedJobIdsChange, onRunCompliance, onExport }) {
   
-  const handleSelectAll = (checked: boolean) => {
+  const handleSelectAll = (checked) => {
     onSelectedJobIdsChange(checked ? jobs.map(j => j.id) : []);
   };
   
-  const handleSelectRow = (id: string, checked: boolean) => {
+  const handleSelectRow = (id, checked) => {
     if (checked) {
       onSelectedJobIdsChange([...selectedJobIds, id]);
     } else {

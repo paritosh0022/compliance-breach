@@ -1,10 +1,11 @@
+
 // src/hooks/use-local-storage-state.ts
 "use client";
 
 import { useState, useEffect } from 'react';
 
-function useLocalStorageState<T>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
-  const [state, setState] = useState<T>(defaultValue);
+function useLocalStorageState(key, defaultValue) {
+  const [state, setState] = useState(defaultValue);
   const [isHydrated, setIsHydrated] = useState(false);
 
   // This effect runs once on the client after initial render to hydrate the state from localStorage.

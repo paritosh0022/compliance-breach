@@ -20,7 +20,6 @@ import AddJobModal from '@/components/add-job-modal';
 import AddJobDetailsModal from '@/components/add-job-details-modal';
 import RunComplianceModal from '@/components/run-compliance-modal';
 import ReportModal from '@/components/compliance-log-modal';
-import type { Device, Job, ComplianceLog } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorageState from '@/hooks/use-local-storage-state';
 import ImportDevicesModal from '@/components/import-devices-modal';
@@ -38,20 +37,17 @@ export default function DashboardPage() {
   
   const [activeTab, setActiveTab] = useState('device-list');
   
-  const [devices, setDevices] = useLocalStorageState<Device[]>('devices', []);
-  const [jobs, setJobs] = useLocalStorageState<Job[]>('jobs', []);
-  const [complianceLog, setComplianceLog] = useLocalStorageState<ComplianceLog[]>('complianceLog', []);
+  const [devices, setDevices] = useLocalStorageState('devices', []);
+  const [jobs, setJobs] = useLocalStorageState('jobs', []);
+  const [complianceLog, setComplianceLog] = useLocalStorageState('complianceLog', []);
 
-  const [deviceToEdit, setDeviceToEdit] = useState<Device | null>(null);
-  const [jobToEdit, setJobToEdit] = useState<Job | null>(null);
-  const [currentJobDetails, setCurrentJobDetails] = useState<Partial<Job>>();
-  const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
-  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
-  const [initialModalSelections, setInitialModalSelections] = useState<{
-    devices?: string[];
-    jobs?: string[];
-  }>({});
-  const [itemToDelete, setItemToDelete] = useState<{ ids: string[]; type: 'device' | 'job' } | null>(null);
+  const [deviceToEdit, setDeviceToEdit] = useState(null);
+  const [jobToEdit, setJobToEdit] = useState(null);
+  const [currentJobDetails, setCurrentJobDetails] = useState();
+  const [selectedDeviceIds, setSelectedDeviceIds] = useState([]);
+  const [selectedJobIds, setSelectedJobIds] = useState([]);
+  const [initialModalSelections, setInitialModalSelections] = useState({});
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   const { toast } = useToast();
 
@@ -59,19 +55,19 @@ export default function DashboardPage() {
     setIsClient(true);
   }, []);
   
-  const handleRunCompliance = (selections: { devices?: string[]; jobs?: string[] }) => {
+  const handleRunCompliance = (selections) => {
     setInitialModalSelections(selections);
     setIsComplianceModalOpen(true);
   };
   
-  const handleComplianceModalOpenChange = (open: boolean) => {
+  const handleComplianceModalOpenChange = (open) => {
     setIsComplianceModalOpen(open);
     if (!open) {
         setInitialModalSelections({});
     }
   }
 
-  const handleSaveDevice = (deviceData: Omit<Device, 'id' | 'password'> & { password?: string }, id?: string) => {
+  const handleSaveDevice = (deviceData, id) => {
     if (id) {
       setDevices(prev => prev.map(d => {
         if (d.id === id) {
@@ -87,14 +83,14 @@ export default function DashboardPage() {
       }));
       toast({ title: "Success", description: "Device updated successfully." });
     } else {
-      const newDevice = { ...deviceData, id: crypto.randomUUID() } as Device;
+      const newDevice = { ...deviceData, id: crypto.randomUUID() };
       setDevices((prev) => [...prev, newDevice]);
       toast({ title: "Success", description: "Device added successfully." });
     }
     setIsDrawerOpen(false);
   };
   
-  const handleEditDeviceClick = (id: string) => {
+  const handleEditDeviceClick = (id) => {
     const device = devices.find(d => d.id === id);
     if (device) {
       setDeviceToEdit(device);
@@ -102,13 +98,13 @@ export default function DashboardPage() {
     }
   };
 
-  const handleImportDevices = (newDevices: Omit<Device, 'id'>[]) => {
+  const handleImportDevices = (newDevices) => {
     const devicesToAdd = newDevices.map(device => ({ ...device, id: crypto.randomUUID() }));
     setDevices(prev => [...prev, ...devicesToAdd]);
     setIsImportModalOpen(false);
   };
 
-  const handleDeleteDevice = (id: string) => {
+  const handleDeleteDevice = (id) => {
     setItemToDelete({ ids: [id], type: 'device' });
     setIsConfirmDialogOpen(true);
   };
@@ -119,7 +115,7 @@ export default function DashboardPage() {
     setIsConfirmDialogOpen(true);
   }
   
-  const handleJobDetailsContinue = (data: Omit<Job, 'id' | 'command' | 'template'>) => {
+  const handleJobDetailsContinue = (data) => {
     if (jobToEdit) {
       setCurrentJobDetails({
         name: data.name,
@@ -134,14 +130,14 @@ export default function DashboardPage() {
     setIsJobModalOpen(true);
   };
 
-  const handleSaveJobDetails = (data: Pick<Job, 'name' | 'description'>, id: string) => {
+  const handleSaveJobDetails = (data, id) => {
     setJobs(prev => prev.map(j => j.id === id ? { ...j, ...data } : j));
     setIsJobDetailsModalOpen(false);
     setJobToEdit(null);
     toast({ title: "Success", description: "Job details updated." });
   };
   
-  const handleAddJob = (jobData: Pick<Job, 'command' | 'template'>) => {
+  const handleAddJob = (jobData) => {
     if (!currentJobDetails) return;
     
     if (jobToEdit) {
@@ -156,11 +152,11 @@ export default function DashboardPage() {
       toast({ title: "Success", description: "Job updated successfully." });
       setJobToEdit(null);
     } else {
-      const newJob: Job = { 
+      const newJob = { 
           ...currentJobDetails,
           ...jobData,
           id: crypto.randomUUID() 
-      } as Job;
+      };
       setJobs((prev) => [...prev, newJob]);
       toast({ title: "Success", description: "Job added successfully." });
     }
@@ -169,7 +165,7 @@ export default function DashboardPage() {
     setCurrentJobDetails(undefined);
   };
   
-  const handleEditJobClick = (id: string) => {
+  const handleEditJobClick = (id) => {
     const job = jobs.find(j => j.id === id);
     if (job) {
       setJobToEdit(job);
@@ -177,7 +173,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDeleteJob = (id: string) => {
+  const handleDeleteJob = (id) => {
     setItemToDelete({ ids: [id], type: 'job' });
     setIsConfirmDialogOpen(true);
   };
@@ -205,7 +201,7 @@ export default function DashboardPage() {
   };
 
 
-  const handleRunComplianceComplete = (logEntry: Omit<ComplianceLog, 'id' | 'timestamp'>) => {
+  const handleRunComplianceComplete = (logEntry) => {
     const newLogEntry = { ...logEntry, id: crypto.randomUUID(), timestamp: new Date().toISOString() };
     setComplianceLog(prev => [newLogEntry, ...prev]);
     toast({
@@ -214,7 +210,7 @@ export default function DashboardPage() {
     });
   };
 
-  const downloadCsv = (data: any[], filename: string) => {
+  const downloadCsv = (data, filename) => {
     const csv = Papa.unparse(data);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -249,7 +245,7 @@ export default function DashboardPage() {
     downloadCsv(devicesToExport, 'all-devices.csv');
   };
   
-  const handleExportDevice = (id: string) => {
+  const handleExportDevice = (id) => {
     const deviceToExport = devices
       .filter(d => d.id === id)
       .map(({ id, password, ...rest }) => rest);
@@ -291,7 +287,7 @@ export default function DashboardPage() {
     downloadCsv(jobsToExport, 'all-jobs.csv');
   };
 
-  const handleExportJob = (id: string) => {
+  const handleExportJob = (id) => {
     const jobToExport = jobs
       .filter(j => j.id === id)
       .map(j => ({
@@ -316,7 +312,7 @@ export default function DashboardPage() {
     setIsJobDetailsModalOpen(true);
   }
 
-  const getActiveButton = (activeTab: string) => {
+  const getActiveButton = (activeTab) => {
     switch (activeTab) {
       case 'job-compliance':
         return (

@@ -1,4 +1,5 @@
-// 'use server';
+
+'use server';
 /**
  * @fileOverview AI agent that suggests components based on a description of the desired functionality.
  *
@@ -15,15 +16,13 @@ import {z} from 'genkit';
 const SuggestComponentInputSchema = z.object({
   description: z.string().describe('The description of the desired component functionality.'),
 });
-export type SuggestComponentInput = z.infer<typeof SuggestComponentInputSchema>;
 
 const SuggestComponentOutputSchema = z.object({
   componentSuggestion: z.string().describe('The suggested component name.'),
   reason: z.string().describe('The reasoning behind the component suggestion.'),
 });
-export type SuggestComponentOutput = z.infer<typeof SuggestComponentOutputSchema>;
 
-export async function suggestComponent(input: SuggestComponentInput): Promise<SuggestComponentOutput> {
+export async function suggestComponent(input) {
   return suggestComponentFlow(input);
 }
 
@@ -46,6 +45,6 @@ const suggestComponentFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return output!;
+    return output;
   }
 );

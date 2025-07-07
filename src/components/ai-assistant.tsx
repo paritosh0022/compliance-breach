@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -13,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { useForm, type SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { suggestComponentAction } from '@/app/actions';
@@ -28,19 +29,12 @@ const FormSchema = z.object({
   }),
 });
 
-type FormValues = z.infer<typeof FormSchema>;
-
-type Suggestion = {
-  componentSuggestion: string;
-  reason: string;
-};
-
 export default function AiAssistant() {
   const [open, setOpen] = useState(false);
-  const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
+  const [suggestion, setSuggestion] = useState(null);
   const { toast } = useToast();
 
-  const form = useForm<FormValues>({
+  const form = useForm({
     resolver: zodResolver(FormSchema),
     defaultValues: {
       description: '',
@@ -54,7 +48,7 @@ export default function AiAssistant() {
     reset,
   } = form;
 
-  const onSubmit: SubmitHandler<FormValues> = async (data) => {
+  const onSubmit = async (data) => {
     setSuggestion(null);
     try {
       const result = await suggestComponentAction({ description: data.description });
@@ -73,7 +67,7 @@ export default function AiAssistant() {
     }
   };
   
-  const handleOpenChange = (isOpen: boolean) => {
+  const handleOpenChange = (isOpen) => {
     setOpen(isOpen);
     if (!isOpen) {
       reset();

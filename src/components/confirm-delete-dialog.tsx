@@ -13,21 +13,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { buttonVariants } from "./ui/button";
 
-interface ConfirmDeleteDialogProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  onConfirm: () => void;
-  itemType?: string;
-  itemCount?: number;
-}
-
 export default function ConfirmDeleteDialog({
   isOpen,
   onOpenChange,
   onConfirm,
   itemType = "item",
   itemCount = 1,
-}: ConfirmDeleteDialogProps) {
+}) {
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
       <AlertDialogContent>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -5,14 +6,9 @@ import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar'
 import AppSidebar from '@/components/app-sidebar';
 import AppHeader from '@/components/app-header';
 import ComponentGrid from '@/components/component-grid';
-import { type ComponentData } from '@/lib/component-data';
 
-interface AppLayoutProps {
-  components: ComponentData[];
-}
-
-export default function AppLayout({ components }: AppLayoutProps) {
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+export default function AppLayout({ components }) {
+  const [activeCategory, setActiveCategory] = useState(null);
 
   const filteredComponents = useMemo(() => {
     if (!activeCategory || activeCategory === 'All Components') {

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -15,18 +16,11 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import type { ComplianceLog, ComplianceRunResult } from "@/lib/types";
 import { format } from 'date-fns';
 import { Download, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-interface ReportModalProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  logs: ComplianceLog[];
-}
-
-export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalProps) {
+export default function ReportModal({ isOpen, onOpenChange, logs }) {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   
@@ -44,7 +38,7 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
         }
         acc[result.jobName].push(result);
         return acc;
-      }, {} as Record<string, ComplianceRunResult[]>);
+      }, {});
 
       return Object.entries(jobsInRun).map(([jobName, results]) => ({
         id: `${log.id}-${jobName}`,
@@ -74,12 +68,12 @@ export default function ReportModal({ isOpen, onOpenChange, logs }: ReportModalP
       }
       
       return null;
-    }).filter((g): g is NonNullable<typeof g> => g !== null);
+    }).filter((g) => g !== null);
 
     return filtered;
   }, [groupedLogs, searchTerm]);
 
-  const getStatusVariant = (status: ComplianceRunResult['status']): 'default' | 'destructive' | 'secondary' => {
+  const getStatusVariant = (status) => {
       switch (status) {
           case 'Success':
               return 'default';

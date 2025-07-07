@@ -21,41 +21,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2, Expand, Minimize2 } from "lucide-react";
-import type { Job } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-interface AddJobModalProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  onAddJob: (jobData: Pick<Job, 'command' | 'template'>) => void;
-  jobDetails?: Partial<Job>;
-}
-
-type Rule = {
-  id: string;
-  variable: string;
-  operator: 'contains' | 'not-contains' | 'equals';
-  value: string;
-};
-
-type RuleGroup = {
-  id: string;
-  rules: Rule[];
-};
-
-export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails }: AddJobModalProps) {
+export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails }) {
   const { toast } = useToast();
   
   const [command, setCommand] = useState("");
   const [template, setTemplate] = useState("");
   const [isTemplateRun, setIsTemplateRun] = useState(false);
-  const [condition, setCondition] = useState<'and' | 'or'>('and');
-  const [groups, setGroups] = useState<RuleGroup[]>([]);
-  const [expandedPanel, setExpandedPanel] = useState<'command' | 'template' | 'rule' | null>(null);
+  const [condition, setCondition] = useState('and');
+  const [groups, setGroups] = useState([]);
+  const [expandedPanel, setExpandedPanel] = useState(null);
   
   const isEditing = jobDetails && jobDetails.command !== undefined;
   const isMobile = useIsMobile();
@@ -76,7 +56,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
     }
   }, [expandedPanel, isMobile]);
 
-  const handleTemplateChange = useCallback((newTemplate: string) => {
+  const handleTemplateChange = useCallback((newTemplate) => {
     setTemplate(newTemplate);
     if (newTemplate.trim() !== "") {
       setIsTemplateRun((currentValue) => {
@@ -130,11 +110,11 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
     setGroups(prev => [...prev, { id: crypto.randomUUID(), rules: [{ id: crypto.randomUUID(), variable: '', operator: 'contains', value: '' }] }]);
   };
 
-  const handleDeleteGroup = (groupId: string) => {
+  const handleDeleteGroup = (groupId) => {
     setGroups(prev => prev.filter(g => g.id !== groupId));
   };
 
-  const handleAddRule = (groupId: string) => {
+  const handleAddRule = (groupId) => {
     setGroups(prev => prev.map(g => 
         g.id === groupId 
         ? { ...g, rules: [...g.rules, { id: crypto.randomUUID(), variable: '', operator: 'contains', value: '' }] }
@@ -142,7 +122,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
     ));
   };
   
-  const handleDeleteRule = (groupId: string, ruleId: string) => {
+  const handleDeleteRule = (groupId, ruleId) => {
     setGroups(prev => prev.map(g => 
         g.id === groupId
         ? { ...g, rules: g.rules.filter(r => r.id !== ruleId) }
@@ -150,8 +130,8 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
     ).filter(g => g.rules.length > 0)); // Also remove group if it becomes empty
   };
   
-  const handleRuleChange = (groupId: string, ruleId: string, field: 'variable' | 'operator' | 'value', value: string) => {
-    const newOperator = value as Rule['operator'];
+  const handleRuleChange = (groupId, ruleId, field, value) => {
+    const newOperator = value;
     setGroups(prev => prev.map(g => 
         g.id === groupId
         ? { ...g, rules: g.rules.map(r => r.id === ruleId ? { ...r, [field]: field === 'operator' ? newOperator : value } : r) }
@@ -159,7 +139,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
     ));
   };
 
-  const handleOpenChangeAndReset = (isOpen: boolean) => {
+  const handleOpenChangeAndReset = (isOpen) => {
     onOpenChange(isOpen);
     if (!isOpen) {
       setCommand("");
@@ -266,7 +246,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
                       <div className="space-y-2">
                         <Label>Condition</Label>
                         <div className="flex items-center gap-2">
-                          <Select value={condition} onValueChange={(v: 'and' | 'or') => setCondition(v)}>
+                          <Select value={condition} onValueChange={(v) => setCondition(v)}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="and">AND</SelectItem>

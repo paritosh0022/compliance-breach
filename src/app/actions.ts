@@ -1,14 +1,13 @@
+
 "use server";
 
 import {
-  suggestComponent,
-  type SuggestComponentInput,
-  type SuggestComponentOutput,
+  suggestComponent
 } from '@/ai/flows/suggest-component';
 
 export async function suggestComponentAction(
-  input: SuggestComponentInput
-): Promise<SuggestComponentOutput | null> {
+  input
+) {
   try {
     const result = await suggestComponent(input);
     return result;

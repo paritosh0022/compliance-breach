@@ -24,7 +24,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import type { Device } from "@/lib/types";
 
 const baseSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -44,19 +43,10 @@ const editDeviceSchema = baseSchema.extend({
   password: z.string().optional(),
 });
 
-type DeviceFormValues = z.infer<typeof addDeviceSchema>;
-
-interface AddDeviceDrawerProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  onSaveDevice: (device: Omit<Device, 'id' | 'password'> & { password?: string }, id?: string) => void;
-  deviceToEdit?: Device | null;
-}
-
-export default function AddDeviceDrawer({ isOpen, onOpenChange, onSaveDevice, deviceToEdit }: AddDeviceDrawerProps) {
+export default function AddDeviceDrawer({ isOpen, onOpenChange, onSaveDevice, deviceToEdit }) {
   const isEditing = !!deviceToEdit;
   
-  const form = useForm<DeviceFormValues>({
+  const form = useForm({
     resolver: zodResolver(isEditing ? editDeviceSchema : addDeviceSchema),
     defaultValues: {
       name: "",
@@ -89,16 +79,16 @@ export default function AddDeviceDrawer({ isOpen, onOpenChange, onSaveDevice, de
     }
   }, [isOpen, isEditing, deviceToEdit, form]);
 
-  const onSubmit = (data: DeviceFormValues) => {
+  const onSubmit = (data) => {
     const dataToSave = { ...data };
     // If editing and password is blank, don't send the password field so it isn't updated
     if (isEditing && !data.password) {
-      delete (dataToSave as Partial<typeof dataToSave>).password;
+      delete dataToSave.password;
     }
     onSaveDevice(dataToSave, deviceToEdit?.id);
   };
   
-  const handleOpenChange = (open: boolean) => {
+  const handleOpenChange = (open) => {
     onOpenChange(open);
     if (!open) {
       form.reset();

@@ -1,14 +1,5 @@
-export type ComponentCategory = 'Layout' | 'Forms' | 'Overlays' | 'Navigation' | 'Display';
 
-export type ComponentData = {
-  name: string;
-  description: string;
-  category: ComponentCategory;
-  href: string;
-  icon: string;
-};
-
-const componentsList: Omit<ComponentData, 'category' | 'href' | 'icon'>[] = [
+const componentsList = [
     { name: 'Accordion', description: 'A vertically stacked set of interactive headings that each reveal a section of content.' },
     { name: 'Alert', description: 'Displays a callout for user attention.' },
     { name: 'Alert Dialog', description: 'A modal dialog that interrupts the user with important content and expects a response.' },
@@ -42,7 +33,7 @@ const componentsList: Omit<ComponentData, 'category' | 'href' | 'icon'>[] = [
     { name: 'Tooltip', description: 'A popup that displays information related to an element when the element receives keyboard focus or the mouse hovers over it.' },
 ];
 
-const componentCategories: Record<string, { category: ComponentCategory, icon: string }> = {
+const componentCategories = {
   Accordion: { category: 'Display', icon: 'ChevronDownSquare' },
   Alert: { category: 'Display', icon: 'AlertCircle' },
   'Alert Dialog': { category: 'Overlays', icon: 'MessageSquareWarning' },
@@ -77,7 +68,7 @@ const componentCategories: Record<string, { category: ComponentCategory, icon: s
 };
 
 
-export const components: ComponentData[] = componentsList.map(comp => {
+export const components = componentsList.map(comp => {
   const categoryInfo = componentCategories[comp.name] || { category: 'Display', icon: 'AlertCircle' };
   return {
     ...comp,
@@ -92,7 +83,7 @@ export const categories = (Object.keys(componentCategories).reduce((acc, key) =>
         acc.push(category);
     }
     return acc;
-}, [] as ComponentCategory[])).sort();
+}, [])).sort();
 
 export const groupedComponents = categories.map(category => ({
   name: category,

@@ -15,29 +15,18 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Play, Copy, Download, Eye, X } from "lucide-react";
-import type { Device, Job, ComplianceLog, ComplianceRunResult } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "./ui/textarea";
 import { cn } from "@/lib/utils";
 
-interface RunComplianceModalProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  devices: Device[];
-  jobs: Job[];
-  onRunComplete: (logEntry: Omit<ComplianceLog, 'id' | 'timestamp'>) => void;
-  initialSelectedDeviceIds?: string[];
-  initialSelectedJobIds?: string[];
-}
-
-export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs, onRunComplete, initialSelectedDeviceIds, initialSelectedJobIds }: RunComplianceModalProps) {
-  const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
-  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
+export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs, onRunComplete, initialSelectedDeviceIds, initialSelectedJobIds }) {
+  const [selectedDevices, setSelectedDevices] = useState([]);
+  const [selectedJobIds, setSelectedJobIds] = useState([]);
   const [deviceSearchTerm, setDeviceSearchTerm] = useState("");
   const [jobSearchTerm, setJobSearchTerm] = useState("");
   const [output, setOutput] = useState("");
-  const [viewedJob, setViewedJob] = useState<Job | null>(null);
-  const [viewedDevice, setViewedDevice] = useState<Device | null>(null);
+  const [viewedJob, setViewedJob] = useState(null);
+  const [viewedDevice, setViewedDevice] = useState(null);
 
 
   const { toast } = useToast();
@@ -63,7 +52,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
       job.name.toLowerCase().includes(jobSearchTerm.toLowerCase())
     ), [jobs, jobSearchTerm]);
 
-  const handleDeviceSelection = (deviceId: string) => {
+  const handleDeviceSelection = (deviceId) => {
     setSelectedDevices((prev) =>
       prev.includes(deviceId)
         ? prev.filter((id) => id !== deviceId)
@@ -71,11 +60,11 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
     );
   };
   
-  const handleSelectAllDevices = (checked: boolean) => {
+  const handleSelectAllDevices = (checked) => {
     setSelectedDevices(checked ? filteredDevices.map(d => d.id) : []);
   }
 
-  const handleJobSelection = (jobId: string) => {
+  const handleJobSelection = (jobId) => {
     setSelectedJobIds((prev) =>
       prev.includes(jobId)
         ? prev.filter((id) => id !== jobId)
@@ -83,7 +72,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
     );
   };
   
-  const handleSelectAllJobs = (checked: boolean) => {
+  const handleSelectAllJobs = (checked) => {
     setSelectedJobIds(checked ? filteredJobs.map(j => j.id) : []);
   }
   
@@ -120,7 +109,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
     }
 
     let rawOutput = `Running ${selectedJobsList.length} job(s) on ${selectedDevices.length} device(s)...\n\n`;
-    const runResults: ComplianceRunResult[] = [];
+    const runResults = [];
     
     selectedDevices.forEach(deviceId => {
       const device = devices.find(d => d.id === deviceId);
@@ -152,7 +141,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
     });
   };
   
-  const handleOpenChangeAndReset = (isOpen: boolean) => {
+  const handleOpenChangeAndReset = (isOpen) => {
     if (!isOpen) {
       setSelectedDevices([]);
       setSelectedJobIds([]);

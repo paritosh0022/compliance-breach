@@ -1,3 +1,4 @@
+
 "use client";
 
 import { z } from "zod";
@@ -22,24 +23,14 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import type { ComplianceRun } from "@/lib/types";
 
 const complianceSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().min(1, "Description is required"),
 });
 
-type ComplianceFormValues = z.infer<typeof complianceSchema>;
-
-interface AddComplianceModalProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  onSave: (data: Omit<ComplianceRun, 'id'>) => void;
-  onSaveAndRun: (data: Omit<ComplianceRun, 'id'>) => void;
-}
-
-export default function AddComplianceModal({ isOpen, onOpenChange, onSave, onSaveAndRun }: AddComplianceModalProps) {
-  const form = useForm<ComplianceFormValues>({
+export default function AddComplianceModal({ isOpen, onOpenChange, onSave, onSaveAndRun }) {
+  const form = useForm({
     resolver: zodResolver(complianceSchema),
     defaultValues: {
       name: "",
@@ -47,17 +38,17 @@ export default function AddComplianceModal({ isOpen, onOpenChange, onSave, onSav
     },
   });
 
-  const handleSave = (data: ComplianceFormValues) => {
+  const handleSave = (data) => {
     onSave(data);
     form.reset();
   };
   
-  const handleSaveAndRun = (data: ComplianceFormValues) => {
+  const handleSaveAndRun = (data) => {
     onSaveAndRun(data);
     form.reset();
   };
   
-  const handleOpenChangeAndReset = (open: boolean) => {
+  const handleOpenChangeAndReset = (open) => {
     if (!open) {
       form.reset();
     }

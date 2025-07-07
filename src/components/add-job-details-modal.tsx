@@ -23,7 +23,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import type { Job } from "@/lib/types";
 import { useEffect } from "react";
 
 const jobDetailsSchema = z.object({
@@ -31,18 +30,8 @@ const jobDetailsSchema = z.object({
   description: z.string().optional(),
 });
 
-type JobDetailsFormValues = z.infer<typeof jobDetailsSchema>;
-
-interface AddJobDetailsModalProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  onContinue: (data: Omit<Job, 'id' | 'command' | 'template'>) => void;
-  onSave?: (data: Omit<Job, 'id' | 'command' | 'template'>, id: string) => void;
-  jobToEdit?: Job | null;
-}
-
-export default function AddJobDetailsModal({ isOpen, onOpenChange, onContinue, onSave, jobToEdit }: AddJobDetailsModalProps) {
-  const form = useForm<JobDetailsFormValues>({
+export default function AddJobDetailsModal({ isOpen, onOpenChange, onContinue, onSave, jobToEdit }) {
+  const form = useForm({
     resolver: zodResolver(jobDetailsSchema),
     defaultValues: {
       name: "",
@@ -65,11 +54,11 @@ export default function AddJobDetailsModal({ isOpen, onOpenChange, onContinue, o
     }
   }, [isOpen, isEditing, jobToEdit, form]);
 
-  const handleSubmit = (data: JobDetailsFormValues) => {
+  const handleSubmit = (data) => {
     onContinue(data);
   };
   
-  const handleOpenChangeAndReset = (open: boolean) => {
+  const handleOpenChangeAndReset = (open) => {
     if (!open) {
       form.reset();
     }
@@ -122,7 +111,7 @@ export default function AddJobDetailsModal({ isOpen, onOpenChange, onContinue, o
               {isEditing ? (
                 <>
                   <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-                  <Button type="button" onClick={form.handleSubmit(data => onSave!(data, jobToEdit.id))}>Save</Button>
+                  <Button type="button" onClick={form.handleSubmit(data => onSave(data, jobToEdit.id))}>Save</Button>
                   <Button type="submit">Continue Edit</Button>
                 </>
               ) : (

@@ -17,14 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Download } from 'lucide-react';
-import type { Device } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-
-interface ImportDevicesModalProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  onImport: (devices: Omit<Device, 'id'>[]) => void;
-}
 
 const deviceSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -39,13 +32,13 @@ const deviceSchema = z.object({
 
 const CSV_HEADERS = ['name', 'ipAddress', 'username', 'password', 'port'];
 
-export default function ImportDevicesModal({ isOpen, onOpenChange, onImport }: ImportDevicesModalProps) {
-  const [file, setFile] = useState<File | null>(null);
+export default function ImportDevicesModal({ isOpen, onOpenChange, onImport }) {
+  const [file, setFile] = useState(null);
   const [isParsing, setIsParsing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
   const { toast } = useToast();
   
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (event) => {
     setError(null);
     if (event.target.files && event.target.files.length > 0) {
       setFile(event.target.files[0]);
@@ -74,13 +67,13 @@ export default function ImportDevicesModal({ isOpen, onOpenChange, onImport }: I
             return;
         }
 
-        const newDevices: Omit<Device, 'id'>[] = [];
-        const validationErrors: string[] = [];
+        const newDevices = [];
+        const validationErrors = [];
 
-        results.data.forEach((row: any, index: number) => {
+        results.data.forEach((row, index) => {
           const parsed = deviceSchema.safeParse(row);
           if (parsed.success) {
-            newDevices.push(parsed.data as Omit<Device, 'id'>);
+            newDevices.push(parsed.data);
           } else {
             validationErrors.push(`Row ${index + 2}: ${parsed.error.issues.map(i => `${i.path[0]} - ${i.message}`).join(', ')}`);
           }

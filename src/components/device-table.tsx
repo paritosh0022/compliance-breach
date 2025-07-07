@@ -13,25 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Trash2, Edit, Bot, Download } from "lucide-react";
-import type { Device } from "@/lib/types";
 
-interface DeviceTableProps {
-  devices: Device[];
-  onDelete: (id: string) => void;
-  onEdit: (id: string) => void;
-  selectedDeviceIds: string[];
-  onSelectedDeviceIdsChange: (ids: string[]) => void;
-  onRunCompliance: (id: string) => void;
-  onExport: (id: string) => void;
-}
+export default function DeviceTable({ devices, onDelete, onEdit, selectedDeviceIds, onSelectedDeviceIdsChange, onRunCompliance, onExport }) {
 
-export default function DeviceTable({ devices, onDelete, onEdit, selectedDeviceIds, onSelectedDeviceIdsChange, onRunCompliance, onExport }: DeviceTableProps) {
-
-  const handleSelectAll = (checked: boolean) => {
+  const handleSelectAll = (checked) => {
     onSelectedDeviceIdsChange(checked ? devices.map(d => d.id) : []);
   };
   
-  const handleSelectRow = (id: string, checked: boolean) => {
+  const handleSelectRow = (id, checked) => {
     if (checked) {
       onSelectedDeviceIdsChange([...selectedDeviceIds, id]);
     } else {

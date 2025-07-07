@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -24,7 +25,7 @@ export default function SetupPage() {
     }
   }, [router]);
 
-  const handleSetup = (e: React.FormEvent) => {
+  const handleSetup = (e) => {
     e.preventDefault();
     setError('');
     if (!password || !confirmPassword) {
