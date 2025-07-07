@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -40,34 +40,38 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
   const isEditing = jobDetails && jobDetails.command !== undefined;
   const isMobile = useIsMobile();
 
+  const wasTemplateRun = useRef(isTemplateRun);
+
+  useEffect(() => {
+    if (isTemplateRun && !wasTemplateRun.current) {
+      toast({
+        title: "Template Detected",
+        description: "Rule engine has been enabled.",
+      });
+    }
+    wasTemplateRun.current = isTemplateRun;
+  }, [isTemplateRun, toast]);
+
   const gridLayoutClass = useMemo(() => {
     if (isMobile) {
       return 'grid-cols-1';
     }
-    switch (expandedPanel) {
-      case 'command':
-        return 'md:grid-cols-[3fr_1fr_1fr]';
-      case 'template':
-        return 'md:grid-cols-[2fr_5fr_3fr]';
-      case 'rule':
-        return 'md:grid-cols-[2fr_3fr_5fr]';
-      default:
-        return 'md:grid-cols-3';
+    if (expandedPanel === 'command') {
+      return 'md:grid-cols-[2fr_1fr_1fr]';
     }
+    if (expandedPanel === 'template') {
+      return 'md:grid-cols-[1fr_2fr_1fr]';
+    }
+    if (expandedPanel === 'rule') {
+      return 'md:grid-cols-[1fr_1fr_2fr]';
+    }
+    return 'md:grid-cols-3';
   }, [expandedPanel, isMobile]);
 
   const handleTemplateChange = useCallback((newTemplate) => {
     setTemplate(newTemplate);
     if (newTemplate.trim() !== "") {
-      setIsTemplateRun((currentValue) => {
-        if (!currentValue) {
-          toast({
-            title: "Template Detected",
-            description: "Rule engine has been enabled.",
-          });
-        }
-        return true;
-      });
+      setIsTemplateRun(true);
       setGroups((g) => {
         if (g.length === 0) {
           return [
@@ -90,7 +94,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
       setIsTemplateRun(false);
       setGroups([]);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     if (isOpen && jobDetails) {
