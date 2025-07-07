@@ -41,18 +41,13 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
   const [viewedDevice, setViewedDevice] = useState(null);
   
   const { toast } = useToast();
-  
-  // Use a ref to track if an abort was requested to prevent closing toast
-  const abortRequested = useRef(false);
 
   useEffect(() => {
     if (isComplianceModalOpen) {
-      abortRequested.current = false;
-      if (initialSelectedDeviceIds && !isComplianceRunning) {
-        setSelectedDevices(initialSelectedDeviceIds);
-      }
-      if (initialSelectedJobIds && !isComplianceRunning) {
-        setSelectedJobIds(initialSelectedJobIds);
+      // Don't reset selections if a run is active
+      if (!isComplianceRunning) {
+        setSelectedDevices(initialSelectedDeviceIds || []);
+        setSelectedJobIds(initialSelectedJobIds || []);
       }
     }
   }, [isComplianceModalOpen, initialSelectedDeviceIds, initialSelectedJobIds, isComplianceRunning]);
@@ -112,26 +107,19 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
     }
   };
 
-  const handleAbort = () => {
-    abortRequested.current = true;
-    if (complianceRunProcess) {
-        clearTimeout(complianceRunProcess);
-        setComplianceRunProcess(null);
-    }
-    setIsComplianceRunning(false);
-    setComplianceStatus('idle');
-    setOutput((prev) => prev + "\n\n--- COMPLIANCE CHECK ABORTED BY USER ---");
-    toast({ variant: "destructive", title: "Aborted", description: "Compliance check was cancelled." });
-  };
-  
   const handleOpenChangeAndReset = (isOpen) => {
+    // This is the new logic to handle closing via 'X' or Escape
+    if (!isOpen && isComplianceRunning) {
+      handleRunInBackground(); // Keep it running
+      return; // Prevent reset logic below
+    }
+    
     // When closing the modal...
     if (!isOpen) {
         // ...if a compliance check is NOT running, reset the modal to a clean state for next time.
-        // If a check IS running, we do nothing, preserving the output and state for when the modal is reopened.
         if (!isComplianceRunning) {
-            setSelectedDevices([]);
-            setSelectedJobIds([]);
+            setSelectedDevices(initialSelectedDeviceIds || []);
+            setSelectedJobIds(initialSelectedJobIds || []);
             setDeviceSearchTerm("");
             setJobSearchTerm("");
             setOutput("");
@@ -388,7 +376,6 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
         <DialogFooter className="p-4 border-t">
           {isComplianceRunning ? (
             <div className="flex justify-end gap-2 w-full">
-               <Button variant="destructive" onClick={handleAbort}>Abort Compliance Check</Button>
                <Button variant="outline" onClick={handleRunInBackground}>Run in Background</Button>
             </div>
           ) : (
