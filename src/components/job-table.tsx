@@ -19,7 +19,7 @@ function ActionButton({ isRunning, onAction, children, tooltipText, disabledTool
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <span tabIndex="0">
+          <span tabIndex={0}>
             <Button variant="ghost" size="icon" disabled>
               {children}
             </Button>
@@ -78,6 +78,7 @@ export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSel
               <Checkbox
                 checked={selectedJobIds.length === jobs.length && jobs.length > 0}
                 onCheckedChange={handleSelectAll}
+                disabled={isComplianceRunning}
               />
             </TableHead>
             <TableHead>Job Name</TableHead>
@@ -92,6 +93,7 @@ export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSel
                 <Checkbox
                   checked={selectedJobIds.includes(job.id)}
                   onCheckedChange={(checked) => handleSelectRow(job.id, !!checked)}
+                  disabled={isComplianceRunning}
                 />
               </TableCell>
               <TableCell className="font-medium">{job.name}</TableCell>
@@ -140,5 +142,3 @@ export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSel
     </div>
   );
 }
-
-    

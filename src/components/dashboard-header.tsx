@@ -29,6 +29,11 @@ export default function DashboardHeader() {
   
   const handleChipClick = () => {
     setIsComplianceModalOpen(true);
+    // If the run is finished (completed or failed), clicking the chip acknowledges it.
+    // We can reset the status to idle, so the chip disappears after the modal is closed.
+    if (complianceStatus === 'completed' || complianceStatus === 'failed') {
+      setComplianceStatus('idle');
+    }
   }
 
   const getStatusContent = () => {
@@ -105,5 +110,3 @@ export default function DashboardHeader() {
     </header>
   );
 }
-
-    

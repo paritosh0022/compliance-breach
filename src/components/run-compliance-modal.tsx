@@ -125,21 +125,21 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
   };
   
   const handleOpenChangeAndReset = (isOpen) => {
+    // When closing the modal...
     if (!isOpen) {
-        if (isComplianceRunning && !abortRequested.current) {
-            // This case means the user closed the modal with Esc or by clicking outside
-            // We treat it as an abort.
-            handleAbort();
+        // ...if a compliance check is NOT running, reset the modal to a clean state for next time.
+        // If a check IS running, we do nothing, preserving the output and state for when the modal is reopened.
+        if (!isComplianceRunning) {
+            setSelectedDevices([]);
+            setSelectedJobIds([]);
+            setDeviceSearchTerm("");
+            setJobSearchTerm("");
+            setOutput("");
+            setViewedJob(null);
+            setViewedDevice(null);
         }
-        // Reset local state for next time
-        setSelectedDevices([]);
-        setSelectedJobIds([]);
-        setDeviceSearchTerm("");
-        setJobSearchTerm("");
-        setOutput("");
-        setViewedJob(null);
-        setViewedDevice(null);
     }
+    // Always update the modal's open state.
     setIsComplianceModalOpen(isOpen);
   };
 
@@ -356,7 +356,8 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
               <h3 className="font-semibold text-base">Output</h3>
               <div className="flex items-center gap-2">
                 <Button size="sm" onClick={handleRunCompliance} disabled={isComplianceRunning || selectedJobIds.length === 0 || selectedDevices.length === 0}>
-                  <Play className="mr-2 h-4 w-4" />Run
+                  <Play className="mr-2 h-4 w-4" />
+                  {isComplianceRunning ? 'Running...' : 'Run'}
                 </Button>
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopyOutput} disabled={!output || isComplianceRunning}>
                   <Copy className="h-4 w-4" />

@@ -25,16 +25,6 @@ export function DashboardProvider({ children }) {
     const newLogEntry = { ...logEntry, id: crypto.randomUUID(), timestamp: new Date().toISOString() };
     setComplianceLog(prev => [newLogEntry, ...prev]);
   }, [setComplianceLog]);
-  
-  // Clear status chip after a delay if it's not a running state
-  useEffect(() => {
-    if (complianceStatus === 'completed' || complianceStatus === 'failed') {
-      const timer = setTimeout(() => {
-        setComplianceStatus('idle');
-      }, 5000); // 5 seconds
-      return () => clearTimeout(timer);
-    }
-  }, [complianceStatus]);
 
   const value = {
     isComplianceModalOpen,
