@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,8 +18,20 @@ import { Search, Play, Copy, Download, Eye, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "./ui/textarea";
 import { cn } from "@/lib/utils";
+import { useDashboard } from "@/contexts/DashboardContext";
 
-export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs, onRunComplete, initialSelectedDeviceIds, initialSelectedJobIds }) {
+export default function RunComplianceModal({ devices, jobs, initialSelectedDeviceIds, initialSelectedJobIds }) {
+  const {
+    isComplianceModalOpen,
+    setIsComplianceModalOpen,
+    isComplianceRunning,
+    setIsComplianceRunning,
+    setComplianceStatus,
+    onRunComplete,
+    complianceRunProcess,
+    setComplianceRunProcess
+  } = useDashboard();
+
   const [selectedDevices, setSelectedDevices] = useState([]);
   const [selectedJobIds, setSelectedJobIds] = useState([]);
   const [deviceSearchTerm, setDeviceSearchTerm] = useState("");
@@ -27,21 +39,23 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
   const [output, setOutput] = useState("");
   const [viewedJob, setViewedJob] = useState(null);
   const [viewedDevice, setViewedDevice] = useState(null);
-  const [isRunning, setIsRunning] = useState(false);
-
-
+  
   const { toast } = useToast();
+  
+  // Use a ref to track if an abort was requested to prevent closing toast
+  const abortRequested = useRef(false);
 
   useEffect(() => {
-    if (isOpen) {
-      if (initialSelectedDeviceIds) {
+    if (isComplianceModalOpen) {
+      abortRequested.current = false;
+      if (initialSelectedDeviceIds && !isComplianceRunning) {
         setSelectedDevices(initialSelectedDeviceIds);
       }
-      if (initialSelectedJobIds) {
+      if (initialSelectedJobIds && !isComplianceRunning) {
         setSelectedJobIds(initialSelectedJobIds);
       }
     }
-  }, [isOpen, initialSelectedDeviceIds, initialSelectedJobIds]);
+  }, [isComplianceModalOpen, initialSelectedDeviceIds, initialSelectedJobIds, isComplianceRunning]);
 
   const filteredDevices = useMemo(() =>
     devices.filter((device) =>
@@ -98,6 +112,37 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
     }
   };
 
+  const handleAbort = () => {
+    abortRequested.current = true;
+    if (complianceRunProcess) {
+        clearTimeout(complianceRunProcess);
+        setComplianceRunProcess(null);
+    }
+    setIsComplianceRunning(false);
+    setComplianceStatus('idle');
+    setOutput((prev) => prev + "\n\n--- COMPLIANCE CHECK ABORTED BY USER ---");
+    toast({ variant: "destructive", title: "Aborted", description: "Compliance check was cancelled." });
+  };
+  
+  const handleOpenChangeAndReset = (isOpen) => {
+    if (!isOpen) {
+        if (isComplianceRunning && !abortRequested.current) {
+            // This case means the user closed the modal with Esc or by clicking outside
+            // We treat it as an abort.
+            handleAbort();
+        }
+        // Reset local state for next time
+        setSelectedDevices([]);
+        setSelectedJobIds([]);
+        setDeviceSearchTerm("");
+        setJobSearchTerm("");
+        setOutput("");
+        setViewedJob(null);
+        setViewedDevice(null);
+    }
+    setIsComplianceModalOpen(isOpen);
+  };
+
   const handleRunCompliance = () => {
     const selectedJobsList = jobs.filter(j => selectedJobIds.includes(j.id));
     if (selectedJobsList.length === 0 || selectedDevices.length === 0) {
@@ -109,20 +154,22 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
       return;
     }
 
-    setIsRunning(true);
-    setOutput("");
+    setIsComplianceRunning(true);
+    setComplianceStatus('running');
+    setOutput(`Running ${selectedJobsList.length} job(s) on ${selectedDevices.length} device(s)...\n`);
 
-    // Simulate API call and processing
-    setTimeout(() => {
-      let rawOutput = `Running ${selectedJobsList.length} job(s) on ${selectedDevices.length} device(s)...\n\n`;
+    const process = setTimeout(() => {
+      let rawOutput = `\n`;
       const runResults = [];
+      let overallSuccess = true;
       
       selectedDevices.forEach(deviceId => {
         const device = devices.find(d => d.id === deviceId);
         if(device) {
           rawOutput += `--- Device: ${device.name} ---\n`;
           selectedJobsList.forEach(job => {
-              const isSuccess = Math.random() > 0.3; // Simulate success/failure
+              const isSuccess = Math.random() > 0.3;
+              if (!isSuccess) overallSuccess = false;
               const message = isSuccess ? `Compliance check passed.` : `Device did not meet compliance standard 'XYZ-1.2'.`;
               rawOutput += `  [Job: ${job.name}] - ${isSuccess ? 'SUCCESS' : 'FAILED'}: ${message}\n`;
 
@@ -139,32 +186,25 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
           rawOutput += `\n`;
         }
       });
-
-      setOutput(rawOutput);
       
-      onRunComplete({
-        results: runResults,
-      });
+      rawOutput += `--- COMPLIANCE CHECK COMPLETE ---`;
+      setOutput(prev => prev + rawOutput);
+      onRunComplete({ results: runResults, });
+      setComplianceStatus(overallSuccess ? 'completed' : 'failed');
+      setIsComplianceRunning(false);
+      setComplianceRunProcess(null);
 
-      setIsRunning(false);
-    }, 2500);
+    }, 30000); // 30 seconds
+
+    setComplianceRunProcess(process);
   };
   
-  const handleOpenChangeAndReset = (isOpen) => {
-    if (!isOpen) {
-      setSelectedDevices([]);
-      setSelectedJobIds([]);
-      setDeviceSearchTerm("");
-      setJobSearchTerm("");
-      setOutput("");
-      setViewedJob(null);
-      setViewedDevice(null);
-      setIsRunning(false);
-    }
-    onOpenChange(isOpen);
+  const handleRunInBackground = () => {
+    setIsComplianceModalOpen(false);
+    toast({ title: "Running in background", description: "Check status in the header." });
   };
   
-  const getGridClass = () => {
+  const finalGridClass = useMemo(() => {
     let classParts = ['md:grid-cols-3'];
     if (viewedDevice || viewedJob) {
       classParts = ['md:grid-cols-[1fr_1.5fr_1fr_1fr]'];
@@ -172,15 +212,12 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
     if (viewedDevice && viewedJob) {
       classParts = ['md:grid-cols-[1fr_1.5fr_1fr_1.5fr_1fr]'];
     }
-
-    // Default view with one column on mobile
     return cn('grid-cols-1', ...classParts);
-  };
-  const finalGridClass = getGridClass();
+  }, [viewedDevice, viewedJob]);
 
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChangeAndReset}>
+    <Dialog open={isComplianceModalOpen} onOpenChange={handleOpenChangeAndReset}>
       <DialogContent className="max-w-screen-2xl w-[95vw] h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-4 border-b">
           <DialogTitle className="text-xl">Run Compliance Check</DialogTitle>
@@ -191,7 +228,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
 
         <div className={cn("flex-1 grid gap-0 overflow-hidden", finalGridClass)}>
           {/* Column 1: Devices */}
-          <fieldset disabled={isRunning} className="flex flex-col border-r min-h-0 disabled:opacity-50 transition-opacity">
+          <fieldset disabled={isComplianceRunning} className="flex flex-col border-r min-h-0 disabled:opacity-50 transition-opacity">
             <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
               <div className="flex items-center space-x-3">
                  <Checkbox
@@ -253,7 +290,7 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
           )}
 
           {/* Column 2: Jobs */}
-          <fieldset disabled={isRunning} className="flex flex-col border-r min-h-0 disabled:opacity-50 transition-opacity">
+          <fieldset disabled={isComplianceRunning} className="flex flex-col border-r min-h-0 disabled:opacity-50 transition-opacity">
              <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
               <div className="flex items-center space-x-3">
                  <Checkbox
@@ -317,21 +354,21 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
           <div className="flex flex-col min-h-0">
             <div className="p-4 border-b flex items-center justify-between h-[73px]">
               <h3 className="font-semibold text-base">Output</h3>
-               <div className="flex items-center gap-2">
-                 <Button size="sm" onClick={handleRunCompliance} disabled={selectedJobIds.length === 0 || selectedDevices.length === 0 || isRunning}>
-                    {isRunning ? "Running..." : <><Play className="mr-2 h-4 w-4" />Run</>}
-                  </Button>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopyOutput} disabled={!output || isRunning}>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={handleRunCompliance} disabled={isComplianceRunning || selectedJobIds.length === 0 || selectedDevices.length === 0}>
+                  <Play className="mr-2 h-4 w-4" />Run
+                </Button>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopyOutput} disabled={!output || isComplianceRunning}>
                   <Copy className="h-4 w-4" />
                   <span className="sr-only">Copy Output</span>
                 </Button>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleDownloadCsv} disabled={!output || isRunning}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleDownloadCsv} disabled={!output || isComplianceRunning}>
                   <Download className="h-4 w-4" />
                   <span className="sr-only">Download CSV</span>
                 </Button>
               </div>
             </div>
-            {isRunning && (
+            {isComplianceRunning && (
               <div className="relative h-1 w-full overflow-hidden bg-primary/20">
                   <div className="h-full w-full animate-progress-indeterminate bg-primary" />
               </div>
@@ -348,7 +385,14 @@ export default function RunComplianceModal({ isOpen, onOpenChange, devices, jobs
         </div>
 
         <DialogFooter className="p-4 border-t">
-          <Button variant="outline" onClick={() => handleOpenChangeAndReset(false)}>Close</Button>
+          {isComplianceRunning ? (
+            <div className="flex justify-end gap-2 w-full">
+               <Button variant="destructive" onClick={handleAbort}>Abort Compliance Check</Button>
+               <Button variant="outline" onClick={handleRunInBackground}>Run in Background</Button>
+            </div>
+          ) : (
+             <Button variant="outline" onClick={() => handleOpenChangeAndReset(false)}>Close</Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

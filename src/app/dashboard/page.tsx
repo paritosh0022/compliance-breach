@@ -24,14 +24,21 @@ import { useToast } from '@/hooks/use-toast';
 import useLocalStorageState from '@/hooks/use-local-storage-state';
 import ImportDevicesModal from '@/components/import-devices-modal';
 import ConfirmDeleteDialog from '@/components/confirm-delete-dialog';
+import { useDashboard } from '@/contexts/DashboardContext';
 
 export default function DashboardPage() {
+  const {
+    isComplianceModalOpen,
+    setIsComplianceModalOpen,
+    isComplianceRunning,
+    complianceLog,
+  } = useDashboard();
+    
   const [isClient, setIsClient] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
   const [isJobDetailsModalOpen, setIsJobDetailsModalOpen] = useState(false);
-  const [isComplianceModalOpen, setIsComplianceModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   
@@ -39,7 +46,6 @@ export default function DashboardPage() {
   
   const [devices, setDevices] = useLocalStorageState('devices', []);
   const [jobs, setJobs] = useLocalStorageState('jobs', []);
-  const [complianceLog, setComplianceLog] = useLocalStorageState('complianceLog', []);
 
   const [deviceToEdit, setDeviceToEdit] = useState(null);
   const [jobToEdit, setJobToEdit] = useState(null);
@@ -60,13 +66,6 @@ export default function DashboardPage() {
     setIsComplianceModalOpen(true);
   };
   
-  const handleComplianceModalOpenChange = (open) => {
-    setIsComplianceModalOpen(open);
-    if (!open) {
-        setInitialModalSelections({});
-    }
-  }
-
   const handleSaveDevice = (deviceData, id) => {
     if (id) {
       setDevices(prev => prev.map(d => {
@@ -198,16 +197,6 @@ export default function DashboardPage() {
     setIsConfirmDialogOpen(false);
     toast({ title: "Success", description: `The selected ${itemToDelete.type}(s) have been deleted.` });
     setItemToDelete(null);
-  };
-
-
-  const handleRunComplianceComplete = (logEntry) => {
-    const newLogEntry = { ...logEntry, id: crypto.randomUUID(), timestamp: new Date().toISOString() };
-    setComplianceLog(prev => [newLogEntry, ...prev]);
-    toast({
-      title: "Compliance Run Finished",
-      description: `Check the reports for details.`,
-    });
   };
 
   const downloadCsv = (data, filename) => {
@@ -385,11 +374,11 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               {selectedDeviceIds.length > 0 && (
                 <>
-                  <Button onClick={() => handleRunCompliance({ devices: selectedDeviceIds })}>
+                  <Button onClick={() => handleRunCompliance({ devices: selectedDeviceIds })} disabled={isComplianceRunning}>
                     <Bot className="mr-2" />
                     Run Compliance ({selectedDeviceIds.length})
                   </Button>
-                  <Button variant="destructive" onClick={handleDeleteSelectedDevices}>
+                  <Button variant="destructive" onClick={handleDeleteSelectedDevices} disabled={isComplianceRunning}>
                     <Trash2 className="mr-2" />
                     Delete ({selectedDeviceIds.length})
                   </Button>
@@ -409,6 +398,7 @@ export default function DashboardPage() {
             onSelectedDeviceIdsChange={setSelectedDeviceIds}
             onRunCompliance={(deviceId) => handleRunCompliance({ devices: [deviceId] })}
             onExport={handleExportDevice}
+            isComplianceRunning={isComplianceRunning}
           />
         </TabsContent>
         <TabsContent value="job-compliance" className="mt-6">
@@ -423,11 +413,11 @@ export default function DashboardPage() {
              <div className="flex items-center gap-2">
               {selectedJobIds.length > 0 && (
                 <>
-                  <Button onClick={() => handleRunCompliance({ jobs: selectedJobIds })}>
+                  <Button onClick={() => handleRunCompliance({ jobs: selectedJobIds })} disabled={isComplianceRunning}>
                     <Bot className="mr-2" />
                     Run Compliance ({selectedJobIds.length})
                   </Button>
-                  <Button variant="destructive" onClick={handleDeleteSelectedJobs}>
+                  <Button variant="destructive" onClick={handleDeleteSelectedJobs} disabled={isComplianceRunning}>
                     <Trash2 className="mr-2" />
                     Delete ({selectedJobIds.length})
                   </Button>
@@ -447,6 +437,7 @@ export default function DashboardPage() {
               onSelectedJobIdsChange={setSelectedJobIds}
               onRunCompliance={(jobId) => handleRunCompliance({ jobs: [jobId] })}
               onExport={handleExportJob}
+              isComplianceRunning={isComplianceRunning}
             />
         </TabsContent>
       </Tabs>
@@ -481,10 +472,8 @@ export default function DashboardPage() {
 
       <RunComplianceModal
         isOpen={isComplianceModalOpen}
-        onOpenChange={handleComplianceModalOpenChange}
         devices={devices}
         jobs={jobs}
-        onRunComplete={handleRunComplianceComplete}
         initialSelectedDeviceIds={initialModalSelections.devices}
         initialSelectedJobIds={initialModalSelections.jobs}
       />

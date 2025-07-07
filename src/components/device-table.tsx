@@ -14,7 +14,39 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Trash2, Edit, Bot, Download } from "lucide-react";
 
-export default function DeviceTable({ devices, onDelete, onEdit, selectedDeviceIds, onSelectedDeviceIdsChange, onRunCompliance, onExport }) {
+function ActionButton({ isRunning, onAction, children, tooltipText, disabledTooltipText }) {
+  if (isRunning) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span tabIndex="0">
+            <Button variant="ghost" size="icon" disabled>
+              {children}
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{disabledTooltipText}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button variant="ghost" size="icon" onClick={onAction}>
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{tooltipText}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+export default function DeviceTable({ devices, onDelete, onEdit, selectedDeviceIds, onSelectedDeviceIdsChange, onRunCompliance, onExport, isComplianceRunning }) {
 
   const handleSelectAll = (checked) => {
     onSelectedDeviceIdsChange(checked ? devices.map(d => d.id) : []);
@@ -46,6 +78,7 @@ export default function DeviceTable({ devices, onDelete, onEdit, selectedDeviceI
               <Checkbox
                 checked={selectedDeviceIds.length === devices.length && devices.length > 0}
                 onCheckedChange={handleSelectAll}
+                disabled={isComplianceRunning}
               />
             </TableHead>
             <TableHead>Name</TableHead>
@@ -62,6 +95,7 @@ export default function DeviceTable({ devices, onDelete, onEdit, selectedDeviceI
                 <Checkbox
                   checked={selectedDeviceIds.includes(device.id)}
                   onCheckedChange={(checked) => handleSelectRow(device.id, !!checked)}
+                  disabled={isComplianceRunning}
                 />
               </TableCell>
               <TableCell className="font-medium">{device.name}</TableCell>
@@ -71,50 +105,38 @@ export default function DeviceTable({ devices, onDelete, onEdit, selectedDeviceI
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
                   <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => onRunCompliance(device.id)}>
-                          <Bot className="h-4 w-4" />
-                          <span className="sr-only">Run Compliance</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Run Compliance</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => onExport(device.id)}>
-                          <Download className="h-4 w-4" />
-                          <span className="sr-only">Export Device</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Export Device</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => onEdit(device.id)}>
-                          <Edit className="h-4 w-4" />
-                          <span className="sr-only">Edit Device</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Edit Device</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => onDelete(device.id)} className="text-destructive hover:text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Delete Device</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Delete Device</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <ActionButton
+                      isRunning={isComplianceRunning}
+                      onAction={() => onRunCompliance(device.id)}
+                      tooltipText="Run Compliance"
+                      disabledTooltipText="Compliance is running"
+                    >
+                      <Bot className="h-4 w-4" />
+                    </ActionButton>
+                    <ActionButton
+                      isRunning={isComplianceRunning}
+                      onAction={() => onExport(device.id)}
+                      tooltipText="Export Device"
+                      disabledTooltipText="Compliance is running"
+                    >
+                      <Download className="h-4 w-4" />
+                    </ActionButton>
+                    <ActionButton
+                      isRunning={isComplianceRunning}
+                      onAction={() => onEdit(device.id)}
+                      tooltipText="Edit Device"
+                      disabledTooltipText="Compliance is running"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </ActionButton>
+                    <ActionButton
+                      isRunning={isComplianceRunning}
+                      onAction={() => onDelete(device.id)}
+                      tooltipText="Delete Device"
+                      disabledTooltipText="Compliance is running"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive hover:text-destructive" />
+                    </ActionButton>
                   </TooltipProvider>
                 </div>
               </TableCell>

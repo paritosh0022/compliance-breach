@@ -14,7 +14,39 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Trash2, Edit, Bot, Download } from "lucide-react";
 
-export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSelectedJobIdsChange, onRunCompliance, onExport }) {
+function ActionButton({ isRunning, onAction, children, tooltipText, disabledTooltipText }) {
+  if (isRunning) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span tabIndex="0">
+            <Button variant="ghost" size="icon" disabled>
+              {children}
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{disabledTooltipText}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button variant="ghost" size="icon" onClick={onAction}>
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{tooltipText}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSelectedJobIdsChange, onRunCompliance, onExport, isComplianceRunning }) {
   
   const handleSelectAll = (checked) => {
     onSelectedJobIdsChange(checked ? jobs.map(j => j.id) : []);
@@ -46,6 +78,7 @@ export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSel
               <Checkbox
                 checked={selectedJobIds.length === jobs.length && jobs.length > 0}
                 onCheckedChange={handleSelectAll}
+                disabled={isComplianceRunning}
               />
             </TableHead>
             <TableHead>Job Name</TableHead>
@@ -60,6 +93,7 @@ export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSel
                 <Checkbox
                   checked={selectedJobIds.includes(job.id)}
                   onCheckedChange={(checked) => handleSelectRow(job.id, !!checked)}
+                  disabled={isComplianceRunning}
                 />
               </TableCell>
               <TableCell className="font-medium">{job.name}</TableCell>
@@ -67,50 +101,38 @@ export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSel
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
                   <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => onRunCompliance(job.id)}>
-                          <Bot className="h-4 w-4" />
-                          <span className="sr-only">Run Compliance</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Run Compliance</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => onExport(job.id)}>
-                          <Download className="h-4 w-4" />
-                          <span className="sr-only">Export Job</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Export Job</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => onEdit(job.id)}>
-                          <Edit className="h-4 w-4" />
-                          <span className="sr-only">Edit Job</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Edit Job</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => onDelete(job.id)} className="text-destructive hover:text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Delete Job</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Delete Job</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <ActionButton
+                      isRunning={isComplianceRunning}
+                      onAction={() => onRunCompliance(job.id)}
+                      tooltipText="Run Compliance"
+                      disabledTooltipText="Compliance is running"
+                    >
+                      <Bot className="h-4 w-4" />
+                    </ActionButton>
+                    <ActionButton
+                      isRunning={isComplianceRunning}
+                      onAction={() => onExport(job.id)}
+                      tooltipText="Export Job"
+                      disabledTooltipText="Compliance is running"
+                    >
+                      <Download className="h-4 w-4" />
+                    </ActionButton>
+                    <ActionButton
+                      isRunning={isComplianceRunning}
+                      onAction={() => onEdit(job.id)}
+                      tooltipText="Edit Job"
+                      disabledTooltipText="Compliance is running"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </ActionButton>
+                    <ActionButton
+                      isRunning={isComplianceRunning}
+                      onAction={() => onDelete(job.id)}
+                      tooltipText="Delete Job"
+                      disabledTooltipText="Compliance is running"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive hover:text-destructive" />
+                    </ActionButton>
                   </TooltipProvider>
                 </div>
               </TableCell>

@@ -7,6 +7,7 @@ import DashboardHeader from '@/components/dashboard-header';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { DashboardProvider } from '@/contexts/DashboardContext';
 
 export default function DashboardLayout({
   children,
@@ -32,14 +33,16 @@ export default function DashboardLayout({
   }
 
   return (
-    <SidebarProvider>
-      <DashboardSidebar />
-      <SidebarInset>
-        <DashboardHeader />
-        <main className="p-4 sm:p-6 lg:p-8">
-          {children}
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+    <DashboardProvider>
+      <SidebarProvider>
+        <DashboardSidebar />
+        <SidebarInset>
+          <DashboardHeader />
+          <main className="p-4 sm:p-6 lg:p-8">
+            {children}
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </DashboardProvider>
   );
 }
