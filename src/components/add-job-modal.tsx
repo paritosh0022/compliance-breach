@@ -36,6 +36,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
   const [condition, setCondition] = useState('and');
   const [groups, setGroups] = useState([]);
   const [expandedPanel, setExpandedPanel] = useState(null);
+  const [parsedVariables, setParsedVariables] = useState([]);
   
   const isEditing = jobDetails && jobDetails.command !== undefined;
   const isMobile = useIsMobile();
@@ -70,29 +71,65 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
 
   const handleTemplateChange = useCallback((newTemplate) => {
     setTemplate(newTemplate);
+
+    const valueRegex = /^Value\s+(\w+)\s+\((.+)\)/gm;
+    let match;
+    const variables = [];
+    while ((match = valueRegex.exec(newTemplate)) !== null) {
+      const name = match[1];
+      const spec = match[2];
+
+      let type = 'input';
+      let options = [];
+
+      if (spec === '\\S+' || spec === '\\d+' || spec === '.*') {
+        type = 'input';
+      } else if (spec.includes('|')) {
+        type = 'select';
+        // Simple case: (yes|no)
+        if (!spec.includes('(') && !spec.includes(')')) {
+          options = spec.split('|');
+        } else {
+          // Complex case: (snmp-version-(1|2c|3))
+          const expansionRegex = /(.*)\((.+?)\)(.*)/;
+          const expansionMatch = spec.match(expansionRegex);
+          if (expansionMatch) {
+            const prefix = expansionMatch[1];
+            const inner = expansionMatch[2];
+            const suffix = expansionMatch[3];
+            options = inner.split('|').map(opt => `${prefix}${opt}${suffix}`);
+          } else {
+            // Fallback for cases like (a|b)
+            options = spec.split('|');
+          }
+        }
+      }
+      
+      variables.push({ name, type, options });
+    }
+    
+    setParsedVariables(variables);
+
     if (newTemplate.trim() !== "") {
       setIsTemplateRun(true);
-      setGroups((g) => {
-        if (g.length === 0) {
-          return [
+      // Reset rules when template changes, as variables may have changed
+      setGroups([
+        {
+          id: crypto.randomUUID(),
+          rules: [
             {
               id: crypto.randomUUID(),
-              rules: [
-                {
-                  id: crypto.randomUUID(),
-                  variable: "",
-                  operator: "contains",
-                  value: "",
-                },
-              ],
+              variable: "",
+              operator: "contains",
+              value: "",
             },
-          ];
-        }
-        return g;
-      });
+          ],
+        },
+      ]);
     } else {
       setIsTemplateRun(false);
       setGroups([]);
+      setParsedVariables([]);
     }
   }, []);
 
@@ -135,10 +172,19 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
   };
   
   const handleRuleChange = (groupId, ruleId, field, value) => {
-    const newOperator = value;
     setGroups(prev => prev.map(g => 
         g.id === groupId
-        ? { ...g, rules: g.rules.map(r => r.id === ruleId ? { ...r, [field]: field === 'operator' ? newOperator : value } : r) }
+        ? { ...g, rules: g.rules.map(r => {
+            if (r.id === ruleId) {
+                const updatedRule = { ...r, [field]: value };
+                // If variable changes, reset the value as options might be different
+                if (field === 'variable') {
+                    updatedRule.value = '';
+                }
+                return updatedRule;
+            }
+            return r;
+        }) }
         : g
     ));
   };
@@ -152,6 +198,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
       setGroups([]);
       setCondition('and');
       setExpandedPanel(null);
+      setParsedVariables([]);
     }
   };
   
@@ -270,28 +317,63 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
                                 </Button>
                               )}
                             {group.rules.map((rule) => (
-                              <div key={rule.id} className="flex items-center gap-2">
-                                  <Input 
-                                    placeholder="Variable (e.g., 'version')" 
+                              <div key={rule.id} className="grid grid-cols-[1fr_1fr_1fr_auto] items-center gap-2">
+                                  <Select
                                     value={rule.variable}
-                                    onChange={(e) => handleRuleChange(group.id, rule.id, 'variable', e.target.value)}
-                                  />
+                                    onValueChange={(v) => handleRuleChange(group.id, rule.id, 'variable', v)}
+                                  >
+                                    <SelectTrigger><SelectValue placeholder="Variable..."/></SelectTrigger>
+                                    <SelectContent>
+                                      {parsedVariables.length > 0 ? (
+                                        parsedVariables.map(v => (
+                                          <SelectItem key={v.name} value={v.name}>{v.name}</SelectItem>
+                                        ))
+                                      ) : (
+                                        <SelectItem value="" disabled>No variables parsed</SelectItem>
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+
                                   <Select 
                                     value={rule.operator}
                                     onValueChange={(v) => handleRuleChange(group.id, rule.id, 'operator', v)}
                                   >
-                                    <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="contains">Contains</SelectItem>
                                       <SelectItem value="not-contains">Does not contain</SelectItem>
                                       <SelectItem value="equals">Equals</SelectItem>
                                     </SelectContent>
                                   </Select>
-                                  <Input 
-                                    placeholder="Value (e.g., '12.4')" 
-                                    value={rule.value}
-                                    onChange={(e) => handleRuleChange(group.id, rule.id, 'value', e.target.value)}
-                                  />
+                                  
+                                  {(() => {
+                                      const variableConfig = parsedVariables.find(v => v.name === rule.variable);
+                                      if (variableConfig && variableConfig.type === 'select') {
+                                          return (
+                                              <Select
+                                                  value={rule.value}
+                                                  onValueChange={(v) => handleRuleChange(group.id, rule.id, 'value', v)}
+                                                  disabled={!rule.variable}
+                                              >
+                                                  <SelectTrigger><SelectValue placeholder="Value..."/></SelectTrigger>
+                                                  <SelectContent>
+                                                      {variableConfig.options.map(opt => (
+                                                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                                      ))}
+                                                  </SelectContent>
+                                              </Select>
+                                          );
+                                      }
+                                      return (
+                                          <Input 
+                                              placeholder="Value" 
+                                              value={rule.value}
+                                              onChange={(e) => handleRuleChange(group.id, rule.id, 'value', e.target.value)}
+                                              disabled={!rule.variable}
+                                          />
+                                      );
+                                  })()}
+                                  
                                   <Button variant="ghost" size="icon" onClick={() => handleDeleteRule(group.id, rule.id)}>
                                     <Trash2 className="h-4 w-4 text-destructive" />
                                     <span className="sr-only">Delete Rule</span>
@@ -323,3 +405,4 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
     </Dialog>
   );
 }
+
