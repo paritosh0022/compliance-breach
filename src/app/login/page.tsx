@@ -52,7 +52,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
             <div className="mx-auto w-fit mb-4">
-                 <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1184.37 200.65" className="h-16 w-auto">
+                 <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1184.37 200.65" className="h-8 w-auto">
                     <defs>
                         <style>
                         {`
