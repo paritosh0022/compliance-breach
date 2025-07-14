@@ -368,7 +368,7 @@ export default function DashboardPage() {
   return (
     <>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold font-headline">Manage Devices</h1>
+        <h1 className="text-2xl font-semibold font-headline">Manage Job Compliance</h1>
         <div className="flex items-center gap-2">
             {getActiveButton(activeTab)}
             <Button variant="outline" onClick={() => setIsReportModalOpen(true)}>
@@ -547,5 +547,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    

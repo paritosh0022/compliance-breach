@@ -48,11 +48,11 @@ export default function DashboardSidebar() {
             <SidebarMenuButton
                 asChild
                 isActive={true}
-                tooltip="Manage Devices"
+                tooltip="Manage Job Compliance"
             >
               <Link href="/dashboard">
                 <Server />
-                <span>Manage Devices</span>
+                <span>Manage Job Compliance</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
