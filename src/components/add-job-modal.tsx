@@ -329,7 +329,7 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
                                           <SelectItem key={v.name} value={v.name}>{v.name}</SelectItem>
                                         ))
                                       ) : (
-                                        <SelectItem value="" disabled>No variables parsed</SelectItem>
+                                        <div className="px-2 py-1.5 text-sm text-muted-foreground">No variables parsed</div>
                                       )}
                                     </SelectContent>
                                   </Select>
@@ -405,4 +405,3 @@ export default function AddJobModal({ isOpen, onOpenChange, onAddJob, jobDetails
     </Dialog>
   );
 }
-
