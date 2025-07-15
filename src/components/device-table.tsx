@@ -46,8 +46,8 @@ function ActionButton({ isRunning, onAction, children, tooltipText, disabledTool
   );
 }
 
-export default function DeviceTable({ devices, table, onDelete, onEdit, onRunCompliance, onExport, isComplianceRunning }) {
-  if (devices.length === 0) {
+export default function DeviceTable({ rows, table, onDelete, onEdit, onRunCompliance, onExport, isComplianceRunning }) {
+  if (rows.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/20 py-20 text-center">
         <h3 className="text-lg font-semibold text-muted-foreground">No Devices Added</h3>
@@ -76,58 +76,61 @@ export default function DeviceTable({ devices, table, onDelete, onEdit, onRunCom
           </TableRow>
         </TableHeader>
         <TableBody>
-          {devices.map((device) => (
-            <TableRow key={device.id} data-state={table.getIsRowSelected(device.id) ? "selected" : ""}>
-              <TableCell>
-                <Checkbox
-                  checked={table.getIsRowSelected(device.id)}
-                  onCheckedChange={(value) => table.toggleRowSelected(device.id, !!value)}
-                  aria-label="Select row"
-                />
-              </TableCell>
-              <TableCell className="font-medium">{device.name}</TableCell>
-              <TableCell>{device.ipAddress}</TableCell>
-              <TableCell>{device.username}</TableCell>
-              <TableCell>{device.port}</TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-1">
-                  <TooltipProvider>
-                    <ActionButton
-                      isRunning={isComplianceRunning}
-                      onAction={() => onRunCompliance(device.id)}
-                      tooltipText="Run Compliance"
-                      disabledTooltipText="Compliance is running"
-                    >
-                      <Bot className="h-4 w-4" />
-                    </ActionButton>
-                    <ActionButton
-                      onAction={() => onExport(device.id)}
-                      tooltipText="Export Device"
-                      disabledTooltipText="Compliance is running"
-                    >
-                      <Download className="h-4 w-4" />
-                    </ActionButton>
-                    <ActionButton
-                      isRunning={isComplianceRunning}
-                      onAction={() => onEdit(device.id)}
-                      tooltipText="Edit Device"
-                      disabledTooltipText="Compliance is running"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </ActionButton>
-                    <ActionButton
-                      isRunning={isComplianceRunning}
-                      onAction={() => onDelete(device.id)}
-                      tooltipText="Delete Device"
-                      disabledTooltipText="Compliance is running"
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive hover:text-destructive" />
-                    </ActionButton>
-                  </TooltipProvider>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
+          {rows.map((row) => {
+            const device = row.original;
+            return (
+              <TableRow key={device.id} data-state={row.getIsSelected() ? "selected" : ""}>
+                <TableCell>
+                  <Checkbox
+                    checked={row.getIsSelected()}
+                    onCheckedChange={(value) => row.toggleSelected(!!value)}
+                    aria-label="Select row"
+                  />
+                </TableCell>
+                <TableCell className="font-medium">{device.name}</TableCell>
+                <TableCell>{device.ipAddress}</TableCell>
+                <TableCell>{device.username}</TableCell>
+                <TableCell>{device.port}</TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <TooltipProvider>
+                      <ActionButton
+                        isRunning={isComplianceRunning}
+                        onAction={() => onRunCompliance(device.id)}
+                        tooltipText="Run Compliance"
+                        disabledTooltipText="Compliance is running"
+                      >
+                        <Bot className="h-4 w-4" />
+                      </ActionButton>
+                      <ActionButton
+                        onAction={() => onExport(device.id)}
+                        tooltipText="Export Device"
+                        disabledTooltipText="Compliance is running"
+                      >
+                        <Download className="h-4 w-4" />
+                      </ActionButton>
+                      <ActionButton
+                        isRunning={isComplianceRunning}
+                        onAction={() => onEdit(device.id)}
+                        tooltipText="Edit Device"
+                        disabledTooltipText="Compliance is running"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </ActionButton>
+                      <ActionButton
+                        isRunning={isComplianceRunning}
+                        onAction={() => onDelete(device.id)}
+                        tooltipText="Delete Device"
+                        disabledTooltipText="Compliance is running"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive hover:text-destructive" />
+                      </ActionButton>
+                    </TooltipProvider>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

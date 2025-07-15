@@ -71,7 +71,7 @@ export default function DevicesPage() {
     pageCount: Math.ceil(filteredDevices.length / 10),
   });
 
-  const paginatedDevices = table.getRowModel().rows.map(row => row.original);
+  const paginatedRows = table.getRowModel().rows;
   const selectedDeviceIds = table.getSelectedRowModel().rows.map(row => row.original.id);
   
   const handleRunCompliance = (selections) => {
@@ -286,7 +286,7 @@ export default function DevicesPage() {
             </div>
           </div>
           <DeviceTable 
-            devices={paginatedDevices}
+            rows={paginatedRows}
             table={table} 
             onDelete={handleDeleteDevice}
             onEdit={handleEditDeviceClick}
