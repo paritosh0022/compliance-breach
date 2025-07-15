@@ -207,7 +207,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
         <div className="px-4 py-3 border-b">
             <Card>
                 <CardContent className="p-3">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                    <div className="flex items-center justify-around text-center">
                         <div>
                             <p className="text-sm text-muted-foreground">Scan ID</p>
                             <p className="font-semibold">{scanGroup.scanId}</p>
@@ -249,7 +249,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
           "flex-1 grid min-h-0 transition-all duration-300 ease-in-out",
           (selectedResultForOutput || viewedDevice || viewedJob) ? "grid-cols-[2fr_1fr]" : "grid-cols-1"
         )}>
-          <div className="flex-1 min-h-0 px-4 overflow-hidden flex flex-col">
+          <div className="flex-1 min-h-0 px-4 pb-4 overflow-hidden flex flex-col">
              <div className="flex-grow border rounded-lg overflow-hidden">
                 <ScrollArea className="h-full">
                   <Table className="min-w-[1200px]">
@@ -262,8 +262,8 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                           <div className="flex items-center gap-2">
                             <Checkbox
                               id="select-all-devices-modal"
-                              checked={filteredDevices.length > 0 && selectedDeviceNames.length === filteredDevices.length}
-                              onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                              checked={table.getIsAllPageRowsSelected()}
+                              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
                               aria-label="Select all"
                             />
                             Device Name
@@ -283,46 +283,49 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                     </TableHeader>
                     <TableBody>
                       {paginatedRows.length > 0 ? (
-                        paginatedRows.map(({original: device}) => (
-                          <TableRow 
-                            key={device.name} 
-                            data-state={(selectedResultForOutput?.deviceName === device.name || viewedDevice?.name === device.name) ? "selected" : ""}
-                            className="group"
-                          >
-                            <TableCell className="font-medium border-r truncate sticky left-0 bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted">
-                              <div className="flex items-center gap-2">
-                                <Checkbox
-                                  checked={selectedDeviceNames.includes(device.name)}
-                                  onCheckedChange={(checked) => handleSelectRow(device.name, !!checked)}
-                                  aria-label={`Select ${device.name}`}
-                                />
-                                <span>{device.name}</span>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handlePanelOpen('device', device)}>
-                                    <Eye className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                            {uniqueJobs.map(jobName => {
-                              const result = resultsMap[`${device.name}-${jobName}`];
-                              const status = result?.status;
-                              const isSelected = selectedResultForOutput?.deviceName === device.name && selectedResultForOutput?.jobName === jobName;
-                              return (
-                                <TableCell key={jobName}>
-                                  {status ? (
-                                    <Badge
-                                      className={cn("cursor-pointer", getStatusBadgeClass(status), isSelected && "ring-2 ring-offset-2 ring-primary ring-offset-background")}
-                                      onClick={() => handleBadgeClick(device.name, jobName)}
-                                    >
-                                      {status}
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="secondary">N/A</Badge>
-                                  )}
-                                </TableCell>
-                              );
-                            })}
-                          </TableRow>
-                        ))
+                        paginatedRows.map((row) => {
+                          const device = row.original;
+                          return (
+                            <TableRow 
+                              key={device.name} 
+                              data-state={(selectedResultForOutput?.deviceName === device.name || viewedDevice?.name === device.name) ? "selected" : ""}
+                              className="group"
+                            >
+                              <TableCell className="font-medium border-r truncate sticky left-0 bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted">
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    checked={row.getIsSelected()}
+                                    onCheckedChange={(value) => row.toggleSelected(!!value)}
+                                    aria-label={`Select ${device.name}`}
+                                  />
+                                  <span>{device.name}</span>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handlePanelOpen('device', device)}>
+                                      <Eye className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                              {uniqueJobs.map(jobName => {
+                                const result = resultsMap[`${device.name}-${jobName}`];
+                                const status = result?.status;
+                                const isSelected = selectedResultForOutput?.deviceName === device.name && selectedResultForOutput?.jobName === jobName;
+                                return (
+                                  <TableCell key={jobName}>
+                                    {status ? (
+                                      <Badge
+                                        className={cn("cursor-pointer", getStatusBadgeClass(status), isSelected && "ring-2 ring-offset-2 ring-primary ring-offset-background")}
+                                        onClick={() => handleBadgeClick(device.name, jobName)}
+                                      >
+                                        {status}
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="secondary">N/A</Badge>
+                                    )}
+                                  </TableCell>
+                                );
+                              })}
+                            </TableRow>
+                          );
+                        })
                       ) : (
                         <TableRow>
                           <TableCell colSpan={uniqueJobs.length + 1} className="h-24 text-center">
