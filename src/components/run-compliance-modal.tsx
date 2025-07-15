@@ -14,13 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Play, Copy, Download, Eye, X } from "lucide-react";
+import { Search, Play, Copy, Download, Eye, X, Calendar as CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "./ui/textarea";
 import { cn } from "@/lib/utils";
 import { useDashboard } from "@/contexts/DashboardContext";
 
-export default function RunComplianceModal({ devices, jobs, initialSelectedDeviceIds, initialSelectedJobIds }) {
+export default function RunComplianceModal({ devices, jobs, initialSelectedDeviceIds, initialSelectedJobIds, onOpenScheduleModal }) {
   const {
     isComplianceModalOpen,
     setIsComplianceModalOpen,
@@ -131,7 +131,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
     setIsComplianceModalOpen(isOpen);
   };
 
-  const handleRunCompliance = () => {
+  const handleRunNow = () => {
     const selectedJobsList = jobs.filter(j => selectedJobIds.includes(j.id));
     if (selectedJobsList.length === 0 || selectedDevices.length === 0) {
       toast({
@@ -182,9 +182,24 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
       setIsComplianceRunning(false);
       setComplianceRunProcess(null);
 
-    }, 30000); // 30 seconds
+    }, 3000); // 3 seconds
 
     setComplianceRunProcess(process);
+  };
+
+  const handleScheduleRun = () => {
+    if (selectedJobIds.length === 0 || selectedDevices.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Selection Required",
+        description: "Please select at least one device and one job to schedule.",
+      });
+      return;
+    }
+    onOpenScheduleModal({
+      deviceIds: selectedDevices,
+      jobIds: selectedJobIds,
+    });
   };
   
   const handleRunInBackground = () => {
@@ -343,9 +358,13 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
             <div className="p-4 border-b flex items-center justify-between h-[73px]">
               <h3 className="font-semibold text-base">Output</h3>
               <div className="flex items-center gap-2">
-                <Button size="sm" onClick={handleRunCompliance} disabled={isComplianceRunning || selectedJobIds.length === 0 || selectedDevices.length === 0}>
+                <Button variant="outline" size="sm" onClick={handleScheduleRun} disabled={isComplianceRunning || selectedJobIds.length === 0 || selectedDevices.length === 0}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  Schedule Run
+                </Button>
+                <Button size="sm" onClick={handleRunNow} disabled={isComplianceRunning || selectedJobIds.length === 0 || selectedDevices.length === 0}>
                   <Play className="mr-2 h-4 w-4" />
-                  {isComplianceRunning ? 'Running...' : 'Run'}
+                  {isComplianceRunning ? 'Running...' : 'Run Now'}
                 </Button>
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopyOutput} disabled={!output || isComplianceRunning}>
                   <Copy className="h-4 w-4" />

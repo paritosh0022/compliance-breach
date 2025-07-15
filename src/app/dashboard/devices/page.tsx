@@ -22,6 +22,7 @@ import ImportDevicesModal from '@/components/import-devices-modal';
 import ConfirmDeleteDialog from '@/components/confirm-delete-dialog';
 import { useDashboard } from '@/contexts/DashboardContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import ScheduleRunModal from '@/components/schedule-run-modal';
 
 export default function DevicesPage() {
   const {
@@ -36,15 +37,18 @@ export default function DevicesPage() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   
   const [devices, setDevices] = useLocalStorageState('devices', []);
   const [jobs, setJobs] = useLocalStorageState('jobs', []);
+  const [scheduledJobs, setScheduledJobs] = useLocalStorageState('scheduledJobs', []);
 
   const [deviceToEdit, setDeviceToEdit] = useState(null);
   const [selectedDeviceIds, setSelectedDeviceIds] = useState([]);
   const [initialModalSelections, setInitialModalSelections] = useState({});
   const [itemToDelete, setItemToDelete] = useState(null);
   const [deviceSearchTerm, setDeviceSearchTerm] = useState("");
+  const [complianceRunConfig, setComplianceRunConfig] = useState(null);
 
   const { toast } = useToast();
 
@@ -178,6 +182,26 @@ export default function DevicesPage() {
     setIsDrawerOpen(true);
   };
 
+  const handleOpenScheduleModal = (config) => {
+    setComplianceRunConfig(config);
+    setIsComplianceModalOpen(false);
+    setIsScheduleModalOpen(true);
+  };
+
+  const handleScheduleJob = (scheduleDetails) => {
+    const newScheduledJob = {
+      id: crypto.randomUUID(),
+      ...complianceRunConfig,
+      ...scheduleDetails,
+    };
+    setScheduledJobs(prev => [...prev, newScheduledJob]);
+    toast({
+      title: "Job Scheduled",
+      description: "The compliance check has been scheduled successfully.",
+    });
+    setIsScheduleModalOpen(false);
+  };
+
   if (!isClient) {
     return (
       <div className="flex h-full w-full items-center justify-center p-16">
@@ -288,6 +312,13 @@ export default function DevicesPage() {
         jobs={jobs}
         initialSelectedDeviceIds={initialModalSelections.devices}
         initialSelectedJobIds={initialModalSelections.jobs}
+        onOpenScheduleModal={handleOpenScheduleModal}
+      />
+      
+      <ScheduleRunModal
+        isOpen={isScheduleModalOpen}
+        onOpenChange={setIsScheduleModalOpen}
+        onSchedule={handleScheduleJob}
       />
 
       <ReportModal 
