@@ -46,20 +46,7 @@ function ActionButton({ isRunning, onAction, children, tooltipText, disabledTool
   );
 }
 
-export default function DeviceTable({ devices, onDelete, onEdit, selectedDeviceIds, onSelectedDeviceIdsChange, onRunCompliance, onExport, isComplianceRunning }) {
-
-  const handleSelectAll = (checked) => {
-    onSelectedDeviceIdsChange(checked ? devices.map(d => d.id) : []);
-  };
-  
-  const handleSelectRow = (id, checked) => {
-    if (checked) {
-      onSelectedDeviceIdsChange([...selectedDeviceIds, id]);
-    } else {
-      onSelectedDeviceIdsChange(selectedDeviceIds.filter(rowId => rowId !== id));
-    }
-  };
-
+export default function DeviceTable({ devices, table, onDelete, onEdit, onRunCompliance, onExport, isComplianceRunning }) {
   if (devices.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/20 py-20 text-center">
@@ -76,8 +63,9 @@ export default function DeviceTable({ devices, onDelete, onEdit, selectedDeviceI
           <TableRow>
             <TableHead className="w-[40px]">
               <Checkbox
-                checked={selectedDeviceIds.length === devices.length && devices.length > 0}
-                onCheckedChange={handleSelectAll}
+                checked={table.getIsAllPageRowsSelected()}
+                onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                aria-label="Select all"
               />
             </TableHead>
             <TableHead>Name</TableHead>
@@ -89,11 +77,12 @@ export default function DeviceTable({ devices, onDelete, onEdit, selectedDeviceI
         </TableHeader>
         <TableBody>
           {devices.map((device) => (
-            <TableRow key={device.id} data-state={selectedDeviceIds.includes(device.id) ? "selected" : ""}>
+            <TableRow key={device.id} data-state={table.getIsRowSelected(device.id) ? "selected" : ""}>
               <TableCell>
                 <Checkbox
-                  checked={selectedDeviceIds.includes(device.id)}
-                  onCheckedChange={(checked) => handleSelectRow(device.id, !!checked)}
+                  checked={table.getIsRowSelected(device.id)}
+                  onCheckedChange={(value) => table.toggleRowSelected(device.id, !!value)}
+                  aria-label="Select row"
                 />
               </TableCell>
               <TableCell className="font-medium">{device.name}</TableCell>

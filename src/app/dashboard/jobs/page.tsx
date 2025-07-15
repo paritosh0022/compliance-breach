@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Search, Trash2, Bot, Download, Loader2, FileText } from 'lucide-react';
@@ -16,6 +16,8 @@ import useLocalStorageState from '@/hooks/use-local-storage-state';
 import ConfirmDeleteDialog from '@/components/confirm-delete-dialog';
 import { useDashboard } from '@/contexts/DashboardContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useDataTable } from '@/hooks/use-data-table';
+import { DataTablePagination } from '@/components/data-table-pagination';
 
 export default function JobsPage() {
   const {
@@ -38,7 +40,6 @@ export default function JobsPage() {
 
   const [jobToEdit, setJobToEdit] = useState(null);
   const [currentJobDetails, setCurrentJobDetails] = useState();
-  const [selectedJobIds, setSelectedJobIds] = useState([]);
   const [initialModalSelections, setInitialModalSelections] = useState({});
   const [itemToDelete, setItemToDelete] = useState(null);
   const [jobSearchTerm, setJobSearchTerm] = useState("");
@@ -49,13 +50,22 @@ export default function JobsPage() {
     setIsClient(true);
   }, []);
 
-  const filteredJobs = jobs.filter(job => {
+  const filteredJobs = useMemo(() => jobs.filter(job => {
     const searchTermLower = jobSearchTerm.toLowerCase();
     return (
       job.name.toLowerCase().includes(searchTermLower) ||
       (job.description && job.description.toLowerCase().includes(searchTermLower))
     );
+  }), [jobs, jobSearchTerm]);
+
+  const { table } = useDataTable({
+    data: filteredJobs,
+    columns: [], // Columns are defined directly in JobTable
+    pageCount: Math.ceil(filteredJobs.length / 10),
   });
+
+  const paginatedJobs = table.getRowModel().rows.map(row => row.original);
+  const selectedJobIds = table.getSelectedRowModel().rows.map(row => row.original.id);
   
   const handleRunCompliance = (selections) => {
     setInitialModalSelections(selections);
@@ -136,7 +146,7 @@ export default function JobsPage() {
     
     if (itemToDelete.type === 'job') {
         setJobs(prev => prev.filter(job => !itemToDelete.ids.includes(job.id)));
-        setSelectedJobIds([]);
+        table.resetRowSelection();
     }
 
     setIsConfirmDialogOpen(false);
@@ -290,15 +300,15 @@ export default function JobsPage() {
             </div>
           </div>
            <JobTable 
-              jobs={filteredJobs} 
+              jobs={paginatedJobs} 
+              table={table}
               onDelete={handleDeleteJob} 
               onEdit={handleEditJobClick}
-              selectedJobIds={selectedJobIds}
-              onSelectedJobIdsChange={setSelectedJobIds}
               onRunCompliance={(jobId) => handleRunCompliance({ jobs: [jobId] })}
               onExport={handleExportJob}
               isComplianceRunning={isComplianceRunning}
             />
+            <DataTablePagination table={table} />
         </div>
       
       <AddJobDetailsModal

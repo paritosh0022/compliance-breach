@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,6 +22,8 @@ import ImportDevicesModal from '@/components/import-devices-modal';
 import ConfirmDeleteDialog from '@/components/confirm-delete-dialog';
 import { useDashboard } from '@/contexts/DashboardContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useDataTable } from '@/hooks/use-data-table';
+import { DataTablePagination } from '@/components/data-table-pagination';
 
 export default function DevicesPage() {
   const {
@@ -43,7 +45,6 @@ export default function DevicesPage() {
   const [scheduledJobs, setScheduledJobs] = useLocalStorageState('scheduledJobs', []);
 
   const [deviceToEdit, setDeviceToEdit] = useState(null);
-  const [selectedDeviceIds, setSelectedDeviceIds] = useState([]);
   const [initialModalSelections, setInitialModalSelections] = useState({});
   const [itemToDelete, setItemToDelete] = useState(null);
   const [deviceSearchTerm, setDeviceSearchTerm] = useState("");
@@ -54,7 +55,7 @@ export default function DevicesPage() {
     setIsClient(true);
   }, []);
 
-  const filteredDevices = devices.filter(device => {
+  const filteredDevices = useMemo(() => devices.filter(device => {
     const searchTermLower = deviceSearchTerm.toLowerCase();
     return (
       device.name.toLowerCase().includes(searchTermLower) ||
@@ -62,7 +63,16 @@ export default function DevicesPage() {
       device.username.toLowerCase().includes(searchTermLower) ||
       device.port.toString().includes(searchTermLower)
     );
+  }), [devices, deviceSearchTerm]);
+
+  const { table } = useDataTable({
+    data: filteredDevices,
+    columns: [], // Columns are defined directly in DeviceTable
+    pageCount: Math.ceil(filteredDevices.length / 10),
   });
+
+  const paginatedDevices = table.getRowModel().rows.map(row => row.original);
+  const selectedDeviceIds = table.getSelectedRowModel().rows.map(row => row.original.id);
   
   const handleRunCompliance = (selections) => {
     setInitialModalSelections(selections);
@@ -122,7 +132,7 @@ export default function DevicesPage() {
     
     if (itemToDelete.type === 'device') {
         setDevices(prev => prev.filter(device => !itemToDelete.ids.includes(device.id)));
-        setSelectedDeviceIds([]);
+        table.resetRowSelection();
     }
 
     setIsConfirmDialogOpen(false);
@@ -276,15 +286,15 @@ export default function DevicesPage() {
             </div>
           </div>
           <DeviceTable 
-            devices={filteredDevices} 
+            devices={paginatedDevices}
+            table={table} 
             onDelete={handleDeleteDevice}
             onEdit={handleEditDeviceClick}
-            selectedDeviceIds={selectedDeviceIds}
-            onSelectedDeviceIdsChange={setSelectedDeviceIds}
             onRunCompliance={(deviceId) => handleRunCompliance({ devices: [deviceId] })}
             onExport={handleExportDevice}
             isComplianceRunning={isComplianceRunning}
           />
+          <DataTablePagination table={table} />
         </div>
       
       <AddDeviceDrawer 

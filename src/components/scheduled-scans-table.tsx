@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -20,6 +21,8 @@ import { Trash2 } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { format } from "date-fns";
+import { useDataTable } from "@/hooks/use-data-table";
+import { DataTablePagination } from "./data-table-pagination";
 
 export default function ScheduledScansTable({ scheduledJobs, onDelete }) {
   const getOrdinalSuffix = (day) => {
@@ -71,6 +74,13 @@ export default function ScheduledScansTable({ scheduledJobs, onDelete }) {
     }
   };
 
+  const { table } = useDataTable({
+    data: scheduledJobs,
+    columns: [], // Columns defined in JSX
+    pageCount: Math.ceil(scheduledJobs.length / 10),
+  });
+
+  const paginatedJobs = table.getRowModel().rows.map(row => row.original);
 
   if (scheduledJobs.length === 0) {
     return (
@@ -82,47 +92,50 @@ export default function ScheduledScansTable({ scheduledJobs, onDelete }) {
   }
 
   return (
-    <div className="rounded-lg border mt-4">
-      <ScrollArea className="h-[60vh]">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Scan ID</TableHead>
-              <TableHead>Schedule</TableHead>
-              <TableHead>Targets</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {scheduledJobs.map((job) => (
-              <TableRow key={job.id}>
-                <TableCell className="font-medium">{job.scanId}</TableCell>
-                <TableCell>{getFormattedSchedule(job)}</TableCell>
-                <TableCell>
-                  <div className="flex flex-col gap-1">
-                    <Badge variant="secondary">Jobs: {job.jobIds.length}</Badge>
-                    <Badge variant="secondary">Devices: {job.deviceIds.length}</Badge>
-                  </div>
-                </TableCell>
-                <TableCell className="text-right">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => onDelete(job.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive hover:text-destructive" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Delete Scheduled Job</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </TableCell>
+    <div className="mt-4">
+      <div className="rounded-lg border">
+        <ScrollArea className="h-[60vh]">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Scan ID</TableHead>
+                <TableHead>Schedule</TableHead>
+                <TableHead>Targets</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </ScrollArea>
+            </TableHeader>
+            <TableBody>
+              {paginatedJobs.map((job) => (
+                <TableRow key={job.id}>
+                  <TableCell className="font-medium">{job.scanId}</TableCell>
+                  <TableCell>{getFormattedSchedule(job)}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      <Badge variant="secondary">Jobs: {job.jobIds.length}</Badge>
+                      <Badge variant="secondary">Devices: {job.deviceIds.length}</Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => onDelete(job.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive hover:text-destructive" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Delete Scheduled Job</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ScrollArea>
+      </div>
+      <DataTablePagination table={table} />
     </div>
   );
 }

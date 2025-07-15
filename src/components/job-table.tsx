@@ -46,20 +46,7 @@ function ActionButton({ isRunning, onAction, children, tooltipText, disabledTool
   );
 }
 
-export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSelectedJobIdsChange, onRunCompliance, onExport, isComplianceRunning }) {
-  
-  const handleSelectAll = (checked) => {
-    onSelectedJobIdsChange(checked ? jobs.map(j => j.id) : []);
-  };
-  
-  const handleSelectRow = (id, checked) => {
-    if (checked) {
-      onSelectedJobIdsChange([...selectedJobIds, id]);
-    } else {
-      onSelectedJobIdsChange(selectedJobIds.filter(rowId => rowId !== id));
-    }
-  };
-
+export default function JobTable({ jobs, table, onDelete, onEdit, onRunCompliance, onExport, isComplianceRunning }) {
   if (jobs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/20 py-20 text-center">
@@ -76,8 +63,9 @@ export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSel
           <TableRow>
             <TableHead className="w-[40px]">
               <Checkbox
-                checked={selectedJobIds.length === jobs.length && jobs.length > 0}
-                onCheckedChange={handleSelectAll}
+                checked={table.getIsAllPageRowsSelected()}
+                onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                aria-label="Select all"
               />
             </TableHead>
             <TableHead>Job Name</TableHead>
@@ -87,11 +75,12 @@ export default function JobTable({ jobs, onDelete, onEdit, selectedJobIds, onSel
         </TableHeader>
         <TableBody>
           {jobs.map((job) => (
-            <TableRow key={job.id} data-state={selectedJobIds.includes(job.id) ? "selected" : ""}>
+            <TableRow key={job.id} data-state={table.getIsRowSelected(job.id) ? "selected" : ""}>
               <TableCell>
                 <Checkbox
-                  checked={selectedJobIds.includes(job.id)}
-                  onCheckedChange={(checked) => handleSelectRow(job.id, !!checked)}
+                  checked={table.getIsRowSelected(job.id)}
+                  onCheckedChange={(value) => table.toggleRowSelected(job.id, !!value)}
+                  aria-label="Select row"
                 />
               </TableCell>
               <TableCell className="font-medium">{job.name}</TableCell>

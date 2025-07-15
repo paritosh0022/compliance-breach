@@ -27,6 +27,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ScheduledScansTable from '@/components/scheduled-scans-table';
 import ScanResultDetailsModal from '@/components/scan-result-details-modal';
 import useLocalStorageState from '@/hooks/use-local-storage-state';
+import { useDataTable } from '@/hooks/use-data-table';
+import { DataTablePagination } from '@/components/data-table-pagination';
 
 export default function DashboardPage() {
     const { complianceLog, setComplianceLog, scheduledJobs, setScheduledJobs } = useDashboard();
@@ -37,7 +39,6 @@ export default function DashboardPage() {
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedScanGroup, setSelectedScanGroup] = useState(null);
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-    const [selectedScanIds, setSelectedScanIds] = useState([]);
     const [itemToDelete, setItemToDelete] = useState(null);
     
     const aggregatedLogs = useMemo(() => {
@@ -90,17 +91,32 @@ export default function DashboardPage() {
   
     }, [aggregatedLogs, searchTerm]);
 
+    const { table } = useDataTable({
+      data: filteredLogs,
+      columns: [], // Columns are defined directly in JSX
+      pageCount: Math.ceil(filteredLogs.length / 10),
+    });
+
+    const paginatedLogs = table.getRowModel().rows.map(row => row.original);
+    const selectedScanIds = table.getSelectedRowModel().rows.map(row => row.original.id);
+    
     const handleSelectAll = (checked) => {
-      setSelectedScanIds(checked ? filteredLogs.map(log => log.id) : []);
+      if (checked) {
+        table.setRowSelection(
+          Object.fromEntries(filteredLogs.map(log => [log.id, true]))
+        );
+      } else {
+        table.resetRowSelection();
+      }
     };
     
     const handleSelectRow = (id, checked) => {
-      if (checked) {
-        setSelectedScanIds([...selectedScanIds, id]);
-      } else {
-        setSelectedScanIds(selectedScanIds.filter(rowId => rowId !== id));
-      }
+       table.setRowSelection(prev => ({
+        ...prev,
+        [id]: checked
+      }));
     };
+
 
     const handleViewDetails = (group) => {
         if (!group.results || group.results.length === 0) return;
@@ -176,7 +192,7 @@ export default function DashboardPage() {
 
       if (itemToDelete.type === 'log') {
         setComplianceLog(prev => prev.filter(log => !itemToDelete.ids.includes(log.id)));
-        setSelectedScanIds([]);
+        table.resetRowSelection();
         toast({ title: 'Success', description: 'Selected log entries have been deleted.' });
       } else if (itemToDelete.type === 'schedule') {
         setScheduledJobs(prev => prev.filter(job => job.id !== itemToDelete.ids[0]));
@@ -250,9 +266,9 @@ export default function DashboardPage() {
                             <TableRow>
                               <TableHead className="w-[40px]">
                                 <Checkbox
-                                  checked={filteredLogs.length > 0 && selectedScanIds.length === filteredLogs.length}
-                                  onCheckedChange={handleSelectAll}
-                                  disabled={filteredLogs.length === 0}
+                                  checked={table.getIsAllPageRowsSelected()}
+                                  onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                                  aria-label="Select all"
                                 />
                               </TableHead>
                               <TableHead>Scan ID</TableHead>
@@ -264,13 +280,14 @@ export default function DashboardPage() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {filteredLogs.length > 0 ? (
-                              filteredLogs.map((group) => (
-                                <TableRow key={group.id} data-state={selectedScanIds.includes(group.id) ? "selected" : ""}>
+                            {paginatedLogs.length > 0 ? (
+                              paginatedLogs.map((group) => (
+                                <TableRow key={group.id} data-state={table.getIsRowSelected(group.id) ? "selected" : ""}>
                                   <TableCell>
                                     <Checkbox
-                                      checked={selectedScanIds.includes(group.id)}
-                                      onCheckedChange={(checked) => handleSelectRow(group.id, !!checked)}
+                                      checked={table.getIsRowSelected(group.id)}
+                                      onCheckedChange={(value) => table.toggleRowSelected(group.id, !!value)}
+                                      aria-label="Select row"
                                     />
                                   </TableCell>
                                   <TableCell className="font-medium">{group.scanId}</TableCell>
@@ -305,6 +322,7 @@ export default function DashboardPage() {
                         </Table>
                     </ScrollArea>
                 </div>
+                <DataTablePagination table={table} />
               </TabsContent>
               <TabsContent value="scheduled">
                 <ScheduledScansTable
