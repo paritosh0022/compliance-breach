@@ -161,10 +161,6 @@ export default function DashboardPage() {
         <>
             <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-semibold font-headline">Manage Job Compliance</h1>
-                <Button variant="outline" onClick={() => setIsReportModalOpen(true)}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Full Report
-                </Button>
             </div>
             <div className="flex items-center justify-between gap-4 mb-4">
                 <div className="relative flex-1">

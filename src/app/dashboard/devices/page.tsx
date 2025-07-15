@@ -210,10 +210,6 @@ export default function DevicesPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="outline" onClick={() => setIsReportModalOpen(true)}>
-                <FileText className="mr-2 h-4 w-4" />
-                Compliance Report
-            </Button>
         </div>
       </div>
 

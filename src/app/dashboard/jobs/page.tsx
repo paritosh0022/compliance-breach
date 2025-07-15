@@ -224,10 +224,6 @@ export default function JobsPage() {
                 <PlusCircle className="mr-2" />
                 Add Job
             </Button>
-            <Button variant="outline" onClick={() => setIsReportModalOpen(true)}>
-                <FileText className="mr-2 h-4 w-4" />
-                Compliance Report
-            </Button>
         </div>
       </div>
 
