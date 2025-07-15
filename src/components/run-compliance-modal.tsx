@@ -299,7 +299,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
     if(viewMode === 'schedule') {
         baseCols = 'grid-cols-1 md:grid-cols-[1fr_1fr_1.5fr]';
     } else {
-        baseCols = 'grid-cols-1 md:grid-cols-[1fr_1fr_2fr]';
+        baseCols = 'grid-cols-1 md:grid-cols-[minmax(200px,_1fr)_minmax(200px,_1fr)_2fr]';
     }
     
     if (viewedDevice || viewedJob) {
@@ -315,24 +315,38 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
     return cn(baseCols);
   }, [viewedDevice, viewedJob, viewMode]);
 
-  const validateSchedules = (schedules, setSchedules) => {
-    const newSchedules = schedules.map((currentSchedule, index) => {
-      const isDuplicate = schedules.some((otherSchedule, otherIndex) => {
-        if (index === otherIndex) return false;
-        
-        const stringifiedCurrent = JSON.stringify(Object.fromEntries(Object.entries(otherSchedule).filter(([key]) => key !== 'id' && key !== 'error')));
-        const stringifiedOther = JSON.stringify(Object.fromEntries(Object.entries(currentSchedule).filter(([key]) => key !== 'id' && key !== 'error')));
-        
-        return stringifiedCurrent === stringifiedOther;
+  const validateSchedules = useCallback((schedules, setSchedules) => {
+      let hasChanged = false;
+      const newSchedules = schedules.map(currentSchedule => {
+        const scheduleToCheck = { ...currentSchedule };
+        delete scheduleToCheck.id;
+        delete scheduleToCheck.error;
+
+        const isDuplicate = schedules.some(otherSchedule => {
+          if (currentSchedule.id === otherSchedule.id) return false;
+          
+          const otherScheduleToCheck = { ...otherSchedule };
+          delete otherScheduleToCheck.id;
+          delete otherScheduleToCheck.error;
+          
+          return JSON.stringify(scheduleToCheck) === JSON.stringify(otherScheduleToCheck);
+        });
+
+        const newError = isDuplicate ? "Duplicate entry not allowed." : null;
+        if (currentSchedule.error !== newError) {
+          hasChanged = true;
+        }
+        return { ...currentSchedule, error: newError };
       });
-      return { ...currentSchedule, error: isDuplicate ? "Duplicate entry not allowed." : null };
-    });
-    setSchedules(newSchedules);
-  };
+
+      if (hasChanged) {
+        setSchedules(newSchedules);
+      }
+  }, []);
   
-  useEffect(() => validateSchedules(dailySchedules, setDailySchedules), [dailySchedules]);
-  useEffect(() => validateSchedules(weeklySchedules, setWeeklySchedules), [weeklySchedules]);
-  useEffect(() => validateSchedules(monthlySchedules, setMonthlySchedules), [monthlySchedules]);
+  useEffect(() => validateSchedules(dailySchedules, setDailySchedules), [dailySchedules, validateSchedules]);
+  useEffect(() => validateSchedules(weeklySchedules, setWeeklySchedules), [weeklySchedules, validateSchedules]);
+  useEffect(() => validateSchedules(monthlySchedules, setMonthlySchedules), [monthlySchedules, validateSchedules]);
 
 
   const renderScheduleControls = () => {
@@ -706,5 +720,3 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
     </Dialog>
   );
 }
-
-    
