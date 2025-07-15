@@ -37,51 +37,59 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanResul
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
-        <DialogHeader>
+      <DialogContent className="max-w-6xl w-[80vw] h-[70vh] flex flex-col p-0">
+        <DialogHeader className="p-4 border-b">
           <DialogTitle>Scan Result Details</DialogTitle>
           <DialogDescription>
             Detailed information for the compliance check on {scanResult.deviceName}.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-0 overflow-hidden">
           {/* Column 1: Metadata */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Details</h3>
-            <div className="space-y-3 text-sm">
-                <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Device Name:</span>
-                    <span className="font-medium">{scanResult.deviceName}</span>
+          <div className="flex flex-col border-r min-h-0">
+             <div className="p-4 border-b">
+                <h3 className="font-semibold text-base">Scan Details</h3>
+             </div>
+             <ScrollArea className="flex-1 p-4">
+                <div className="space-y-4 text-sm">
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Device Name:</span>
+                        <span className="font-medium">{scanResult.deviceName}</span>
+                    </div>
+                     <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Scan ID:</span>
+                        <span className="font-medium">{scanResult.scanId}</span>
+                    </div>
+                     <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Job Name:</span>
+                        <span className="font-medium">{scanResult.jobName}</span>
+                    </div>
+                     <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Last ran at:</span>
+                        <span className="font-medium">{format(new Date(scanResult.timestamp), "yyyy-MM-dd HH:mm:ss")}</span>
+                    </div>
+                     <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Run Status:</span>
+                        <Badge variant={getStatusVariant(scanResult.status)}>{scanResult.status}</Badge>
+                    </div>
                 </div>
-                 <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Scan ID:</span>
-                    <span className="font-medium">{scanResult.scanId}</span>
-                </div>
-                 <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Job Name:</span>
-                    <span className="font-medium">{scanResult.jobName}</span>
-                </div>
-                 <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Last ran at:</span>
-                    <span className="font-medium">{format(new Date(scanResult.timestamp), "yyyy-MM-dd HH:mm:ss")}</span>
-                </div>
-                 <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Run Status:</span>
-                    <Badge variant={getStatusVariant(scanResult.status)}>{scanResult.status}</Badge>
-                </div>
-            </div>
+             </ScrollArea>
           </div>
           {/* Column 2: Output */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Output</h3>
-            <ScrollArea className="h-48 rounded-md border bg-muted/50 p-4">
-              <pre className="text-sm whitespace-pre-wrap font-mono">
-                {getOutputMessage()}
-              </pre>
-            </ScrollArea>
+          <div className="flex flex-col min-h-0">
+            <div className="p-4 border-b">
+                <h3 className="font-semibold text-base">Output</h3>
+            </div>
+            <div className="flex-1 min-h-0 p-4">
+                 <ScrollArea className="h-full rounded-md border bg-muted/50 p-4">
+                    <pre className="text-sm whitespace-pre-wrap font-mono">
+                        {getOutputMessage()}
+                    </pre>
+                </ScrollArea>
+            </div>
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="p-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>
