@@ -33,7 +33,7 @@ export default function DashboardPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-    const [selectedScanResult, setSelectedScanResult] = useState(null);
+    const [selectedScanGroup, setSelectedScanGroup] = useState(null);
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
     const [selectedScanIds, setSelectedScanIds] = useState([]);
     const [itemToDelete, setItemToDelete] = useState(null);
@@ -81,15 +81,7 @@ export default function DashboardPage() {
 
     const handleViewDetails = (group) => {
         if (!group.results || group.results.length === 0) return;
-        
-        const firstResult = group.results[0];
-
-        setSelectedScanResult({
-            ...firstResult,
-            scanId: group.scanId,
-            jobName: firstResult.jobName, // Keep job name for context in the modal
-            timestamp: group.timestamp,
-        });
+        setSelectedScanGroup(group);
         setIsDetailsModalOpen(true);
     };
   
@@ -347,7 +339,7 @@ export default function DashboardPage() {
             <ScanResultDetailsModal 
               isOpen={isDetailsModalOpen}
               onOpenChange={setIsDetailsModalOpen}
-              scanResult={selectedScanResult}
+              scanGroup={selectedScanGroup}
             />
             <ConfirmDeleteDialog
                 isOpen={isConfirmDialogOpen}

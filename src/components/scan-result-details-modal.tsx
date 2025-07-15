@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,16 +12,33 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
 import { ScrollArea } from "./ui/scroll-area";
-import { Copy, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
+import { Download } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 
-export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanResult }) {
+export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup }) {
   const { toast } = useToast();
 
-  if (!scanResult) return null;
+  const processedData = useMemo(() => {
+    if (!scanGroup || !scanGroup.results) return null;
+
+    const uniqueJobs = [...new Set(scanGroup.results.map(r => r.jobName))];
+    const uniqueDevices = [...new Set(scanGroup.results.map(r => r.deviceName))];
+
+    const statusMap = scanGroup.results.reduce((acc, result) => {
+      const key = `${result.deviceName}-${result.jobName}`;
+      acc[key] = result.status;
+      return acc;
+    }, {});
+
+    return { uniqueJobs, uniqueDevices, statusMap };
+  }, [scanGroup]);
+
+  if (!processedData) return null;
+
+  const { uniqueJobs, uniqueDevices, statusMap } = processedData;
 
   const getStatusVariant = (status) => {
     switch (status) {
@@ -33,37 +51,26 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanResul
     }
   };
 
-  const getOutputMessage = () => {
-    if (scanResult.status === 'Success') {
-      return "Scanned successfully.";
-    }
-    return scanResult.message || "No specific reason provided.";
-  };
-
-  const outputMessage = getOutputMessage();
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(outputMessage);
-    toast({ title: "Success", description: "Output copied to clipboard." });
-  };
-  
   const handleDownload = () => {
-    const scanDetailsData = [{
-        'Scan ID': scanResult.scanId,
-        'Job Name': scanResult.jobName,
-        'Device Name': scanResult.deviceName,
-        'IP Address': scanResult.deviceIpAddress,
-        'Timestamp': format(new Date(scanResult.timestamp), "yyyy-MM-dd HH:mm:ss"),
-        'Status': scanResult.status,
-        'Output': outputMessage
-    }];
+    const tableData = [];
+    const headers = ['Device Name', ...uniqueJobs];
+    tableData.push(headers);
 
-    const csv = Papa.unparse(scanDetailsData);
+    uniqueDevices.forEach(deviceName => {
+      const row = [deviceName];
+      uniqueJobs.forEach(jobName => {
+        const key = `${deviceName}-${jobName}`;
+        row.push(statusMap[key] || 'N/A');
+      });
+      tableData.push(row);
+    });
+
+    const csv = Papa.unparse(tableData);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `scan_details_${scanResult.scanId}_${scanResult.deviceName}.csv`);
+    link.setAttribute('download', `scan_details_${scanGroup.scanId}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -73,60 +80,48 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanResul
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl w-[80vw] h-[70vh] flex flex-col p-0">
-        <DialogHeader className="p-4 border-b">
-          <DialogTitle>Scan Result Details</DialogTitle>
-          <DialogDescription>
-            Detailed information for the compliance check on {scanResult.deviceName}.
-          </DialogDescription>
+      <DialogContent className="max-w-7xl w-[90vw] h-[80vh] flex flex-col p-0">
+        <DialogHeader className="p-4 border-b flex-row flex justify-between items-center">
+          <div>
+            <DialogTitle>Scan Result Details: {scanGroup.scanId}</DialogTitle>
+            <DialogDescription>
+              Matrix view of job statuses across all devices for this scan.
+            </DialogDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleDownload}>
+              <Download className="mr-2 h-4 w-4" />
+              Download Report
+          </Button>
         </DialogHeader>
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-0 overflow-hidden">
-          {/* Column 1: Metadata */}
-          <div className="flex flex-col border-r min-h-0">
-             <ScrollArea className="flex-1">
-                <div className="p-4 space-y-4 text-sm">
-                    <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Device Name:</span>
-                        <span className="font-medium">{scanResult.deviceName}</span>
-                    </div>
-                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Scan ID:</span>
-                        <span className="font-medium">{scanResult.scanId}</span>
-                    </div>
-                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Job Name:</span>
-                        <span className="font-medium">{scanResult.jobName}</span>
-                    </div>
-                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Last ran at:</span>
-                        <span className="font-medium">{format(new Date(scanResult.timestamp), "yyyy-MM-dd HH:mm:ss")}</span>
-                    </div>
-                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Run Status:</span>
-                        <Badge variant={getStatusVariant(scanResult.status)}>{scanResult.status}</Badge>
-                    </div>
-                </div>
-             </ScrollArea>
-          </div>
-          {/* Column 2: Output */}
-          <div className="flex flex-col min-h-0">
-            <div className="p-4 border-b h-[60px] flex items-center justify-between">
-                <h3 className="font-semibold text-base">Output</h3>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopy}>
-                        <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleDownload}>
-                        <Download className="h-4 w-4" />
-                    </Button>
-                </div>
-            </div>
-            <ScrollArea className="flex-1 bg-muted/50">
-                <pre className="text-sm whitespace-pre-wrap font-mono p-4">
-                    {outputMessage}
-                </pre>
-            </ScrollArea>
-          </div>
+        <div className="flex-1 min-h-0">
+          <ScrollArea className="h-full">
+            <Table>
+              <TableHeader className="sticky top-0 bg-background z-10">
+                <TableRow>
+                  <TableHead>Device Name</TableHead>
+                  {uniqueJobs.map(jobName => (
+                    <TableHead key={jobName}>{jobName}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {uniqueDevices.map(deviceName => (
+                  <TableRow key={deviceName}>
+                    <TableCell className="font-medium">{deviceName}</TableCell>
+                    {uniqueJobs.map(jobName => {
+                      const key = `${deviceName}-${jobName}`;
+                      const status = statusMap[key] || 'N/A';
+                      return (
+                        <TableCell key={`${deviceName}-${jobName}`}>
+                          <Badge variant={getStatusVariant(status)}>{status}</Badge>
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollArea>
         </div>
         <DialogFooter className="p-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
@@ -135,5 +130,3 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanResul
     </Dialog>
   );
 }
-
-    
