@@ -149,7 +149,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
         )}>
           <div className="flex-1 min-h-0 px-4">
             <ScrollArea className="h-full border rounded-lg">
-              <Table className="table-fixed min-w-full">
+              <Table className="min-w-[1200px]">
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
                     <TableHead className="w-[250px] border-r"></TableHead>
