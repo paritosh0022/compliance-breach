@@ -47,11 +47,11 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanResul
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-0 overflow-hidden">
           {/* Column 1: Metadata */}
           <div className="flex flex-col border-r min-h-0">
-             <div className="p-4 border-b">
+             <div className="p-4 border-b h-[60px] flex items-center">
                 <h3 className="font-semibold text-base">Scan Details</h3>
              </div>
-             <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4 text-sm">
+             <ScrollArea className="flex-1">
+                <div className="p-4 space-y-4 text-sm">
                     <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Device Name:</span>
                         <span className="font-medium">{scanResult.deviceName}</span>
@@ -77,16 +77,14 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanResul
           </div>
           {/* Column 2: Output */}
           <div className="flex flex-col min-h-0">
-            <div className="p-4 border-b">
+            <div className="p-4 border-b h-[60px] flex items-center">
                 <h3 className="font-semibold text-base">Output</h3>
             </div>
-            <div className="flex-1 min-h-0 p-4">
-                 <ScrollArea className="h-full rounded-md border bg-muted/50 p-4">
-                    <pre className="text-sm whitespace-pre-wrap font-mono">
-                        {getOutputMessage()}
-                    </pre>
-                </ScrollArea>
-            </div>
+            <ScrollArea className="flex-1 bg-muted/50">
+                <pre className="text-sm whitespace-pre-wrap font-mono p-4">
+                    {getOutputMessage()}
+                </pre>
+            </ScrollArea>
           </div>
         </div>
         <DialogFooter className="p-4 border-t">
