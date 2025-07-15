@@ -47,6 +47,7 @@ export default function DashboardPage() {
   
         return Object.entries(jobsInRun).map(([jobName, results]) => ({
           id: `${log.id}-${jobName}`,
+          scanId: log.scanId,
           jobName,
           timestamp: log.timestamp,
           results,
@@ -64,7 +65,7 @@ export default function DashboardPage() {
           result.deviceIpAddress.toLowerCase().includes(lowercasedFilter)
         );
         
-        if (group.jobName.toLowerCase().includes(lowercasedFilter)) {
+        if (group.jobName.toLowerCase().includes(lowercasedFilter) || (group.scanId && group.scanId.toLowerCase().includes(lowercasedFilter))) {
           return group;
         }
         
@@ -92,6 +93,7 @@ export default function DashboardPage() {
     const handleDownloadCsv = () => {
       const csvData = filteredLogs.flatMap(group => 
         group.results.map(result => ({
+          scan_id: group.scanId,
           job_name: group.jobName,
           device_name: result.deviceName,
           ip_address: result.deviceIpAddress,
@@ -132,11 +134,12 @@ export default function DashboardPage() {
       doc.text("Compliance Report", 14, 15);
   
       autoTable(doc, {
-        head: [['Job Name', 'Device', 'IP Address', 'Last ran at', 'Status']],
+        head: [['Scan ID', 'Job Name', 'Device', 'IP Address', 'Last ran at', 'Status']],
         body: filteredLogs.flatMap(group => 
           group.results.map((result, index) => {
             if (index === 0) {
               return [
+                { content: group.scanId, rowSpan: group.results.length, styles: { valign: 'top' } },
                 { content: group.jobName, rowSpan: group.results.length, styles: { valign: 'top' } },
                 result.deviceName,
                 result.deviceIpAddress,
@@ -166,7 +169,7 @@ export default function DashboardPage() {
                 <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search by job, device, or IP..."
+                        placeholder="Search by Scan ID, job, device, or IP..."
                         className="pl-9"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -196,6 +199,7 @@ export default function DashboardPage() {
                    <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead>Scan ID</TableHead>
                           <TableHead>Job Name</TableHead>
                           <TableHead>Device</TableHead>
                           <TableHead>IP Address</TableHead>
@@ -209,6 +213,11 @@ export default function DashboardPage() {
                             <React.Fragment key={group.id}>
                               {group.results.map((result, resultIndex) => (
                                 <TableRow key={`${group.id}-${result.deviceId}`}>
+                                  {resultIndex === 0 && (
+                                      <TableCell rowSpan={group.results.length} className="font-medium align-top border-r">
+                                          {group.scanId}
+                                      </TableCell>
+                                  )}
                                   {resultIndex === 0 && (
                                       <TableCell rowSpan={group.results.length} className="font-medium align-top border-r">
                                           {group.jobName}
@@ -230,7 +239,7 @@ export default function DashboardPage() {
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={5} className="h-24 text-center">
+                            <TableCell colSpan={6} className="h-24 text-center">
                               No compliance history found.
                             </TableCell>
                           </TableRow>

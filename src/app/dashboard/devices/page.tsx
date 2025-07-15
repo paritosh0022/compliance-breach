@@ -29,6 +29,7 @@ export default function DevicesPage() {
     setIsComplianceModalOpen,
     isComplianceRunning,
     complianceLog,
+    getNextScanId,
   } = useDashboard();
     
   const [isClient, setIsClient] = useState(false);
@@ -180,15 +181,17 @@ export default function DevicesPage() {
   };
 
   const handleScheduleJob = (scheduleDetails, complianceRunConfig) => {
+    const scanId = getNextScanId();
     const newScheduledJob = {
       id: crypto.randomUUID(),
+      scanId,
       ...complianceRunConfig,
       ...scheduleDetails,
     };
     setScheduledJobs(prev => [...prev, newScheduledJob]);
     toast({
       title: "Job Scheduled",
-      description: "The compliance check has been scheduled successfully.",
+      description: `The compliance check has been scheduled successfully with ${scanId}.`,
     });
     setIsComplianceModalOpen(false);
   };

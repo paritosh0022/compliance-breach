@@ -20,11 +20,19 @@ export function DashboardProvider({ children }) {
   const [complianceStatus, setComplianceStatus] = useState('idle'); // idle, running, completed, failed
   const [complianceLog, setComplianceLog] = useLocalStorageState('complianceLog', []);
   const [complianceRunProcess, setComplianceRunProcess] = useState(null); // To hold the timeout ID
+  const [scanCounter, setScanCounter] = useLocalStorageState('scanCounter', 1);
+
+  const getNextScanId = () => {
+    const id = `Scan ${scanCounter}`;
+    setScanCounter(prev => prev + 1);
+    return id;
+  };
 
   const onRunComplete = useCallback((logEntry) => {
-    const newLogEntry = { ...logEntry, id: crypto.randomUUID(), timestamp: new Date().toISOString() };
+    const scanId = getNextScanId();
+    const newLogEntry = { ...logEntry, id: crypto.randomUUID(), scanId, timestamp: new Date().toISOString() };
     setComplianceLog(prev => [newLogEntry, ...prev]);
-  }, [setComplianceLog]);
+  }, [setComplianceLog, getNextScanId]);
 
   const value = {
     isComplianceModalOpen,
@@ -37,6 +45,7 @@ export function DashboardProvider({ children }) {
     onRunComplete,
     complianceRunProcess,
     setComplianceRunProcess,
+    getNextScanId,
   };
 
   return (
