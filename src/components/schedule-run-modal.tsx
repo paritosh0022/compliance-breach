@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -71,7 +71,7 @@ export default function ScheduleRunModal({ isOpen, onOpenChange, onSchedule }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Schedule Compliance Run</DialogTitle>
           <DialogDescription>
@@ -84,16 +84,16 @@ export default function ScheduleRunModal({ isOpen, onOpenChange, onSchedule }) {
             <Tabs value={mode} onValueChange={setMode}>
               <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="once">Once</TabsTrigger>
-                <TabsTrigger value="every" disabled>Every</TabsTrigger>
-                <TabsTrigger value="daily" disabled>Daily</TabsTrigger>
-                <TabsTrigger value="weekly" disabled>Weekly</TabsTrigger>
-                <TabsTrigger value="monthly" disabled>Monthly</TabsTrigger>
+                <TabsTrigger value="every">Every</TabsTrigger>
+                <TabsTrigger value="daily">Daily</TabsTrigger>
+                <TabsTrigger value="weekly">Weekly</TabsTrigger>
+                <TabsTrigger value="monthly">Monthly</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
           <div className="space-y-2">
             <Label htmlFor="schedule-date">at *</Label>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
                 <Popover>
                     <PopoverTrigger asChild>
                     <Button
@@ -117,31 +117,33 @@ export default function ScheduleRunModal({ isOpen, onOpenChange, onSchedule }) {
                     </PopoverContent>
                 </Popover>
 
-                <Input 
-                    id="hour" 
-                    type="number" 
-                    className="w-16" 
-                    value={hour}
-                    onChange={(e) => setHour(e.target.value)}
-                    min="1"
-                    max="12"
-                />
-                <span>:</span>
-                <Input 
-                    id="minute" 
-                    type="number" 
-                    className="w-16" 
-                    value={minute}
-                    onChange={(e) => setMinute(e.target.value)}
-                    min="0"
-                    max="59"
-                />
-                <Tabs value={ampm} onValueChange={setAmPm} className="w-[100px]">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="AM">AM</TabsTrigger>
-                        <TabsTrigger value="PM">PM</TabsTrigger>
-                    </TabsList>
-                </Tabs>
+                <div className="flex items-center gap-2 flex-1">
+                    <Input 
+                        id="hour" 
+                        type="number" 
+                        className="w-16" 
+                        value={hour}
+                        onChange={(e) => setHour(e.target.value)}
+                        min="1"
+                        max="12"
+                    />
+                    <span>:</span>
+                    <Input 
+                        id="minute" 
+                        type="number" 
+                        className="w-16" 
+                        value={minute}
+                        onChange={(e) => setMinute(e.target.value)}
+                        min="0"
+                        max="59"
+                    />
+                    <Tabs value={ampm} onValueChange={setAmPm} className="w-[100px]">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="AM">AM</TabsTrigger>
+                            <TabsTrigger value="PM">PM</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                </div>
             </div>
           </div>
           <Alert>
