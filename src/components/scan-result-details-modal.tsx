@@ -13,8 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ScrollArea } from "./ui/scroll-area";
+import { Copy, Download } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import Papa from "papaparse";
 
 export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanResult }) {
+  const { toast } = useToast();
+
   if (!scanResult) return null;
 
   const getStatusVariant = (status) => {
@@ -33,6 +38,25 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanResul
       return "Scanned successfully.";
     }
     return scanResult.message || "No specific reason provided.";
+  };
+
+  const outputMessage = getOutputMessage();
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(outputMessage);
+    toast({ title: "Success", description: "Output copied to clipboard." });
+  };
+  
+  const handleDownload = () => {
+    const csvContent = "data:text/csv;charset=utf-8," + Papa.unparse([{ output: outputMessage }]);
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `scan_output_${scanResult.scanId}_${scanResult.deviceName}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Success", description: "Output downloaded as CSV." });
   };
 
   return (
@@ -74,12 +98,20 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanResul
           </div>
           {/* Column 2: Output */}
           <div className="flex flex-col min-h-0">
-            <div className="p-4 border-b h-[60px] flex items-center">
+            <div className="p-4 border-b h-[60px] flex items-center justify-between">
                 <h3 className="font-semibold text-base">Output</h3>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopy}>
+                        <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleDownload}>
+                        <Download className="h-4 w-4" />
+                    </Button>
+                </div>
             </div>
             <ScrollArea className="flex-1 bg-muted/50">
                 <pre className="text-sm whitespace-pre-wrap font-mono p-4">
-                    {getOutputMessage()}
+                    {outputMessage}
                 </pre>
             </ScrollArea>
           </div>
