@@ -175,8 +175,8 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
             Matrix view of job statuses across all devices for this scan. Click a status badge to see the output.
           </DialogDescription>
         </DialogHeader>
-        <div className="p-4">
-          <div className="relative max-w-sm">
+        <div className="px-4 py-2">
+          <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search devices..."
