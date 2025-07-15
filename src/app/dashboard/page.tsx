@@ -32,6 +32,7 @@ import { DataTablePagination } from '@/components/data-table-pagination';
 
 export default function DashboardPage() {
     const { complianceLog, setComplianceLog, scheduledJobs, setScheduledJobs } = useDashboard();
+    const [devices] = useLocalStorageState('devices', []);
     const [jobs] = useLocalStorageState('jobs', []);
     const { toast } = useToast();
     const [searchTerm, setSearchTerm] = useState("");
@@ -327,6 +328,7 @@ export default function DashboardPage() {
               onOpenChange={setIsDetailsModalOpen}
               scanGroup={selectedScanGroup}
               jobs={jobs}
+              devices={devices}
             />
             <ConfirmDeleteDialog
                 isOpen={isConfirmDialogOpen}

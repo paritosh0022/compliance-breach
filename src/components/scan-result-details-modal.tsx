@@ -23,7 +23,7 @@ import Papa from "papaparse";
 import { useDataTable } from "@/hooks/use-data-table";
 import { DataTablePagination } from "./data-table-pagination";
 
-export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup, jobs = [] }) {
+export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup, jobs = [], devices = [] }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedResultForOutput, setSelectedResultForOutput] = useState(null);
   const [viewedDevice, setViewedDevice] = useState(null);
@@ -33,29 +33,50 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   const processedData = useMemo(() => {
     if (!scanGroup || !scanGroup.results) return null;
 
-    const uniqueJobs = [...new Set(scanGroup.results.map(r => r.jobName))];
+    const devicesMap = devices.reduce((acc, device) => {
+        acc[device.id] = device;
+        return acc;
+    }, {});
+
+    const jobsMap = jobs.reduce((acc, job) => {
+        acc[job.id] = job;
+        return acc;
+    }, {});
+
+    const updatedResults = scanGroup.results.map(result => {
+        const currentDevice = devicesMap[result.deviceId];
+        const currentJob = jobsMap[result.jobId];
+        return {
+            ...result,
+            deviceName: currentDevice ? currentDevice.name : result.deviceName,
+            jobName: currentJob ? currentJob.name : result.jobName,
+        };
+    });
     
-    const deviceMap = scanGroup.results.reduce((acc, result) => {
+    const uniqueJobs = [...new Set(updatedResults.map(r => r.jobName))];
+    
+    const deviceMap = updatedResults.reduce((acc, result) => {
+        const currentDevice = devicesMap[result.deviceId];
         if (!acc[result.deviceName]) {
             acc[result.deviceName] = {
                 name: result.deviceName,
-                ipAddress: result.deviceIpAddress,
-                username: result.deviceUsername || 'N/A', 
-                port: result.devicePort || 'N/A'
+                ipAddress: currentDevice ? currentDevice.ipAddress : result.deviceIpAddress,
+                username: currentDevice ? currentDevice.username : 'N/A', 
+                port: currentDevice ? currentDevice.port : 'N/A'
             };
         }
         return acc;
     }, {});
     const uniqueDevices = Object.values(deviceMap);
 
-    const resultsMap = scanGroup.results.reduce((acc, result) => {
+    const resultsMap = updatedResults.reduce((acc, result) => {
       const key = `${result.deviceName}-${result.jobName}`;
       acc[key] = { status: result.status, message: result.message, timestamp: scanGroup.timestamp, scanId: scanGroup.scanId };
       return acc;
     }, {});
 
-    return { uniqueJobs, uniqueDevices, resultsMap, stats: scanGroup.stats, allResults: scanGroup.results };
-  }, [scanGroup]);
+    return { uniqueJobs, uniqueDevices, resultsMap, stats: scanGroup.stats, allResults: updatedResults };
+  }, [scanGroup, jobs, devices]);
 
   const filteredDevices = useMemo(() => {
     if (!processedData) return [];
@@ -68,7 +89,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
 
   const { table } = useDataTable({
     data: filteredDevices,
-    columns: [], // Columns are defined in JSX
+    columns: [], // Columns defined in JSX
     pageCount: Math.ceil(filteredDevices.length / 10),
   });
 
