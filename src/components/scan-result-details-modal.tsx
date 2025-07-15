@@ -25,7 +25,6 @@ import { DataTablePagination } from "./data-table-pagination";
 
 export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup, jobs = [] }) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDeviceNames, setSelectedDeviceNames] = useState([]);
   const [selectedResultForOutput, setSelectedResultForOutput] = useState(null);
   const [viewedDevice, setViewedDevice] = useState(null);
   const [viewedJob, setViewedJob] = useState(null);
@@ -74,6 +73,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   });
 
   const paginatedRows = table.getRowModel().rows;
+  const selectedDeviceNames = table.getSelectedRowModel().rows.map(row => row.original.name);
   
   const handlePanelOpen = (panelType, data) => {
     if (panelType === 'output') {
@@ -109,22 +109,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
         return 'bg-destructive hover:bg-destructive/80 text-destructive-foreground';
       default:
         return 'bg-secondary text-secondary-foreground';
-    }
-  };
-  
-  const handleSelectAll = (checked) => {
-    if (checked) {
-        setSelectedDeviceNames(filteredDevices.map(d => d.name));
-    } else {
-        setSelectedDeviceNames([]);
-    }
-  };
-  
-  const handleSelectRow = (deviceName, checked) => {
-    if (checked) {
-      setSelectedDeviceNames([...selectedDeviceNames, deviceName]);
-    } else {
-      setSelectedDeviceNames(selectedDeviceNames.filter(name => name !== deviceName));
     }
   };
 
@@ -214,15 +198,15 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">Devices Run</p>
-                            <p className="font-semibold">{stats?.run || 0}</p>
+                            <Badge variant="secondary">{stats?.run || 0}</Badge>
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">Devices Passed</p>
-                            <p className="font-semibold text-green-600">{stats?.passed || 0}</p>
+                            <Badge className="bg-green-500 hover:bg-green-600">{stats?.passed || 0}</Badge>
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">Devices Failed</p>
-                            <p className="font-semibold text-destructive">{stats?.failed || 0}</p>
+                            <Badge variant="destructive">{stats?.failed || 0}</Badge>
                         </div>
                     </div>
                 </CardContent>
@@ -254,20 +238,20 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                 <ScrollArea className="h-full">
                   <Table className="min-w-[1200px]">
                     <TableHeader className="sticky top-0 bg-background z-10">
-                      <TableRow>
+                       <TableRow>
                         <TableHead colSpan={uniqueJobs.length + 1} className="text-center border-b font-bold">Job Status Matrix</TableHead>
                       </TableRow>
                       <TableRow>
                         <TableHead className="w-[250px] min-w-[250px] sticky left-0 bg-background z-10 border-r">
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              id="select-all-devices-modal"
-                              checked={table.getIsAllPageRowsSelected()}
-                              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-                              aria-label="Select all"
-                            />
-                            Device Name
-                          </div>
+                           <div className="flex items-center gap-2">
+                             <Checkbox
+                               id="select-all-devices-modal"
+                               checked={table.getIsAllPageRowsSelected()}
+                               onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                               aria-label="Select all"
+                             />
+                             Device Name
+                           </div>
                         </TableHead>
                         {uniqueJobs.map(jobName => (
                           <TableHead key={jobName} className="min-w-[150px]">
@@ -288,7 +272,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                           return (
                             <TableRow 
                               key={device.name} 
-                              data-state={(selectedResultForOutput?.deviceName === device.name || viewedDevice?.name === device.name) ? "selected" : ""}
+                              data-state={row.getIsSelected() || (selectedResultForOutput?.deviceName === device.name || viewedDevice?.name === device.name) ? "selected" : ""}
                               className="group"
                             >
                               <TableCell className="font-medium border-r truncate sticky left-0 bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted">
@@ -298,7 +282,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                                     onCheckedChange={(value) => row.toggleSelected(!!value)}
                                     aria-label={`Select ${device.name}`}
                                   />
-                                  <span>{device.name}</span>
+                                  <span className="flex-1">{device.name}</span>
                                   <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handlePanelOpen('device', device)}>
                                       <Eye className="h-4 w-4" />
                                   </Button>
@@ -337,7 +321,9 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                   </Table>
                 </ScrollArea>
              </div>
-             <DataTablePagination table={table} />
+             <div className="pt-2">
+                <DataTablePagination table={table} />
+             </div>
           </div>
           {(selectedResultForOutput || viewedDevice || viewedJob) && (
             <div className="flex flex-col border-l bg-muted/30 min-h-0 pr-4">
