@@ -20,6 +20,8 @@ import { cn } from "@/lib/utils";
 import { Checkbox } from "./ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
+import { useDataTable } from "@/hooks/use-data-table";
+import { DataTablePagination } from "./data-table-pagination";
 
 export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup, jobs = [] }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -64,6 +66,14 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
       device.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [processedData, searchTerm]);
+
+  const { table } = useDataTable({
+    data: filteredDevices,
+    columns: [], // Columns are defined in JSX
+    pageCount: Math.ceil(filteredDevices.length / 10),
+  });
+
+  const paginatedRows = table.getRowModel().rows;
   
   const handlePanelOpen = (panelType, data) => {
     if (panelType === 'output') {
@@ -236,93 +246,95 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
         </div>
 
         <div className={cn(
-          "flex-1 grid min-h-0 transition-all duration-300 ease-in-out pb-4",
+          "flex-1 grid min-h-0 transition-all duration-300 ease-in-out",
           (selectedResultForOutput || viewedDevice || viewedJob) ? "grid-cols-[2fr_1fr]" : "grid-cols-1"
         )}>
-          <div className="flex-1 min-h-0 px-4 overflow-hidden">
-             <ScrollArea className="h-full border rounded-lg">
-               <Table className="min-w-[1200px]">
-                <TableHeader className="sticky top-0 bg-background z-10">
-                  <TableRow>
-                    <TableHead className="w-[250px] border-r">
-                       <div className="flex items-center gap-2">
-                        <Checkbox
-                           id="select-all-devices"
-                           checked={filteredDevices.length > 0 && selectedDeviceNames.length === filteredDevices.length}
-                           onCheckedChange={(checked) => handleSelectAll(!!checked)}
-                           aria-label="Select all"
-                        />
-                        Device Name
-                       </div>
-                    </TableHead>
-                    <TableHead colSpan={uniqueJobs.length} className="text-center border-b">Job Name</TableHead>
-                  </TableRow>
-                  <TableRow>
-                    <TableHead className="w-[250px] border-r"></TableHead>
-                    {uniqueJobs.map(jobName => (
-                      <TableHead key={jobName} className="min-w-[150px]">
-                         <div className="group flex items-center gap-2">
-                           <span>{jobName}</span>
-                           <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleJobDetailsClick(jobName)}>
-                             <Eye className="h-4 w-4" />
-                           </Button>
-                         </div>
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDevices.length > 0 ? (
-                    filteredDevices.map(device => (
-                      <TableRow 
-                        key={device.name} 
-                        data-state={(selectedResultForOutput?.deviceName === device.name || viewedDevice?.name === device.name) ? "selected" : ""}
-                        className="group"
-                      >
-                        <TableCell className="font-medium border-r truncate">
-                           <div className="flex items-center gap-2">
-                            <Checkbox
-                              checked={selectedDeviceNames.includes(device.name)}
-                              onCheckedChange={(checked) => handleSelectRow(device.name, !!checked)}
-                              aria-label={`Select ${device.name}`}
-                            />
-                            <span>{device.name}</span>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handlePanelOpen('device', device)}>
-                                <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                        {uniqueJobs.map(jobName => {
-                          const result = resultsMap[`${device.name}-${jobName}`];
-                          const status = result?.status;
-                          const isSelected = selectedResultForOutput?.deviceName === device.name && selectedResultForOutput?.jobName === jobName;
-                          return (
-                            <TableCell key={jobName}>
-                              {status ? (
-                                <Badge
-                                  className={cn("cursor-pointer", getStatusBadgeClass(status), isSelected && "ring-2 ring-offset-2 ring-primary ring-offset-background")}
-                                  onClick={() => handleBadgeClick(device.name, jobName)}
-                                >
-                                  {status}
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary">N/A</Badge>
-                              )}
-                            </TableCell>
-                          );
-                        })}
+          <div className="flex-1 min-h-0 px-4 overflow-hidden flex flex-col">
+             <div className="flex-grow border rounded-lg overflow-hidden">
+                <ScrollArea className="h-full">
+                  <Table className="min-w-[1200px]">
+                    <TableHeader className="sticky top-0 bg-background z-10">
+                      <TableRow>
+                        <TableHead colSpan={uniqueJobs.length + 1} className="text-center border-b font-bold">Job Status Matrix</TableHead>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={uniqueJobs.length + 1} className="h-24 text-center">
-                        No devices found for this search term.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </ScrollArea>
+                      <TableRow>
+                        <TableHead className="w-[250px] min-w-[250px] sticky left-0 bg-background z-10 border-r">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              id="select-all-devices-modal"
+                              checked={filteredDevices.length > 0 && selectedDeviceNames.length === filteredDevices.length}
+                              onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                              aria-label="Select all"
+                            />
+                            Device Name
+                          </div>
+                        </TableHead>
+                        {uniqueJobs.map(jobName => (
+                          <TableHead key={jobName} className="min-w-[150px]">
+                            <div className="group flex items-center gap-2">
+                              <span>{jobName}</span>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleJobDetailsClick(jobName)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedRows.length > 0 ? (
+                        paginatedRows.map(({original: device}) => (
+                          <TableRow 
+                            key={device.name} 
+                            data-state={(selectedResultForOutput?.deviceName === device.name || viewedDevice?.name === device.name) ? "selected" : ""}
+                            className="group"
+                          >
+                            <TableCell className="font-medium border-r truncate sticky left-0 bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted">
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  checked={selectedDeviceNames.includes(device.name)}
+                                  onCheckedChange={(checked) => handleSelectRow(device.name, !!checked)}
+                                  aria-label={`Select ${device.name}`}
+                                />
+                                <span>{device.name}</span>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handlePanelOpen('device', device)}>
+                                    <Eye className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                            {uniqueJobs.map(jobName => {
+                              const result = resultsMap[`${device.name}-${jobName}`];
+                              const status = result?.status;
+                              const isSelected = selectedResultForOutput?.deviceName === device.name && selectedResultForOutput?.jobName === jobName;
+                              return (
+                                <TableCell key={jobName}>
+                                  {status ? (
+                                    <Badge
+                                      className={cn("cursor-pointer", getStatusBadgeClass(status), isSelected && "ring-2 ring-offset-2 ring-primary ring-offset-background")}
+                                      onClick={() => handleBadgeClick(device.name, jobName)}
+                                    >
+                                      {status}
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="secondary">N/A</Badge>
+                                  )}
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={uniqueJobs.length + 1} className="h-24 text-center">
+                            No devices found for this search term.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+             </div>
+             <DataTablePagination table={table} />
           </div>
           {(selectedResultForOutput || viewedDevice || viewedJob) && (
             <div className="flex flex-col border-l bg-muted/30 min-h-0 pr-4">
