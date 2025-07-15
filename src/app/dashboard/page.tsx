@@ -25,13 +25,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import ConfirmDeleteDialog from '@/components/confirm-delete-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ScheduledScansTable from '@/components/scheduled-scans-table';
-import useLocalStorageState from '@/hooks/use-local-storage-state';
+import ScanResultDetailsModal from '@/components/scan-result-details-modal';
 
 export default function DashboardPage() {
     const { complianceLog, setComplianceLog, scheduledJobs, setScheduledJobs } = useDashboard();
     const { toast } = useToast();
     const [searchTerm, setSearchTerm] = useState("");
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [selectedScanResult, setSelectedScanResult] = useState(null);
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
     const [selectedScanIds, setSelectedScanIds] = useState([]);
     const [itemToDelete, setItemToDelete] = useState(null);
@@ -98,6 +100,16 @@ export default function DashboardPage() {
       } else {
         setSelectedScanIds(selectedScanIds.filter(rowId => rowId !== id));
       }
+    };
+
+    const handleViewDetails = (result, group) => {
+        setSelectedScanResult({
+            ...result,
+            scanId: group.scanId,
+            jobName: group.jobName,
+            timestamp: group.timestamp,
+        });
+        setIsDetailsModalOpen(true);
     };
   
     const getStatusVariant = (status) => {
@@ -318,7 +330,7 @@ export default function DashboardPage() {
                                         <TooltipProvider>
                                           <Tooltip>
                                             <TooltipTrigger asChild>
-                                               <Button variant="ghost" size="icon" className="h-7 w-7">
+                                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleViewDetails(result, group)}>
                                                 <Eye className="h-4 w-4" />
                                               </Button>
                                             </TooltipTrigger>
@@ -356,6 +368,11 @@ export default function DashboardPage() {
               isOpen={isReportModalOpen}
               onOpenChange={setIsReportModalOpen}
               logs={complianceLog}
+            />
+            <ScanResultDetailsModal 
+              isOpen={isDetailsModalOpen}
+              onOpenChange={setIsDetailsModalOpen}
+              scanResult={selectedScanResult}
             />
             <ConfirmDeleteDialog
                 isOpen={isConfirmDialogOpen}
