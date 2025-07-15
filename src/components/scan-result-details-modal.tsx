@@ -48,15 +48,27 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanResul
   };
   
   const handleDownload = () => {
-    const csvContent = "data:text/csv;charset=utf-8," + Papa.unparse([{ output: outputMessage }]);
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `scan_output_${scanResult.scanId}_${scanResult.deviceName}.csv`);
+    const scanDetailsData = [{
+        'Scan ID': scanResult.scanId,
+        'Job Name': scanResult.jobName,
+        'Device Name': scanResult.deviceName,
+        'IP Address': scanResult.deviceIpAddress,
+        'Timestamp': format(new Date(scanResult.timestamp), "yyyy-MM-dd HH:mm:ss"),
+        'Status': scanResult.status,
+        'Output': outputMessage
+    }];
+
+    const csv = Papa.unparse(scanDetailsData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `scan_details_${scanResult.scanId}_${scanResult.deviceName}.csv`);
+    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast({ title: "Success", description: "Output downloaded as CSV." });
+    toast({ title: "Success", description: "Scan details downloaded as CSV." });
   };
 
   return (
@@ -123,3 +135,4 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanResul
     </Dialog>
   );
 }
+
