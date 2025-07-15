@@ -23,14 +23,18 @@ import { useDashboard } from '@/contexts/DashboardContext';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import ConfirmDeleteDialog from '@/components/confirm-delete-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ScheduledScansTable from '@/components/scheduled-scans-table';
+import useLocalStorageState from '@/hooks/use-local-storage-state';
 
 export default function DashboardPage() {
-    const { complianceLog, setComplianceLog } = useDashboard();
+    const { complianceLog, setComplianceLog, scheduledJobs, setScheduledJobs } = useDashboard();
     const { toast } = useToast();
     const [searchTerm, setSearchTerm] = useState("");
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
     const [selectedScanIds, setSelectedScanIds] = useState([]);
+    const [itemToDelete, setItemToDelete] = useState(null);
     
     const groupedLogs = useMemo(() => {
       if (!complianceLog) return [];
@@ -51,6 +55,7 @@ export default function DashboardPage() {
   
         return Object.entries(jobsInRun).map(([jobName, results]) => ({
           id: `${log.id}-${jobName}`,
+          logId: log.id,
           scanId: log.scanId,
           jobName,
           timestamp: log.timestamp,
@@ -175,39 +180,39 @@ export default function DashboardPage() {
   
       doc.save('compliance_report.pdf');
     };
+    
+    const handleDeleteSelected = () => {
+      setItemToDelete({ type: 'log', ids: selectedScanIds });
+      setIsConfirmDialogOpen(true);
+    };
 
-    const handleConfirmClear = () => {
-        setComplianceLog([]);
+    const handleConfirmDelete = () => {
+      if (!itemToDelete) return;
+
+      if (itemToDelete.type === 'log') {
+        const logIdsToDelete = new Set(groupedLogs.filter(g => itemToDelete.ids.includes(g.id)).map(g => g.logId));
+        setComplianceLog(prev => prev.filter(log => !logIdsToDelete.has(log.id)));
         setSelectedScanIds([]);
-        setIsConfirmDialogOpen(false);
-        toast({ title: 'Success', description: 'All compliance results have been cleared.' });
+        toast({ title: 'Success', description: 'Selected log entries have been deleted.' });
+      } else if (itemToDelete.type === 'schedule') {
+        setScheduledJobs(prev => prev.filter(job => job.id !== itemToDelete.ids[0]));
+        toast({ title: 'Success', description: 'Scheduled job has been deleted.' });
+      }
+
+      setIsConfirmDialogOpen(false);
+      setItemToDelete(null);
+    };
+
+    const handleDeleteScheduledJob = (id) => {
+      setItemToDelete({ type: 'schedule', ids: [id] });
+      setIsConfirmDialogOpen(true);
     };
 
     return (
         <>
             <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-semibold font-headline">Manage Job Compliance</h1>
-            </div>
-            <div className="flex items-center justify-between gap-4 mb-4">
-                <div className="relative flex-1">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search by Scan ID, job, device, or IP..."
-                        className="pl-9"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="destructive"
-                    onClick={() => setIsConfirmDialogOpen(true)}
-                    disabled={complianceLog.length === 0}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Clear Results
-                  </Button>
-                  <DropdownMenu>
+                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline">
                         <Download className="mr-2 h-4 w-4" />
@@ -223,91 +228,130 @@ export default function DashboardPage() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+            </div>
+            
+            <Tabs defaultValue="history">
+              <TabsList>
+                <TabsTrigger value="history">Scan History</TabsTrigger>
+                <TabsTrigger value="scheduled">
+                  Scheduled & Running 
+                  {scheduledJobs.length > 0 && <Badge className="ml-2">{scheduledJobs.length}</Badge>}
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="history">
+                <div className="flex items-center justify-between gap-4 mb-4 mt-4">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search by Scan ID, job, device, or IP..."
+                            className="pl-9"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    {selectedScanIds.length > 0 && (
+                      <Button
+                        variant="destructive"
+                        onClick={handleDeleteSelected}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete ({selectedScanIds.length})
+                      </Button>
+                    )}
                 </div>
-            </div>
-            <div className="rounded-lg border">
-                <ScrollArea className="h-[60vh]">
-                   <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[40px]">
-                            <Checkbox
-                              checked={filteredLogs.length > 0 && selectedScanIds.length === filteredLogs.length}
-                              onCheckedChange={handleSelectAll}
-                            />
-                          </TableHead>
-                          <TableHead>Scan ID</TableHead>
-                          <TableHead>Last ran at</TableHead>
-                          <TableHead>Job Name</TableHead>
-                          <TableHead>Device</TableHead>
-                          <TableHead>IP Address</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredLogs.length > 0 ? (
-                          filteredLogs.map((group) => (
-                            <React.Fragment key={group.id}>
-                              {group.results.map((result, resultIndex) => (
-                                <TableRow key={`${group.id}-${result.deviceId}`} data-state={selectedScanIds.includes(group.id) ? "selected" : ""}>
-                                  {resultIndex === 0 && (
-                                      <TableCell rowSpan={group.results.length} className="font-medium align-top border-r">
-                                          <Checkbox
-                                            checked={selectedScanIds.includes(group.id)}
-                                            onCheckedChange={(checked) => handleSelectRow(group.id, !!checked)}
-                                          />
+                <div className="rounded-lg border">
+                    <ScrollArea className="h-[60vh]">
+                       <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[40px]">
+                                <Checkbox
+                                  checked={filteredLogs.length > 0 && selectedScanIds.length === filteredLogs.length}
+                                  onCheckedChange={handleSelectAll}
+                                  disabled={filteredLogs.length === 0}
+                                />
+                              </TableHead>
+                              <TableHead>Scan ID</TableHead>
+                              <TableHead>Last ran at</TableHead>
+                              <TableHead>Job Name</TableHead>
+                              <TableHead>Device</TableHead>
+                              <TableHead>IP Address</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredLogs.length > 0 ? (
+                              filteredLogs.map((group) => (
+                                <React.Fragment key={group.id}>
+                                  {group.results.map((result, resultIndex) => (
+                                    <TableRow key={`${group.id}-${result.deviceId}`} data-state={selectedScanIds.includes(group.id) ? "selected" : ""}>
+                                      {resultIndex === 0 && (
+                                          <TableCell rowSpan={group.results.length} className="font-medium align-top border-r">
+                                              <Checkbox
+                                                checked={selectedScanIds.includes(group.id)}
+                                                onCheckedChange={(checked) => handleSelectRow(group.id, !!checked)}
+                                              />
+                                          </TableCell>
+                                      )}
+                                      {resultIndex === 0 && (
+                                          <TableCell rowSpan={group.results.length} className="font-medium align-top">
+                                              {group.scanId}
+                                          </TableCell>
+                                      )}
+                                      {resultIndex === 0 && (
+                                          <TableCell rowSpan={group.results.length} className="align-top border-r">
+                                              {format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")}
+                                          </TableCell>
+                                      )}
+                                      {resultIndex === 0 && (
+                                          <TableCell rowSpan={group.results.length} className="font-medium align-top border-r">
+                                              {group.jobName}
+                                          </TableCell>
+                                      )}
+                                      <TableCell className="align-top">{result.deviceName}</TableCell>
+                                      <TableCell className="align-top">{result.deviceIpAddress}</TableCell>
+                                      <TableCell className="align-top">
+                                        <Badge variant={getStatusVariant(result.status)}>{result.status}</Badge>
                                       </TableCell>
-                                  )}
-                                  {resultIndex === 0 && (
-                                      <TableCell rowSpan={group.results.length} className="font-medium align-top">
-                                          {group.scanId}
+                                      <TableCell className="align-top text-right">
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                               <Button variant="ghost" size="icon" className="h-7 w-7">
+                                                <Eye className="h-4 w-4" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>View Details</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
                                       </TableCell>
-                                  )}
-                                  {resultIndex === 0 && (
-                                      <TableCell rowSpan={group.results.length} className="align-top border-r">
-                                          {format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")}
-                                      </TableCell>
-                                  )}
-                                  {resultIndex === 0 && (
-                                      <TableCell rowSpan={group.results.length} className="font-medium align-top border-r">
-                                          {group.jobName}
-                                      </TableCell>
-                                  )}
-                                  <TableCell className="align-top">{result.deviceName}</TableCell>
-                                  <TableCell className="align-top">{result.deviceIpAddress}</TableCell>
-                                  <TableCell className="align-top">
-                                    <Badge variant={getStatusVariant(result.status)}>{result.status}</Badge>
-                                  </TableCell>
-                                  <TableCell className="align-top text-right">
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                           <Button variant="ghost" size="icon" className="h-7 w-7">
-                                            <Eye className="h-4 w-4" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>View Details</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </React.Fragment>
-                          ))
-                        ) : (
-                          <TableRow>
-                            <TableCell colSpan={8} className="h-24 text-center">
-                              No compliance history found.
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                </ScrollArea>
-            </div>
+                                    </TableRow>
+                                  ))}
+                                </React.Fragment>
+                              ))
+                            ) : (
+                              <TableRow>
+                                <TableCell colSpan={8} className="h-24 text-center">
+                                  No compliance history found.
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                    </ScrollArea>
+                </div>
+              </TabsContent>
+              <TabsContent value="scheduled">
+                <ScheduledScansTable
+                  scheduledJobs={scheduledJobs}
+                  onDelete={handleDeleteScheduledJob}
+                />
+              </TabsContent>
+            </Tabs>
+
             <ReportModal 
               isOpen={isReportModalOpen}
               onOpenChange={setIsReportModalOpen}
@@ -316,9 +360,9 @@ export default function DashboardPage() {
             <ConfirmDeleteDialog
                 isOpen={isConfirmDialogOpen}
                 onOpenChange={setIsConfirmDialogOpen}
-                onConfirm={handleConfirmClear}
-                itemType="log"
-                itemCount={complianceLog.length}
+                onConfirm={handleConfirmDelete}
+                itemType={itemToDelete?.type}
+                itemCount={itemToDelete?.ids.length}
             />
         </>
     );

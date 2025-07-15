@@ -20,11 +20,14 @@ export default function ConfirmDeleteDialog({
   itemType = "item",
   itemCount = 1,
 }) {
-  const description =
-    itemType === 'log'
-      ? `This action cannot be undone. This will permanently delete all ${itemCount} compliance log entr${itemCount > 1 ? 'ies' : 'y'}.`
-      : `This action cannot be undone. This will permanently delete the selected ${itemCount} ${itemType}${itemCount > 1 ? 's' : ''}.`;
+  let description = `This action cannot be undone. This will permanently delete the selected ${itemCount} ${itemType}${itemCount > 1 ? 's' : ''}.`;
       
+  if (itemType === 'log') {
+    description = `This action cannot be undone. This will permanently delete the selected ${itemCount} log group${itemCount > 1 ? 's' : ''}.`;
+  } else if (itemType === 'schedule') {
+    description = 'This action cannot be undone. This will permanently delete the scheduled job.';
+  }
+
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
       <AlertDialogContent>

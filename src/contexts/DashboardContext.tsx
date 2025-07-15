@@ -21,6 +21,7 @@ export function DashboardProvider({ children }) {
   const [complianceLog, setComplianceLog] = useLocalStorageState('complianceLog', []);
   const [complianceRunProcess, setComplianceRunProcess] = useState(null); // To hold the timeout ID
   const [scanCounter, setScanCounter] = useLocalStorageState('scanCounter', 1);
+  const [scheduledJobs, setScheduledJobs] = useLocalStorageState('scheduledJobs', []);
 
   const getNextScanId = () => {
     const id = `Scan ${scanCounter}`;
@@ -47,6 +48,8 @@ export function DashboardProvider({ children }) {
     complianceRunProcess,
     setComplianceRunProcess,
     getNextScanId,
+    scheduledJobs,
+    setScheduledJobs,
   };
 
   return (
