@@ -265,8 +265,9 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
   };
   
   const getOrdinalSuffix = (day) => {
-    if (day > 3 && day < 21) return 'th';
-    switch (day % 10) {
+    const dayNum = parseInt(day, 10);
+    if (dayNum > 3 && dayNum < 21) return 'th';
+    switch (dayNum % 10) {
       case 1:  return "st";
       case 2:  return "nd";
       case 3:  return "rd";
@@ -284,7 +285,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
         return `Scheduled on ${format(scheduleDate, "dd MMMM yyyy")}, ${formatTime(onceSchedule)}`;
       case 'every':
         const unit = everyInterval === '1' ? everyUnit.slice(0, -1) : everyUnit;
-        return `Scheduled for every ${everyInterval} ${capitalize(unit)}`;
+        return `Scheduled for every ${everyInterval} ${unit}`;
       case 'daily': {
         if (dailySchedules.length === 0) return "No daily schedules set";
         const dailyTimes = dailySchedules.map(formatTime).join(' and ');
@@ -296,12 +297,12 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
           const days = s.days.map(d => capitalize(d)).join(', ');
           return `${days} at ${formatTime(s)}`;
         }).join(' and ');
-        return `Scheduled for every week ${weeklyDetails}`;
+        return `Scheduled for every week on ${weeklyDetails}`;
       }
       case 'monthly': {
         if (monthlySchedules.length === 0) return "No monthly schedules set";
         const monthlyDetails = monthlySchedules.map(s => {
-            const dayWithSuffix = `${s.day}${getOrdinalSuffix(parseInt(s.day))}`;
+            const dayWithSuffix = `${s.day}${getOrdinalSuffix(s.day)}`;
             return `${dayWithSuffix} at ${formatTime(s)}`;
         }).join(' and ');
         return `Scheduled for every month on the ${monthlyDetails}`;
@@ -337,8 +338,35 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
     return cn(baseCols);
   }, [viewedDevice, viewedJob, viewMode]);
 
-  const validateSchedules = useCallback((schedules, setSchedules) => {
+  const validateSchedules = useCallback((schedules, setSchedules, mode) => {
     let hasChanged = false;
+
+    if (mode === 'weekly') {
+      const seenDayTime = new Set();
+      const newSchedules = schedules.map(currentSchedule => {
+        let isDuplicate = false;
+        const timeKey = `${currentSchedule.hour}:${currentSchedule.minute}:${currentSchedule.ampm}`;
+        for (const day of currentSchedule.days) {
+            const dayTimeKey = `${day}-${timeKey}`;
+            if (seenDayTime.has(dayTimeKey)) {
+                isDuplicate = true;
+            }
+            seenDayTime.add(dayTimeKey);
+        }
+
+        const newError = isDuplicate ? "Duplicate entry not allowed." : null;
+        if (currentSchedule.error !== newError) {
+          hasChanged = true;
+        }
+        return { ...currentSchedule, error: newError };
+      });
+
+      if (hasChanged) {
+        setSchedules(newSchedules);
+      }
+      return;
+    }
+
     const seen = new Set();
     const newSchedules = schedules.map(currentSchedule => {
       const scheduleToCheck = { ...currentSchedule };
@@ -364,9 +392,9 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
     }
   }, []);
   
-  useEffect(() => validateSchedules(dailySchedules, setDailySchedules), [dailySchedules, validateSchedules]);
-  useEffect(() => validateSchedules(weeklySchedules, setWeeklySchedules), [weeklySchedules, validateSchedules]);
-  useEffect(() => validateSchedules(monthlySchedules, setMonthlySchedules), [monthlySchedules, validateSchedules]);
+  useEffect(() => validateSchedules(dailySchedules, setDailySchedules, 'daily'), [dailySchedules, validateSchedules]);
+  useEffect(() => validateSchedules(weeklySchedules, setWeeklySchedules, 'weekly'), [weeklySchedules, validateSchedules]);
+  useEffect(() => validateSchedules(monthlySchedules, setMonthlySchedules, 'monthly'), [monthlySchedules, validateSchedules]);
 
   const renderScheduleControls = () => {
     const handleUpdateSchedule = (id, field, value, schedules, setSchedules) => {
