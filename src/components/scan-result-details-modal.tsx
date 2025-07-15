@@ -37,6 +37,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
       setSelectedDeviceForDetails(null);
       setSelectedResultForOutput(null);
       setSearchTerm("");
+      setViewedJob(null);
     }, 300);
   };
   
@@ -291,16 +292,14 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     
     return (
       <div className="flex flex-col h-full">
-         <div className="p-4 border-b flex items-center justify-between">
-           <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedDeviceForDetails(null)}>
-                  <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div>
-                  <h3 className="font-semibold text-lg leading-none">Compliance Details</h3>
-                  <p className="text-sm text-muted-foreground">{selectedDeviceForDetails.name}</p>
-              </div>
-           </div>
+         <div className="p-4 border-b flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedDeviceForDetails(null)}>
+                <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+                <h3 className="font-semibold text-lg leading-none">Compliance Details</h3>
+                <p className="text-sm text-muted-foreground">{selectedDeviceForDetails.name}</p>
+            </div>
         </div>
 
         <div className="px-4 py-3 border-b">
@@ -330,8 +329,8 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
           "flex-1 grid min-h-0 transition-all duration-300 ease-in-out",
           (selectedResultForOutput || viewedJob) ? "grid-cols-[2fr_1fr]" : "grid-cols-1"
         )}>
-           <div className="flex-1 min-h-0 px-4 py-4 flex flex-col">
-             <div className="flex-grow border rounded-lg overflow-hidden">
+           <div className="flex-1 flex flex-col min-h-0 px-4 py-4">
+             <div className="flex-grow border rounded-lg overflow-hidden flex flex-col">
                 <ScrollArea className="h-full">
                   <Table>
                     <TableHeader>
@@ -399,15 +398,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseModal}>
       <DialogContent className="max-w-7xl w-[90vw] h-[80vh] flex flex-col p-0">
-        <DialogHeader className="p-4 border-b">
-          <DialogTitle>Scan Result Details</DialogTitle>
-          <DialogDescription>
-            {selectedDeviceForDetails 
-                ? `Showing job statuses for ${selectedDeviceForDetails.name}. Click a status badge to see output.`
-                : 'Aggregated compliance status for all devices in this scan. Click a status to see details.'
-            }
-          </DialogDescription>
-        </DialogHeader>
         {selectedDeviceForDetails ? renderDeviceDetailView() : renderDeviceListView()}
       </DialogContent>
     </Dialog>
