@@ -20,11 +20,12 @@ import { Checkbox } from "./ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
 
-export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup }) {
+export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup, jobs = [] }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDeviceNames, setSelectedDeviceNames] = useState([]);
   const [selectedResultForOutput, setSelectedResultForOutput] = useState(null);
   const [viewedDevice, setViewedDevice] = useState(null);
+  const [viewedJob, setViewedJob] = useState(null);
   const { toast } = useToast();
 
   const processedData = useMemo(() => {
@@ -37,7 +38,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
             acc[result.deviceName] = {
                 name: result.deviceName,
                 ipAddress: result.deviceIpAddress,
-                // These might not be available in the log, but good to have if they are
                 username: result.deviceUsername || 'N/A', 
                 port: result.devicePort || 'N/A'
             };
@@ -67,16 +67,23 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   const handlePanelOpen = (panelType, data) => {
     if (panelType === 'output') {
       setViewedDevice(null);
+      setViewedJob(null);
       setSelectedResultForOutput(data);
     } else if (panelType === 'device') {
       setSelectedResultForOutput(null);
+      setViewedJob(null);
       setViewedDevice(data);
+    } else if (panelType === 'job') {
+      setSelectedResultForOutput(null);
+      setViewedDevice(null);
+      setViewedJob(data);
     }
   };
 
   const handlePanelClose = () => {
     setSelectedResultForOutput(null);
     setViewedDevice(null);
+    setViewedJob(null);
   }
 
   if (!processedData || !scanGroup) return null;
@@ -151,6 +158,13 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     document.body.removeChild(link);
     toast({ title: "Success", description: "Output downloaded as CSV." });
   };
+  
+  const handleJobDetailsClick = (jobName) => {
+    const job = jobs.find(j => j.name === jobName);
+    if (job) {
+      handlePanelOpen('job', job);
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -174,11 +188,11 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
         </div>
         <div className={cn(
           "flex-1 grid min-h-0 transition-all duration-300 ease-in-out pb-4",
-          (selectedResultForOutput || viewedDevice) ? "grid-cols-[2fr_1fr]" : "grid-cols-1"
+          (selectedResultForOutput || viewedDevice || viewedJob) ? "grid-cols-[2fr_1fr]" : "grid-cols-1"
         )}>
           <div className="flex-1 min-h-0 px-4 overflow-hidden">
-            <ScrollArea className="h-full border rounded-lg">
-              <Table className="min-w-[1200px]">
+             <ScrollArea className="h-full border rounded-lg">
+               <Table className="min-w-[1200px]">
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
                     <TableHead className="w-[250px] border-r"></TableHead>
@@ -187,7 +201,14 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                   <TableRow>
                     <TableHead className="w-[250px] border-r">Device Name</TableHead>
                     {uniqueJobs.map(jobName => (
-                      <TableHead key={jobName} className="min-w-[150px]">{jobName}</TableHead>
+                      <TableHead key={jobName} className="min-w-[150px]">
+                         <div className="group flex items-center gap-2">
+                           <span>{jobName}</span>
+                           <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleJobDetailsClick(jobName)}>
+                             <Eye className="h-4 w-4" />
+                           </Button>
+                         </div>
+                      </TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
@@ -196,7 +217,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                     filteredDevices.map(device => (
                       <TableRow 
                         key={device.name} 
-                        data-state={selectedResultForOutput?.deviceName === device.name || viewedDevice?.name === device.name ? "selected" : ""}
+                        data-state={(selectedResultForOutput?.deviceName === device.name || viewedDevice?.name === device.name) ? "selected" : ""}
                         className="group"
                       >
                         <TableCell className="font-medium border-r truncate">
@@ -244,7 +265,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
               </Table>
             </ScrollArea>
           </div>
-          {(selectedResultForOutput || viewedDevice) && (
+          {(selectedResultForOutput || viewedDevice || viewedJob) && (
             <div className="flex flex-col border-l bg-muted/30 min-h-0 pr-4">
                {selectedResultForOutput && (
                     <>
@@ -286,6 +307,24 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                                 <p className="break-words"><strong className="text-muted-foreground">Username:</strong> <code>{viewedDevice.username}</code></p>
                                 <p className="break-words"><strong className="text-muted-foreground">Port:</strong> <code>{viewedDevice.port}</code></p>
                             </div>
+                        </ScrollArea>
+                    </>
+               )}
+               {viewedJob && (
+                    <>
+                        <div className="p-4 border-b flex items-center justify-between">
+                            <h3 className="font-semibold text-base truncate">Details: {viewedJob.name}</h3>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePanelClose}>
+                                <X className="h-4 w-4" />
+                                <span className="sr-only">Close Panel</span>
+                            </Button>
+                        </div>
+                        <ScrollArea className="flex-1 p-4">
+                           <div className="p-4 border rounded-lg bg-background/50 space-y-2 text-sm">
+                              <h4 className="font-semibold">Job Details</h4>
+                              <p className="break-words"><strong className="text-muted-foreground">Command:</strong> <code>{viewedJob.command || 'N/A'}</code></p>
+                              <p className="break-words"><strong className="text-muted-foreground">Template:</strong> <code>{viewedJob.template || 'N/A'}</code></p>
+                          </div>
                         </ScrollArea>
                     </>
                )}

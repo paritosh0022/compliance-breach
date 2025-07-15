@@ -26,9 +26,11 @@ import ConfirmDeleteDialog from '@/components/confirm-delete-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ScheduledScansTable from '@/components/scheduled-scans-table';
 import ScanResultDetailsModal from '@/components/scan-result-details-modal';
+import useLocalStorageState from '@/hooks/use-local-storage-state';
 
 export default function DashboardPage() {
     const { complianceLog, setComplianceLog, scheduledJobs, setScheduledJobs } = useDashboard();
+    const [jobs] = useLocalStorageState('jobs', []);
     const { toast } = useToast();
     const [searchTerm, setSearchTerm] = useState("");
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -321,6 +323,7 @@ export default function DashboardPage() {
               isOpen={isDetailsModalOpen}
               onOpenChange={setIsDetailsModalOpen}
               scanGroup={selectedScanGroup}
+              jobs={jobs}
             />
             <ConfirmDeleteDialog
                 isOpen={isConfirmDialogOpen}
