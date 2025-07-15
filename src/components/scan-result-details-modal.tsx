@@ -81,17 +81,19 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl w-[90vw] h-[80vh] flex flex-col p-0">
-        <DialogHeader className="p-4 border-b flex-row flex justify-between items-center">
-          <div>
-            <DialogTitle>Scan Result Details: {scanGroup.scanId}</DialogTitle>
-            <DialogDescription>
-              Matrix view of job statuses across all devices for this scan.
-            </DialogDescription>
+        <DialogHeader className="p-4 border-b">
+          <div className="flex justify-between items-center w-full pr-8">
+            <div>
+              <DialogTitle>Scan Result Details: {scanGroup.scanId}</DialogTitle>
+              <DialogDescription>
+                Matrix view of job statuses across all devices for this scan.
+              </DialogDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleDownload}>
+                <Download className="mr-2 h-4 w-4" />
+                Download Report
+            </Button>
           </div>
-          <Button variant="outline" size="sm" onClick={handleDownload}>
-              <Download className="mr-2 h-4 w-4" />
-              Download Report
-          </Button>
         </DialogHeader>
         <div className="flex-1 min-h-0">
           <ScrollArea className="h-full">
