@@ -283,7 +283,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
         if (!scheduleDate) return "Not scheduled";
         return `Scheduled on ${format(scheduleDate, "dd MMMM yyyy")}, ${formatTime(onceSchedule)}`;
       case 'every':
-        const unit = everyUnit.endsWith('s') && everyInterval === '1' ? everyUnit.slice(0, -1) : everyUnit;
+        const unit = everyInterval === '1' ? everyUnit.slice(0, -1) : everyUnit;
         return `Scheduled for every ${everyInterval} ${capitalize(unit)}`;
       case 'daily': {
         if (dailySchedules.length === 0) return "No daily schedules set";
@@ -304,7 +304,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
             const dayWithSuffix = `${s.day}${getOrdinalSuffix(parseInt(s.day))}`;
             return `${dayWithSuffix} at ${formatTime(s)}`;
         }).join(' and ');
-        return `Scheduled for every month ${monthlyDetails}`;
+        return `Scheduled for every month on the ${monthlyDetails}`;
       }
       default:
         return "Not scheduled";
@@ -645,7 +645,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
               <ScrollArea className="flex-1 p-4">
                  <div className="p-4 border rounded-lg bg-background/50 space-y-2 text-sm">
                     <h4 className="font-semibold">Job Details</h4>
-                    <p className="break-words"><strong className="text-muted-foreground">Command:</strong> code>{viewedJob.command || 'N/A'}</code></p>
+                    <p className="break-words"><strong className="text-muted-foreground">Command:</strong> <code>{viewedJob.command || 'N/A'}</code></p>
                     <p className="break-words"><strong className="text-muted-foreground">Template:</strong> <code>{viewedJob.template || 'N/A'}</code></p>
                 </div>
               </ScrollArea>
@@ -738,5 +738,3 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
     </Dialog>
   );
 }
-
-    
