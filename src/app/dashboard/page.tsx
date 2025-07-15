@@ -273,9 +273,9 @@ export default function DashboardPage() {
                                   </TableCell>
                                   <TableCell className="font-medium">{group.scanId}</TableCell>
                                   <TableCell>{format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")}</TableCell>
-                                  <TableCell>{group.stats.run}</TableCell>
-                                  <TableCell className="text-green-600">{group.stats.passed}</TableCell>
-                                  <TableCell className="text-destructive">{group.stats.failed}</TableCell>
+                                  <TableCell><Badge variant="secondary">{group.stats.run}</Badge></TableCell>
+                                  <TableCell><Badge className="bg-green-500 hover:bg-green-600">{group.stats.passed}</Badge></TableCell>
+                                  <TableCell><Badge variant="destructive">{group.stats.failed}</Badge></TableCell>
                                   <TableCell className="text-right">
                                     <TooltipProvider>
                                       <Tooltip>
