@@ -14,17 +14,19 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Input } from "./ui/input";
-import { Search, Eye, ArrowLeft, Maximize2 } from "lucide-react";
+import { Search, Eye, ArrowLeft, Maximize2, Copy } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "./ui/checkbox";
 import { useDataTable } from "@/hooks/use-data-table";
 import { DataTablePagination } from "./data-table-pagination";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup, jobs = [], devices = [] }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDeviceForDetails, setSelectedDeviceForDetails] = useState(null);
   const [expandedRows, setExpandedRows] = useState(new Set());
+  const { toast } = useToast();
 
   const handleCloseModal = () => {
     onOpenChange(false);
@@ -128,6 +130,14 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     });
   };
 
+  const handleCopyOutput = (output) => {
+    navigator.clipboard.writeText(output);
+    toast({
+      title: "Copied!",
+      description: "Job output has been copied to your clipboard.",
+    });
+  };
+
   const renderDeviceListView = () => (
     <>
       <div className="p-4 border-b">
@@ -192,7 +202,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                       paginatedRows.map((row) => {
                         const device = row.original;
                         return (
-                          <TableRow key={device.name} data-state={row.getIsSelected() && "selected"}>
+                          <TableRow key={device.id} data-state={row.getIsSelected() && "selected"}>
                             <TableCell>
                                 <Checkbox
                                   checked={row.getIsSelected()}
@@ -241,9 +251,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedDeviceForDetails(null); setExpandedRows(new Set()); }}>
                 <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div>
-                <h3 className="font-semibold text-lg leading-none">Compliance Details</h3>
-            </div>
+            <h3 className="font-semibold text-lg leading-none">Compliance Details</h3>
         </div>
 
         <div className="px-4 py-3 border-b">
@@ -271,10 +279,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
         
         <div className="flex-1 flex flex-col min-h-0 px-4 py-4">
              <div className="flex-grow border rounded-lg overflow-hidden flex flex-col">
-                <div className="p-4">
-                    <h4 className="font-semibold">Jobs</h4>
-                    <p className="text-sm text-muted-foreground">Click the expand icon to see the full output.</p>
-                </div>
                 <ScrollArea className="flex-1">
                   <Table>
                     <TableHeader>
@@ -299,18 +303,33 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                               {result.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="relative group align-top">
-                            <p className={cn("overflow-hidden text-ellipsis", !expandedRows.has(result.id) && "whitespace-nowrap max-w-[300px]")}>
+                          <TableCell className="relative align-top">
+                            <p className={cn(
+                                "overflow-hidden text-ellipsis pr-20",
+                                !expandedRows.has(result.id) && "whitespace-nowrap max-w-[300px]"
+                            )}>
                                 {result.message}
                             </p>
-                             <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100"
-                                onClick={() => toggleRowExpansion(result.id)}
-                            >
-                                <Maximize2 className="h-4 w-4" />
-                             </Button>
+                             <div className="absolute top-1 right-1 flex items-center gap-1">
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6"
+                                    onClick={() => handleCopyOutput(result.message)}
+                                >
+                                    <Copy className="h-4 w-4" />
+                                    <span className="sr-only">Copy Output</span>
+                                </Button>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6"
+                                    onClick={() => toggleRowExpansion(result.id)}
+                                >
+                                    <Maximize2 className="h-4 w-4" />
+                                    <span className="sr-only">Expand Row</span>
+                                </Button>
+                             </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -331,7 +350,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
           <DialogTitle>Scan Result Details</DialogTitle>
           <DialogDescription>
             View detailed results for a specific compliance scan. You can see overall status and drill down into individual devices and jobs.
-          </DialogDescription>
+          </Dialog-description>
         </DialogHeader>
         {selectedDeviceForDetails ? renderDeviceDetailView() : renderDeviceListView()}
       </DialogContent>
