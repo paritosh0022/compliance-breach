@@ -65,6 +65,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
       const deviceName = devicesMap[result.deviceId]?.name || result.deviceName;
       if (!acc[deviceName]) {
         acc[deviceName] = {
+          id: result.deviceId,
           name: deviceName,
           ipAddress: devicesMap[result.deviceId]?.ipAddress || result.deviceIpAddress,
           port: devicesMap[result.deviceId]?.port || 'N/A',
@@ -398,8 +399,15 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseModal}>
       <DialogContent className="max-w-7xl w-[90vw] h-[80vh] flex flex-col p-0">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Scan Result Details</DialogTitle>
+          <DialogDescription>
+            View detailed results for a specific compliance scan. You can see overall status and drill down into individual devices and jobs.
+          </DialogDescription>
+        </DialogHeader>
         {selectedDeviceForDetails ? renderDeviceDetailView() : renderDeviceListView()}
       </DialogContent>
     </Dialog>
   );
 }
+
