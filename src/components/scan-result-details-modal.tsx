@@ -130,6 +130,9 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
 
   const renderDeviceListView = () => (
     <>
+      <div className="p-4 border-b">
+        <h3 className="font-semibold text-lg">Scan Result Details</h3>
+      </div>
       <div className="p-4">
         <Card className="bg-transparent shadow-none border">
           <CardContent className="p-3">
@@ -269,13 +272,15 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
         
         <div className="flex-1 flex flex-col min-h-0 px-4 py-4">
              <div className="flex-grow border rounded-lg overflow-hidden flex flex-col">
-                <ScrollArea className="h-full">
+                <div className="p-4">
+                    <h4 className="font-semibold">Jobs</h4>
+                    <p className="text-sm text-muted-foreground">Click a status badge to see the output.</p>
+                </div>
+                <ScrollArea className="flex-1">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>
-                          Jobs
-                        </TableHead>
+                        <TableHead>Job</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Output</TableHead>
                       </TableRow>
