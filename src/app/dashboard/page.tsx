@@ -97,26 +97,8 @@ export default function DashboardPage() {
       pageCount: Math.ceil(filteredLogs.length / 10),
     });
 
-    const paginatedLogs = table.getRowModel().rows.map(row => row.original);
+    const paginatedRows = table.getRowModel().rows;
     const selectedScanIds = table.getSelectedRowModel().rows.map(row => row.original.id);
-    
-    const handleSelectAll = (checked) => {
-      if (checked) {
-        table.setRowSelection(
-          Object.fromEntries(filteredLogs.map(log => [log.id, true]))
-        );
-      } else {
-        table.resetRowSelection();
-      }
-    };
-    
-    const handleSelectRow = (id, checked) => {
-       table.setRowSelection(prev => ({
-        ...prev,
-        [id]: checked
-      }));
-    };
-
 
     const handleViewDetails = (group) => {
         if (!group.results || group.results.length === 0) return;
@@ -280,37 +262,40 @@ export default function DashboardPage() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {paginatedLogs.length > 0 ? (
-                              paginatedLogs.map((group) => (
-                                <TableRow key={group.id} data-state={table.getIsRowSelected(group.id) ? "selected" : ""}>
-                                  <TableCell>
-                                    <Checkbox
-                                      checked={table.getIsRowSelected(group.id)}
-                                      onCheckedChange={(value) => table.toggleRowSelected(group.id, !!value)}
-                                      aria-label="Select row"
-                                    />
-                                  </TableCell>
-                                  <TableCell className="font-medium">{group.scanId}</TableCell>
-                                  <TableCell>{format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")}</TableCell>
-                                  <TableCell><Badge variant="secondary">{group.stats.run}</Badge></TableCell>
-                                  <TableCell><Badge className="bg-green-500 hover:bg-green-600">{group.stats.passed}</Badge></TableCell>
-                                  <TableCell><Badge variant="destructive">{group.stats.failed}</Badge></TableCell>
-                                  <TableCell className="text-right">
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleViewDetails(group)}>
-                                            <Eye className="h-4 w-4" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>View Details</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  </TableCell>
-                                </TableRow>
-                              ))
+                            {paginatedRows.length > 0 ? (
+                              paginatedRows.map((row) => {
+                                const group = row.original;
+                                return (
+                                  <TableRow key={group.id} data-state={row.getIsSelected() ? "selected" : ""}>
+                                    <TableCell>
+                                      <Checkbox
+                                        checked={row.getIsSelected()}
+                                        onCheckedChange={(value) => row.toggleSelected(!!value)}
+                                        aria-label="Select row"
+                                      />
+                                    </TableCell>
+                                    <TableCell className="font-medium">{group.scanId}</TableCell>
+                                    <TableCell>{format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")}</TableCell>
+                                    <TableCell><Badge variant="secondary">{group.stats.run}</Badge></TableCell>
+                                    <TableCell><Badge className="bg-green-500 hover:bg-green-600">{group.stats.passed}</Badge></TableCell>
+                                    <TableCell><Badge variant="destructive">{group.stats.failed}</Badge></TableCell>
+                                    <TableCell className="text-right">
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleViewDetails(group)}>
+                                              <Eye className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>View Details</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </TableCell>
+                                  </TableRow>
+                                )
+                              })
                             ) : (
                               <TableRow>
                                 <TableCell colSpan={7} className="h-24 text-center">
