@@ -47,9 +47,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanResul
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-0 overflow-hidden">
           {/* Column 1: Metadata */}
           <div className="flex flex-col border-r min-h-0">
-             <div className="p-4 border-b h-[60px] flex items-center">
-                <h3 className="font-semibold text-base">Scan Details</h3>
-             </div>
              <ScrollArea className="flex-1">
                 <div className="p-4 space-y-4 text-sm">
                     <div className="flex justify-between items-center">
