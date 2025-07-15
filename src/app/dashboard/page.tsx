@@ -41,53 +41,30 @@ export default function DashboardPage() {
     const groupedLogs = useMemo(() => {
       if (!complianceLog) return [];
       const sortedLogs = [...complianceLog].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  
-      return sortedLogs.flatMap(log => {
-        if (!log || !log.results) {
-          return [];
-        }
-  
-        const jobsInRun = log.results.reduce((acc, result) => {
-          if (!acc[result.jobName]) {
-            acc[result.jobName] = [];
-          }
-          acc[result.jobName].push(result);
-          return acc;
-        }, {});
-  
-        return Object.entries(jobsInRun).map(([jobName, results]) => ({
-          id: `${log.id}-${jobName}`,
-          logId: log.id,
-          scanId: log.scanId,
-          jobName,
-          timestamp: log.timestamp,
-          results,
-        }));
-      });
+      return sortedLogs;
     }, [complianceLog]);
   
     const filteredLogs = useMemo(() => {
       if (!searchTerm) return groupedLogs;
       const lowercasedFilter = searchTerm.toLowerCase();
   
-      const filtered = groupedLogs.map(group => {
-        const filteredResults = group.results.filter(result => 
+      return groupedLogs.map(log => {
+        const filteredResults = log.results.filter(result => 
           result.deviceName.toLowerCase().includes(lowercasedFilter) ||
           result.deviceIpAddress.toLowerCase().includes(lowercasedFilter)
         );
         
-        if (group.jobName.toLowerCase().includes(lowercasedFilter) || (group.scanId && group.scanId.toLowerCase().includes(lowercasedFilter))) {
-          return group;
+        if (log.scanId && log.scanId.toLowerCase().includes(lowercasedFilter)) {
+          return log;
         }
         
         if (filteredResults.length > 0) {
-          return { ...group, results: filteredResults };
+          return { ...log, results: filteredResults };
         }
         
         return null;
-      }).filter((g) => g !== null);
+      }).filter(log => log !== null);
   
-      return filtered;
     }, [groupedLogs, searchTerm]);
 
     const handleSelectAll = (checked) => {
@@ -102,11 +79,15 @@ export default function DashboardPage() {
       }
     };
 
-    const handleViewDetails = (result, group) => {
+    const handleViewDetails = (group) => {
+        if (!group.results || group.results.length === 0) return;
+        
+        const firstResult = group.results[0];
+
         setSelectedScanResult({
-            ...result,
+            ...firstResult,
             scanId: group.scanId,
-            jobName: group.jobName,
+            jobName: firstResult.jobName, // Keep job name for context in the modal
             timestamp: group.timestamp,
         });
         setIsDetailsModalOpen(true);
@@ -127,7 +108,7 @@ export default function DashboardPage() {
       const csvData = filteredLogs.flatMap(group => 
         group.results.map(result => ({
           scan_id: group.scanId,
-          job_name: group.jobName,
+          job_name: result.jobName,
           device_name: result.deviceName,
           ip_address: result.deviceIpAddress,
           status: result.status,
@@ -167,13 +148,12 @@ export default function DashboardPage() {
       doc.text("Compliance Report", 14, 15);
   
       autoTable(doc, {
-        head: [['Scan ID', 'Job Name', 'Device', 'IP Address', 'Last ran at', 'Status']],
+        head: [['Scan ID', 'Device', 'IP Address', 'Last ran at', 'Status']],
         body: filteredLogs.flatMap(group => 
           group.results.map((result, index) => {
             if (index === 0) {
               return [
                 { content: group.scanId, rowSpan: group.results.length, styles: { valign: 'top' } },
-                { content: group.jobName, rowSpan: group.results.length, styles: { valign: 'top' } },
                 result.deviceName,
                 result.deviceIpAddress,
                 { content: format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss"), rowSpan: group.results.length, styles: { valign: 'top' } },
@@ -202,8 +182,7 @@ export default function DashboardPage() {
       if (!itemToDelete) return;
 
       if (itemToDelete.type === 'log') {
-        const logIdsToDelete = new Set(groupedLogs.filter(g => itemToDelete.ids.includes(g.id)).map(g => g.logId));
-        setComplianceLog(prev => prev.filter(log => !logIdsToDelete.has(log.id)));
+        setComplianceLog(prev => prev.filter(log => !itemToDelete.ids.includes(log.id)));
         setSelectedScanIds([]);
         toast({ title: 'Success', description: 'Selected log entries have been deleted.' });
       } else if (itemToDelete.type === 'schedule') {
@@ -255,7 +234,7 @@ export default function DashboardPage() {
                     <div className="relative flex-1">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Search by Scan ID, job, device, or IP..."
+                            placeholder="Search by Scan ID, device, or IP..."
                             className="pl-9"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -285,7 +264,6 @@ export default function DashboardPage() {
                               </TableHead>
                               <TableHead>Scan ID</TableHead>
                               <TableHead>Last ran at</TableHead>
-                              <TableHead>Job Name</TableHead>
                               <TableHead>Device</TableHead>
                               <TableHead>IP Address</TableHead>
                               <TableHead>Status</TableHead>
@@ -316,37 +294,34 @@ export default function DashboardPage() {
                                               {format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")}
                                           </TableCell>
                                       )}
-                                      {resultIndex === 0 && (
-                                          <TableCell rowSpan={group.results.length} className="font-medium align-top border-r">
-                                              {group.jobName}
-                                          </TableCell>
-                                      )}
                                       <TableCell className="align-top">{result.deviceName}</TableCell>
                                       <TableCell className="align-top">{result.deviceIpAddress}</TableCell>
                                       <TableCell className="align-top">
                                         <Badge variant={getStatusVariant(result.status)}>{result.status}</Badge>
                                       </TableCell>
-                                      <TableCell className="align-top text-right">
-                                        <TooltipProvider>
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleViewDetails(result, group)}>
-                                                <Eye className="h-4 w-4" />
-                                              </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              <p>View Details</p>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-                                      </TableCell>
+                                      {resultIndex === 0 && (
+                                          <TableCell rowSpan={group.results.length} className="align-top text-right">
+                                            <TooltipProvider>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleViewDetails(group)}>
+                                                    <Eye className="h-4 w-4" />
+                                                  </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  <p>View Details</p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          </TableCell>
+                                      )}
                                     </TableRow>
                                   ))}
                                 </React.Fragment>
                               ))
                             ) : (
                               <TableRow>
-                                <TableCell colSpan={8} className="h-24 text-center">
+                                <TableCell colSpan={7} className="h-24 text-center">
                                   No compliance history found.
                                 </TableCell>
                               </TableRow>
@@ -384,3 +359,5 @@ export default function DashboardPage() {
         </>
     );
 }
+
+    
