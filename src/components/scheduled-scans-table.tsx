@@ -40,7 +40,7 @@ export default function ScheduledScansTable({ scheduledJobs, onDelete }) {
     
     switch(schedule.mode) {
       case 'once':
-        if (!schedule.once.date) return "Not scheduled";
+        if (!schedule.once || !schedule.once.date) return "Not scheduled";
         return `Once on ${format(new Date(schedule.once.date), "dd MMM yyyy")}, ${formatTime(schedule.once)}`;
       case 'every':
         const unit = schedule.every.interval === '1' ? schedule.every.unit.slice(0, -1) : schedule.every.unit;
