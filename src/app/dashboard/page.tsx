@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Papa from 'papaparse';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,540 +10,244 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChevronDown, PlusCircle, Upload, Search, Trash2, Bot, FileText, Download, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import AddDeviceDrawer from '@/components/add-device-drawer';
-import DeviceTable from '@/components/device-table';
-import JobTable from '@/components/job-table';
-import AddJobModal from '@/components/add-job-modal';
-import AddJobDetailsModal from '@/components/add-job-details-modal';
-import RunComplianceModal from '@/components/run-compliance-modal';
-import ReportModal from '@/components/compliance-log-modal';
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { format } from 'date-fns';
+import { Download, Search, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorageState from '@/hooks/use-local-storage-state';
-import ImportDevicesModal from '@/components/import-devices-modal';
-import ConfirmDeleteDialog from '@/components/confirm-delete-dialog';
+import ReportModal from '@/components/compliance-log-modal';
+import React from 'react';
 import { useDashboard } from '@/contexts/DashboardContext';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function DashboardPage() {
-  const {
-    isComplianceModalOpen,
-    setIsComplianceModalOpen,
-    isComplianceRunning,
-    complianceLog,
-  } = useDashboard();
+    const { complianceLog } = useDashboard();
+    const { toast } = useToast();
+    const [searchTerm, setSearchTerm] = useState("");
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     
-  const [isClient, setIsClient] = useState(false);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [isJobModalOpen, setIsJobModalOpen] = useState(false);
-  const [isJobDetailsModalOpen, setIsJobDetailsModalOpen] = useState(false);
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+    const groupedLogs = useMemo(() => {
+      if (!complianceLog) return [];
+      const sortedLogs = [...complianceLog].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   
-  const [activeTab, setActiveTab] = useState('device-list');
-  
-  const [devices, setDevices] = useLocalStorageState('devices', []);
-  const [jobs, setJobs] = useLocalStorageState('jobs', []);
-
-  const [deviceToEdit, setDeviceToEdit] = useState(null);
-  const [jobToEdit, setJobToEdit] = useState(null);
-  const [currentJobDetails, setCurrentJobDetails] = useState();
-  const [selectedDeviceIds, setSelectedDeviceIds] = useState([]);
-  const [selectedJobIds, setSelectedJobIds] = useState([]);
-  const [initialModalSelections, setInitialModalSelections] = useState({});
-  const [itemToDelete, setItemToDelete] = useState(null);
-  const [deviceSearchTerm, setDeviceSearchTerm] = useState("");
-  const [jobSearchTerm, setJobSearchTerm] = useState("");
-
-  const { toast } = useToast();
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  const filteredDevices = devices.filter(device => {
-    const searchTermLower = deviceSearchTerm.toLowerCase();
-    return (
-      device.name.toLowerCase().includes(searchTermLower) ||
-      device.ipAddress.toLowerCase().includes(searchTermLower) ||
-      device.username.toLowerCase().includes(searchTermLower) ||
-      device.port.toString().includes(searchTermLower)
-    );
-  });
-
-  const filteredJobs = jobs.filter(job => {
-    const searchTermLower = jobSearchTerm.toLowerCase();
-    return (
-      job.name.toLowerCase().includes(searchTermLower) ||
-      (job.description && job.description.toLowerCase().includes(searchTermLower))
-    );
-  });
-  
-  const handleRunCompliance = (selections) => {
-    setInitialModalSelections(selections);
-    setIsComplianceModalOpen(true);
-  };
-  
-  const handleSaveDevice = (deviceData, id) => {
-    if (id) {
-      setDevices(prev => prev.map(d => {
-        if (d.id === id) {
-          const { password, ...rest } = deviceData;
-          const updatedDevice = { ...d, ...rest };
-          // Only update password if a new one is provided
-          if (password) {
-            updatedDevice.password = password;
-          }
-          return updatedDevice;
+      return sortedLogs.flatMap(log => {
+        if (!log || !log.results) {
+          return [];
         }
-        return d;
-      }));
-      toast({ title: "Success", description: "Device updated successfully." });
-    } else {
-      const newDevice = { ...deviceData, id: crypto.randomUUID() };
-      setDevices((prev) => [...prev, newDevice]);
-      toast({ title: "Success", description: "Device added successfully." });
-    }
-    setIsDrawerOpen(false);
-  };
   
-  const handleEditDeviceClick = (id) => {
-    const device = devices.find(d => d.id === id);
-    if (device) {
-      setDeviceToEdit(device);
-      setIsDrawerOpen(true);
-    }
-  };
-
-  const handleImportDevices = (newDevices) => {
-    const devicesToAdd = newDevices.map(device => ({ ...device, id: crypto.randomUUID() }));
-    setDevices(prev => [...prev, ...devicesToAdd]);
-    setIsImportModalOpen(false);
-  };
-
-  const handleDeleteDevice = (id) => {
-    setItemToDelete({ ids: [id], type: 'device' });
-    setIsConfirmDialogOpen(true);
-  };
-
-  const handleDeleteSelectedDevices = () => {
-    if (selectedDeviceIds.length === 0) return;
-    setItemToDelete({ ids: selectedDeviceIds, type: 'device' });
-    setIsConfirmDialogOpen(true);
-  }
+        const jobsInRun = log.results.reduce((acc, result) => {
+          if (!acc[result.jobName]) {
+            acc[result.jobName] = [];
+          }
+          acc[result.jobName].push(result);
+          return acc;
+        }, {});
   
-  const handleJobDetailsContinue = (data) => {
-    if (jobToEdit) {
-      setCurrentJobDetails({
-        name: data.name,
-        description: data.description,
-        command: jobToEdit.command,
-        template: jobToEdit.template
+        return Object.entries(jobsInRun).map(([jobName, results]) => ({
+          id: `${log.id}-${jobName}`,
+          jobName,
+          timestamp: log.timestamp,
+          results,
+        }));
       });
-    } else {
-      setCurrentJobDetails(data);
-    }
-    setIsJobDetailsModalOpen(false);
-    setIsJobModalOpen(true);
-  };
-
-  const handleSaveJobDetails = (data, id) => {
-    setJobs(prev => prev.map(j => j.id === id ? { ...j, ...data } : j));
-    setIsJobDetailsModalOpen(false);
-    setJobToEdit(null);
-    toast({ title: "Success", description: "Job details updated." });
-  };
+    }, [complianceLog]);
   
-  const handleAddJob = (jobData) => {
-    if (!currentJobDetails) return;
-    
-    if (jobToEdit) {
-      const updatedJob = {
-        ...jobToEdit,
-        name: currentJobDetails.name,
-        description: currentJobDetails.description,
-        command: jobData.command,
-        template: jobData.template,
-      };
-      setJobs(prev => prev.map(j => j.id === jobToEdit.id ? updatedJob : j));
-      toast({ title: "Success", description: "Job updated successfully." });
-      setJobToEdit(null);
-    } else {
-      const newJob = { 
-          ...currentJobDetails,
-          ...jobData,
-          id: crypto.randomUUID() 
-      };
-      setJobs((prev) => [...prev, newJob]);
-      toast({ title: "Success", description: "Job added successfully." });
-    }
-
-    setIsJobModalOpen(false);
-    setCurrentJobDetails(undefined);
-  };
+    const filteredLogs = useMemo(() => {
+      if (!searchTerm) return groupedLogs;
+      const lowercasedFilter = searchTerm.toLowerCase();
   
-  const handleEditJobClick = (id) => {
-    const job = jobs.find(j => j.id === id);
-    if (job) {
-      setJobToEdit(job);
-      setIsJobDetailsModalOpen(true);
-    }
-  };
-
-  const handleDeleteJob = (id) => {
-    setItemToDelete({ ids: [id], type: 'job' });
-    setIsConfirmDialogOpen(true);
-  };
-  
-  const handleDeleteSelectedJobs = () => {
-    if (selectedJobIds.length === 0) return;
-    setItemToDelete({ ids: selectedJobIds, type: 'job' });
-    setIsConfirmDialogOpen(true);
-  }
-
-  const handleConfirmDelete = () => {
-    if (!itemToDelete) return;
-    
-    if (itemToDelete.type === 'device') {
-        setDevices(prev => prev.filter(device => !itemToDelete.ids.includes(device.id)));
-        setSelectedDeviceIds([]);
-    } else if (itemToDelete.type === 'job') {
-        setJobs(prev => prev.filter(job => !itemToDelete.ids.includes(job.id)));
-        setSelectedJobIds([]);
-    }
-
-    setIsConfirmDialogOpen(false);
-    toast({ title: "Success", description: `The selected ${itemToDelete.type}(s) have been deleted.` });
-    setItemToDelete(null);
-  };
-
-  const downloadCsv = (data, filename) => {
-    const csv = Papa.unparse(data);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleExportSelectedDevices = () => {
-    if (selectedDeviceIds.length === 0) return;
-    const devicesToExport = devices
-      .filter(d => selectedDeviceIds.includes(d.id))
-      .map(({ id, password, ...rest }) => rest);
-    downloadCsv(devicesToExport, 'selected-devices.csv');
-  };
-
-  const handleExportAllDevices = () => {
-    if (devices.length === 0) {
-        toast({
-            variant: "destructive",
-            title: "No Devices",
-            description: "There are no devices to export.",
-        });
-        return;
-    }
-    const devicesToExport = devices
-      .map(({ id, password, ...rest }) => rest);
-    downloadCsv(devicesToExport, 'all-devices.csv');
-  };
-  
-  const handleExportDevice = (id) => {
-    const deviceToExport = devices
-      .filter(d => d.id === id)
-      .map(({ id, password, ...rest }) => rest);
-    if (deviceToExport.length > 0) {
-      const deviceName = deviceToExport[0].name.replace(/ /g, '_');
-      downloadCsv(deviceToExport, `${deviceName}-device.csv`);
-    }
-  };
-
-  const handleExportSelectedJobs = () => {
-    if (selectedJobIds.length === 0) return;
-    const jobsToExport = jobs
-      .filter(j => selectedJobIds.includes(j.id))
-      .map(j => ({
-        name: j.name,
-        description: j.description || '',
-        command: j.command || '',
-        template: j.template || '',
-      }));
-    downloadCsv(jobsToExport, 'selected-jobs.csv');
-  };
-
-  const handleExportAllJobs = () => {
-    if (jobs.length === 0) {
-        toast({
-            variant: "destructive",
-            title: "No Jobs",
-            description: "There are no jobs to export.",
-        });
-        return;
-    }
-    const jobsToExport = jobs
-      .map(j => ({
-        name: j.name,
-        description: j.description || '',
-        command: j.command || '',
-        template: j.template || '',
-      }));
-    downloadCsv(jobsToExport, 'all-jobs.csv');
-  };
-
-  const handleExportJob = (id) => {
-    const jobToExport = jobs
-      .filter(j => j.id === id)
-      .map(j => ({
-        name: j.name,
-        description: j.description || '',
-        command: j.command || '',
-        template: j.template || '',
-      }));
-    if (jobToExport.length > 0) {
-      const jobName = jobToExport[0].name.replace(/ /g, '_');
-      downloadCsv(jobToExport, `${jobName}-job.csv`);
-    }
-  };
-
-  const handleAddDeviceClick = () => {
-    setDeviceToEdit(null);
-    setIsDrawerOpen(true);
-  };
-
-  const handleAddJobClick = () => {
-    setJobToEdit(null);
-    setIsJobDetailsModalOpen(true);
-  }
-
-  const getActiveButton = (activeTab) => {
-    switch (activeTab) {
-      case 'job-compliance':
-        return (
-          <Button onClick={handleAddJobClick}>
-            <PlusCircle className="mr-2" />
-            Add Job
-          </Button>
+      const filtered = groupedLogs.map(group => {
+        const filteredResults = group.results.filter(result => 
+          result.deviceName.toLowerCase().includes(lowercasedFilter) ||
+          result.deviceIpAddress.toLowerCase().includes(lowercasedFilter)
         );
-      case 'device-list':
-      default:
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <PlusCircle className="mr-2" />
-                Add Device
-                <ChevronDown className="ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onSelect={handleAddDeviceClick}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Single Device
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setIsImportModalOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                Import from CSV
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-    }
-  };
+        
+        if (group.jobName.toLowerCase().includes(lowercasedFilter)) {
+          return group;
+        }
+        
+        if (filteredResults.length > 0) {
+          return { ...group, results: filteredResults };
+        }
+        
+        return null;
+      }).filter((g) => g !== null);
+  
+      return filtered;
+    }, [groupedLogs, searchTerm]);
+  
+    const getStatusVariant = (status) => {
+        switch (status) {
+            case 'Success':
+                return 'default';
+            case 'Failed':
+                return 'destructive';
+            default:
+                return 'secondary';
+        }
+    };
+    
+    const handleDownloadCsv = () => {
+      const csvData = filteredLogs.flatMap(group => 
+        group.results.map(result => ({
+          job_name: group.jobName,
+          device_name: result.deviceName,
+          ip_address: result.deviceIpAddress,
+          status: result.status,
+          message: result.message,
+          last_ran_at: format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")
+        }))
+      );
+  
+      if (csvData.length === 0) {
+          toast({ variant: 'destructive', title: 'No data to download.' });
+          return;
+      }
+  
+      const csv = Papa.unparse(csvData);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'compliance_report.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+    
+    const handleDownloadPdf = async () => {
+      if (filteredLogs.length === 0) {
+        toast({ variant: 'destructive', title: 'No data to download.' });
+        return;
+      }
+  
+      const { default: jsPDF } = await import('jspdf');
+      const { default: autoTable } = await import('jspdf-autotable');
+  
+      const doc = new jsPDF();
+      
+      doc.text("Compliance Report", 14, 15);
+  
+      autoTable(doc, {
+        head: [['Job Name', 'Device', 'IP Address', 'Last ran at', 'Status']],
+        body: filteredLogs.flatMap(group => 
+          group.results.map((result, index) => {
+            if (index === 0) {
+              return [
+                { content: group.jobName, rowSpan: group.results.length, styles: { valign: 'top' } },
+                result.deviceName,
+                result.deviceIpAddress,
+                { content: format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss"), rowSpan: group.results.length, styles: { valign: 'top' } },
+                result.status
+              ];
+            }
+            return [
+              result.deviceName,
+              result.deviceIpAddress,
+              result.status
+            ];
+          })
+        ),
+        startY: 22,
+      });
+  
+      doc.save('compliance_report.pdf');
+    };
 
-  if (!isClient) {
     return (
-      <div className="flex h-full w-full items-center justify-center p-16">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold font-headline">Manage Job Compliance</h1>
-        <div className="flex items-center gap-2">
-            {getActiveButton(activeTab)}
-            <Button variant="outline" onClick={() => setIsReportModalOpen(true)}>
-                <FileText className="mr-2 h-4 w-4" />
-                Compliance Report
-            </Button>
-        </div>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList>
-          <TabsTrigger value="device-list">Device List</TabsTrigger>
-          <TabsTrigger value="job-compliance">Job Compliance</TabsTrigger>
-        </TabsList>
-        <TabsContent value="device-list" className="mt-6">
-          <div className="flex items-center justify-between gap-4 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search devices..."
-                className="pl-9"
-                value={deviceSearchTerm}
-                onChange={(e) => setDeviceSearchTerm(e.target.value)}
-              />
+        <>
+            <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-semibold font-headline">Manage Job Compliance</h1>
+                <Button variant="outline" onClick={() => setIsReportModalOpen(true)}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Full Report
+                </Button>
             </div>
-            <div className="flex items-center gap-2">
-              {selectedDeviceIds.length > 0 && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span tabIndex={0}>
-                        <Button onClick={() => handleRunCompliance({ devices: selectedDeviceIds })} disabled={isComplianceRunning}>
-                          <Bot className="mr-2" />
-                          Run Compliance ({selectedDeviceIds.length})
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    {isComplianceRunning && <TooltipContent><p>Compliance is running</p></TooltipContent>}
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span tabIndex={0}>
-                        <Button variant="destructive" onClick={handleDeleteSelectedDevices} disabled={isComplianceRunning}>
-                          <Trash2 className="mr-2" />
-                          Delete ({selectedDeviceIds.length})
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    {isComplianceRunning && <TooltipContent><p>Compliance is running</p></TooltipContent>}
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-              <Button variant="outline" onClick={() => selectedDeviceIds.length > 0 ? handleExportSelectedDevices() : handleExportAllDevices()}>
-                <Download className="mr-2 h-4 w-4" />
-                {selectedDeviceIds.length > 0 ? `Export (${selectedDeviceIds.length})` : 'Export All'}
-              </Button>
+            <div className="flex items-center justify-between gap-4 mb-4">
+                <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search by job, device, or IP..."
+                        className="pl-9"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        <Download className="mr-2 h-4 w-4" />
+                        Export Report
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onSelect={handleDownloadCsv}>
+                          Export as CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={handleDownloadPdf}>
+                          Export as PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
             </div>
-          </div>
-          <DeviceTable 
-            devices={filteredDevices} 
-            onDelete={handleDeleteDevice}
-            onEdit={handleEditDeviceClick}
-            selectedDeviceIds={selectedDeviceIds}
-            onSelectedDeviceIdsChange={setSelectedDeviceIds}
-            onRunCompliance={(deviceId) => handleRunCompliance({ devices: [deviceId] })}
-            onExport={handleExportDevice}
-            isComplianceRunning={isComplianceRunning}
-          />
-        </TabsContent>
-        <TabsContent value="job-compliance" className="mt-6">
-           <div className="flex items-center justify-between gap-4 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search jobs..."
-                className="pl-9"
-                value={jobSearchTerm}
-                onChange={(e) => setJobSearchTerm(e.target.value)}
-              />
+            <div className="rounded-lg border">
+                <ScrollArea className="h-[60vh]">
+                   <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Job Name</TableHead>
+                          <TableHead>Device</TableHead>
+                          <TableHead>IP Address</TableHead>
+                          <TableHead>Last ran at</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredLogs.length > 0 ? (
+                          filteredLogs.map((group) => (
+                            <React.Fragment key={group.id}>
+                              {group.results.map((result, resultIndex) => (
+                                <TableRow key={`${group.id}-${result.deviceId}`}>
+                                  {resultIndex === 0 && (
+                                      <TableCell rowSpan={group.results.length} className="font-medium align-top border-r">
+                                          {group.jobName}
+                                      </TableCell>
+                                  )}
+                                  <TableCell className="align-top">{result.deviceName}</TableCell>
+                                  <TableCell className="align-top">{result.deviceIpAddress}</TableCell>
+                                   {resultIndex === 0 && (
+                                      <TableCell rowSpan={group.results.length} className="align-top">
+                                          {format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")}
+                                      </TableCell>
+                                  )}
+                                  <TableCell className="align-top">
+                                    <Badge variant={getStatusVariant(result.status)}>{result.status}</Badge>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </React.Fragment>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={5} className="h-24 text-center">
+                              No compliance history found.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                </ScrollArea>
             </div>
-             <div className="flex items-center gap-2">
-              {selectedJobIds.length > 0 && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span tabIndex={0}>
-                        <Button onClick={() => handleRunCompliance({ jobs: selectedJobIds })} disabled={isComplianceRunning}>
-                          <Bot className="mr-2" />
-                          Run Compliance ({selectedJobIds.length})
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    {isComplianceRunning && <TooltipContent><p>Compliance is running</p></TooltipContent>}
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span tabIndex={0}>
-                        <Button variant="destructive" onClick={handleDeleteSelectedJobs} disabled={isComplianceRunning}>
-                          <Trash2 className="mr-2" />
-                          Delete ({selectedJobIds.length})
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    {isComplianceRunning && <TooltipContent><p>Compliance is running</p></TooltipContent>}
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-               <Button variant="outline" onClick={() => selectedJobIds.length > 0 ? handleExportSelectedJobs() : handleExportAllJobs()}>
-                <Download className="mr-2 h-4 w-4" />
-                {selectedJobIds.length > 0 ? `Export (${selectedJobIds.length})` : 'Export All'}
-              </Button>
-            </div>
-          </div>
-           <JobTable 
-              jobs={filteredJobs} 
-              onDelete={handleDeleteJob} 
-              onEdit={handleEditJobClick}
-              selectedJobIds={selectedJobIds}
-              onSelectedJobIdsChange={setSelectedJobIds}
-              onRunCompliance={(jobId) => handleRunCompliance({ jobs: [jobId] })}
-              onExport={handleExportJob}
-              isComplianceRunning={isComplianceRunning}
+            <ReportModal 
+              isOpen={isReportModalOpen}
+              onOpenChange={setIsReportModalOpen}
+              logs={complianceLog}
             />
-        </TabsContent>
-      </Tabs>
-      
-      <AddDeviceDrawer 
-        isOpen={isDrawerOpen} 
-        onOpenChange={setIsDrawerOpen}
-        onSaveDevice={handleSaveDevice}
-        deviceToEdit={deviceToEdit}
-      />
-
-      <ImportDevicesModal
-        isOpen={isImportModalOpen}
-        onOpenChange={setIsImportModalOpen}
-        onImport={handleImportDevices}
-      />
-      
-      <AddJobDetailsModal
-        isOpen={isJobDetailsModalOpen}
-        onOpenChange={setIsJobDetailsModalOpen}
-        onContinue={handleJobDetailsContinue}
-        onSave={handleSaveJobDetails}
-        jobToEdit={jobToEdit}
-      />
-      
-      <AddJobModal
-        isOpen={isJobModalOpen} 
-        onOpenChange={setIsJobModalOpen}
-        onAddJob={handleAddJob}
-        jobDetails={currentJobDetails}
-      />
-
-      <RunComplianceModal
-        isOpen={isComplianceModalOpen}
-        devices={devices}
-        jobs={jobs}
-        initialSelectedDeviceIds={initialModalSelections.devices}
-        initialSelectedJobIds={initialModalSelections.jobs}
-      />
-
-      <ReportModal 
-        isOpen={isReportModalOpen}
-        onOpenChange={setIsReportModalOpen}
-        logs={complianceLog}
-      />
-
-      <ConfirmDeleteDialog
-        isOpen={isConfirmDialogOpen}
-        onOpenChange={setIsConfirmDialogOpen}
-        onConfirm={handleConfirmDelete}
-        itemType={itemToDelete?.type}
-        itemCount={itemToDelete?.ids.length}
-      />
-    </>
-  );
+        </>
+    );
 }

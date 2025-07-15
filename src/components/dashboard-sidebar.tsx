@@ -10,10 +10,19 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { Server } from 'lucide-react';
+import { Server, Combine, Briefcase } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export default function DashboardSidebar() {
+  const pathname = usePathname();
+
+  const menuItems = [
+    { href: "/dashboard", icon: <Server />, label: "Compliance Dashboard" },
+    { href: "/dashboard/devices", icon: <Combine />, label: "Manage Devices" },
+    { href: "/dashboard/jobs", icon: <Briefcase />, label: "Manage Jobs" },
+  ];
+
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
@@ -44,18 +53,20 @@ export default function DashboardSidebar() {
       </SidebarHeader>
       <SidebarContent className="p-2">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-                asChild
-                isActive={true}
-                tooltip="Manage Job Compliance"
-            >
-              <Link href="/dashboard">
-                <Server />
-                <span>Manage Job Compliance</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {menuItems.map((item) => (
+             <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href}
+                    tooltip={item.label}
+                >
+                  <Link href={item.href}>
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
         </SidebarMenu>
       </SidebarContent>
     </Sidebar>
