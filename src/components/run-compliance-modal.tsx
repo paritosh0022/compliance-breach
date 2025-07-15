@@ -69,8 +69,8 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
   
   const [onceSchedule, setOnceSchedule] = useState({ hour: "11", minute: "30", ampm: "AM" });
   
-  const [everyInterval, setEveryInterval] = useState("15");
-  const [everyUnit, setEveryUnit] = useState("minutes");
+  const [everyInterval, setEveryInterval] = useState("1");
+  const [everyUnit, setEveryUnit] = useState("days");
   
   const [dailySchedules, setDailySchedules] = useState([initialDailySchedule()]);
   const [weeklySchedules, setWeeklySchedules] = useState([initialWeeklySchedule()]);
@@ -80,13 +80,11 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
 
   useEffect(() => {
     if (isComplianceModalOpen) {
-      if (!isComplianceRunning) {
         setSelectedDevices(initialSelectedDeviceIds || []);
         setSelectedJobIds(initialSelectedJobIds || []);
         setViewMode('output');
-      }
     }
-  }, [isComplianceModalOpen, initialSelectedDeviceIds, initialSelectedJobIds, isComplianceRunning]);
+  }, [isComplianceModalOpen, initialSelectedDeviceIds, initialSelectedJobIds]);
 
   const filteredDevices = useMemo(() =>
     devices.filter((device) =>
@@ -277,7 +275,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
   };
 
   const getFormattedSchedule = () => {
-    const formatTime = (s) => `${s.hour.padStart(2, '0')}:${s.minute.padStart(2, '0')} ${s.ampm}`;
+    const formatTime = (s) => `${String(s.hour).padStart(2, '0')}:${String(s.minute).padStart(2, '0')} ${s.ampm}`;
     const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
     
     switch(scheduleMode) {
@@ -287,22 +285,27 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
       case 'every':
         const unit = everyUnit.endsWith('s') && everyInterval === '1' ? everyUnit.slice(0, -1) : everyUnit;
         return `Scheduled for every ${everyInterval} ${capitalize(unit)}`;
-      case 'daily':
+      case 'daily': {
         if (dailySchedules.length === 0) return "No daily schedules set";
-        const dailyTimes = dailySchedules.map(formatTime).join(', ');
+        const dailyTimes = dailySchedules.map(formatTime).join(' and ');
         return `Scheduled for everyday at ${dailyTimes}`;
-      case 'weekly':
+      }
+      case 'weekly': {
         if (weeklySchedules.length === 0) return "No weekly schedules set";
-        return weeklySchedules.map(s => {
-          const days = s.days.map(capitalize).join(', ');
-          return `Scheduled for every week ${days} at ${formatTime(s)}`;
-        }).join('; ');
-      case 'monthly':
+        const weeklyDetails = weeklySchedules.map(s => {
+          const days = s.days.map(d => capitalize(d)).join(', ');
+          return `${days} at ${formatTime(s)}`;
+        }).join(' and ');
+        return `Scheduled for every week ${weeklyDetails}`;
+      }
+      case 'monthly': {
         if (monthlySchedules.length === 0) return "No monthly schedules set";
-        return monthlySchedules.map(s => {
+        const monthlyDetails = monthlySchedules.map(s => {
             const dayWithSuffix = `${s.day}${getOrdinalSuffix(parseInt(s.day))}`;
-            return `Scheduled for every month ${dayWithSuffix} at ${formatTime(s)}`;
-        }).join('; ');
+            return `${dayWithSuffix} at ${formatTime(s)}`;
+        }).join(' and ');
+        return `Scheduled for every month ${monthlyDetails}`;
+      }
       default:
         return "Not scheduled";
     }
@@ -316,9 +319,9 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
   const finalGridClass = useMemo(() => {
     let baseCols = 'grid-cols-1 md:grid-cols-[1fr_1fr]';
     if(viewMode === 'schedule') {
-        baseCols = 'grid-cols-1 md:grid-cols-[1fr_1fr_1.5fr]';
+        baseCols = 'grid-cols-1 md:grid-cols-[minmax(200px,_1fr)_minmax(200px,_1fr)_1.5fr]';
     } else {
-        baseCols = 'grid-cols-1 md:grid-cols-[minmax(200px,_1fr)_minmax(200px,_1fr)_2fr]';
+        baseCols = 'grid-cols-1 md:grid-cols-[minmax(200px,_1fr)_minmax(200px,_1fr)_minmax(74px,2fr)]';
     }
     
     if (viewedDevice || viewedJob) {
@@ -327,7 +330,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
         } else if (viewMode === 'schedule') {
             baseCols = 'grid-cols-1 md:grid-cols-[1fr_1.5fr_1fr_1.5fr]';
         } else {
-            baseCols = 'grid-cols-1 md:grid-cols-[1fr_1.5fr_1fr_2fr]';
+            baseCols = 'grid-cols-1 md:grid-cols-[1fr_1.5fr_1fr_minmax(74px,2fr)]';
         }
     }
     
@@ -341,10 +344,13 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
       const scheduleToCheck = { ...currentSchedule };
       delete scheduleToCheck.id;
       delete scheduleToCheck.error;
+      
       const key = JSON.stringify(scheduleToCheck);
 
       const isDuplicate = seen.has(key);
-      seen.add(key);
+      if (!isDuplicate) {
+        seen.add(key);
+      }
 
       const newError = isDuplicate ? "Duplicate entry not allowed." : null;
       if (currentSchedule.error !== newError) {
@@ -361,7 +367,6 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
   useEffect(() => validateSchedules(dailySchedules, setDailySchedules), [dailySchedules, validateSchedules]);
   useEffect(() => validateSchedules(weeklySchedules, setWeeklySchedules), [weeklySchedules, validateSchedules]);
   useEffect(() => validateSchedules(monthlySchedules, setMonthlySchedules), [monthlySchedules, validateSchedules]);
-
 
   const renderScheduleControls = () => {
     const handleUpdateSchedule = (id, field, value, schedules, setSchedules) => {
@@ -511,8 +516,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
       default:
         return null;
     }
-  }
-
+  };
 
   return (
     <Dialog open={isComplianceModalOpen} onOpenChange={handleOpenChangeAndReset}>
@@ -526,7 +530,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
 
         <div className={cn("flex-1 grid gap-0 overflow-hidden", finalGridClass)}>
           {/* Column 1: Devices */}
-          <fieldset className="flex flex-col border-r min-h-0">
+          <div className="flex flex-col border-r min-h-0">
             <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
               <div className="flex items-center space-x-3">
                  <Checkbox
@@ -565,7 +569,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
                 {devices.length === 0 && ( <div className="text-center text-sm text-muted-foreground p-4">No devices available.</div> )}
               </div>
             </ScrollArea>
-          </fieldset>
+          </div>
 
           {/* Column 1.5: Device Details (Conditional) */}
           {viewedDevice && (
@@ -588,7 +592,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
           )}
 
           {/* Column 2: Jobs */}
-          <fieldset className="flex flex-col border-r min-h-0">
+          <div className="flex flex-col border-r min-h-0">
              <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
               <div className="flex items-center space-x-3">
                  <Checkbox
@@ -627,7 +631,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
                 {jobs.length === 0 && ( <div className="text-center text-sm text-muted-foreground p-4">No jobs available.</div> )}
               </div>
             </ScrollArea>
-          </fieldset>
+          </div>
 
           {/* Column 2.5: Job Details (Conditional) */}
           {viewedJob && (
@@ -641,7 +645,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
               <ScrollArea className="flex-1 p-4">
                  <div className="p-4 border rounded-lg bg-background/50 space-y-2 text-sm">
                     <h4 className="font-semibold">Job Details</h4>
-                    <p className="break-words"><strong className="text-muted-foreground">Command:</strong> <code>{viewedJob.command || 'N/A'}</code></p>
+                    <p className="break-words"><strong className="text-muted-foreground">Command:</strong> code>{viewedJob.command || 'N/A'}</code></p>
                     <p className="break-words"><strong className="text-muted-foreground">Template:</strong> <code>{viewedJob.template || 'N/A'}</code></p>
                 </div>
               </ScrollArea>
@@ -734,3 +738,5 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
     </Dialog>
   );
 }
+
+    
