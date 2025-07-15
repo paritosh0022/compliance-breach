@@ -308,7 +308,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
 
         <div className={cn("flex-1 grid gap-0 overflow-hidden", finalGridClass)}>
           {/* Column 1: Devices */}
-          <fieldset disabled={isComplianceRunning || viewMode === 'schedule'} className="flex flex-col border-r min-h-0 disabled:opacity-50 transition-opacity">
+          <fieldset disabled={isComplianceRunning} className="flex flex-col border-r min-h-0 disabled:opacity-50 transition-opacity">
             <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
               <div className="flex items-center space-x-3">
                  <Checkbox
@@ -370,7 +370,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
           )}
 
           {/* Column 2: Jobs */}
-          <fieldset disabled={isComplianceRunning || viewMode === 'schedule'} className="flex flex-col border-r min-h-0 disabled:opacity-50 transition-opacity">
+          <fieldset disabled={isComplianceRunning} className="flex flex-col border-r min-h-0 disabled:opacity-50 transition-opacity">
              <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
               <div className="flex items-center space-x-3">
                  <Checkbox
