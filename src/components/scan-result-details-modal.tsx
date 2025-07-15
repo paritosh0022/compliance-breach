@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useLayoutEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,8 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDeviceForDetails, setSelectedDeviceForDetails] = useState(null);
   const [expandedRows, setExpandedRows] = useState(new Set());
+  const [overflowingRows, setOverflowingRows] = useState(new Set());
+  const outputRefs = useRef({});
   const { toast } = useToast();
 
   const handleCloseModal = () => {
@@ -35,6 +37,8 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
       setSelectedDeviceForDetails(null);
       setSearchTerm("");
       setExpandedRows(new Set());
+      setOverflowingRows(new Set());
+      outputRefs.current = {};
     }, 300);
   };
   
@@ -94,6 +98,23 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
       device.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [processedData, searchTerm]);
+
+  useLayoutEffect(() => {
+    if (selectedDeviceForDetails) {
+      const newOverflowingRows = new Set();
+      for (const id in outputRefs.current) {
+        const element = outputRefs.current[id];
+        if (element && element.scrollWidth > element.clientWidth) {
+          newOverflowingRows.add(id);
+        }
+      }
+      // Check if there's a change to avoid infinite loops
+      if (newOverflowingRows.size !== overflowingRows.size || ![...newOverflowingRows].every(id => overflowingRows.has(id))) {
+          setOverflowingRows(newOverflowingRows);
+      }
+    }
+  }, [selectedDeviceForDetails, processedData, expandedRows, overflowingRows.size]); // Re-check on data change or expansion
+
 
   const { table } = useDataTable({
     data: filteredDevices,
@@ -293,26 +314,40 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                     <TableBody>
                       {selectedDeviceForDetails.results.map(result => (
                         <TableRow 
-                            key={`${result.deviceId}-${result.jobId}`}
+                            key={result.id}
                             className={cn(
-                                "transition-all",
+                                "align-top transition-all",
                                 expandedRows.has(result.id) ? "h-64" : "h-16"
                             )}
                         >
-                          <TableCell className="font-medium align-top">{result.jobName}</TableCell>
-                          <TableCell className="align-top">
+                          <TableCell className="font-medium align-top pt-3">{result.jobName}</TableCell>
+                          <TableCell className="align-top pt-3">
                             <Badge className={cn(getStatusBadgeClass(result.status))}>
                               {result.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="relative align-top">
-                            <p className={cn(
-                                "overflow-hidden text-ellipsis pr-20",
-                                !expandedRows.has(result.id) && "whitespace-nowrap max-w-[300px]"
-                            )}>
+                          <TableCell className="relative align-top pt-3">
+                            <p
+                                ref={el => outputRefs.current[result.id] = el}
+                                className={cn(
+                                  "overflow-hidden text-ellipsis pr-20",
+                                  !expandedRows.has(result.id) && "whitespace-nowrap"
+                                )}
+                              >
                                 {result.message}
                             </p>
                              <div className="absolute top-1 right-1 flex items-center gap-1">
+                                {overflowingRows.has(result.id) && (
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-6 w-6"
+                                        onClick={() => toggleRowExpansion(result.id)}
+                                    >
+                                        <Maximize2 className="h-4 w-4" />
+                                        <span className="sr-only">Expand Row</span>
+                                    </Button>
+                                )}
                                 <Button 
                                     variant="ghost" 
                                     size="icon" 
@@ -321,15 +356,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                                 >
                                     <Copy className="h-4 w-4" />
                                     <span className="sr-only">Copy Output</span>
-                                </Button>
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-6 w-6"
-                                    onClick={() => toggleRowExpansion(result.id)}
-                                >
-                                    <Maximize2 className="h-4 w-4" />
-                                    <span className="sr-only">Expand Row</span>
                                 </Button>
                              </div>
                           </TableCell>
@@ -351,7 +377,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
           <DialogTitle>Scan Result Details</DialogTitle>
           <DialogDescription>
             View detailed results for a specific compliance scan. You can see overall status and drill down into individual devices and jobs.
-          </DialogDescription>
+          </Dialog-Description>
         </DialogHeader>
         {selectedDeviceForDetails ? renderDeviceDetailView() : renderDeviceListView()}
       </DialogContent>
