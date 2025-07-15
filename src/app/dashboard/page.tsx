@@ -15,18 +15,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
-import { Download, Search, FileText } from 'lucide-react';
+import { Download, Search, FileText, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorageState from '@/hooks/use-local-storage-state';
 import ReportModal from '@/components/compliance-log-modal';
 import React from 'react';
 import { useDashboard } from '@/contexts/DashboardContext';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function DashboardPage() {
     const { complianceLog } = useDashboard();
     const { toast } = useToast();
     const [searchTerm, setSearchTerm] = useState("");
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    const [selectedScanIds, setSelectedScanIds] = useState([]);
     
     const groupedLogs = useMemo(() => {
       if (!complianceLog) return [];
@@ -78,6 +81,18 @@ export default function DashboardPage() {
   
       return filtered;
     }, [groupedLogs, searchTerm]);
+
+    const handleSelectAll = (checked) => {
+      setSelectedScanIds(checked ? filteredLogs.map(log => log.id) : []);
+    };
+    
+    const handleSelectRow = (id, checked) => {
+      if (checked) {
+        setSelectedScanIds([...selectedScanIds, id]);
+      } else {
+        setSelectedScanIds(selectedScanIds.filter(rowId => rowId !== id));
+      }
+    };
   
     const getStatusVariant = (status) => {
         switch (status) {
@@ -199,12 +214,19 @@ export default function DashboardPage() {
                    <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead className="w-[40px]">
+                            <Checkbox
+                              checked={filteredLogs.length > 0 && selectedScanIds.length === filteredLogs.length}
+                              onCheckedChange={handleSelectAll}
+                            />
+                          </TableHead>
                           <TableHead>Scan ID</TableHead>
+                          <TableHead>Last ran at</TableHead>
                           <TableHead>Job Name</TableHead>
                           <TableHead>Device</TableHead>
                           <TableHead>IP Address</TableHead>
-                          <TableHead>Last ran at</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -212,10 +234,23 @@ export default function DashboardPage() {
                           filteredLogs.map((group) => (
                             <React.Fragment key={group.id}>
                               {group.results.map((result, resultIndex) => (
-                                <TableRow key={`${group.id}-${result.deviceId}`}>
+                                <TableRow key={`${group.id}-${result.deviceId}`} data-state={selectedScanIds.includes(group.id) ? "selected" : ""}>
                                   {resultIndex === 0 && (
                                       <TableCell rowSpan={group.results.length} className="font-medium align-top border-r">
+                                          <Checkbox
+                                            checked={selectedScanIds.includes(group.id)}
+                                            onCheckedChange={(checked) => handleSelectRow(group.id, !!checked)}
+                                          />
+                                      </TableCell>
+                                  )}
+                                  {resultIndex === 0 && (
+                                      <TableCell rowSpan={group.results.length} className="font-medium align-top">
                                           {group.scanId}
+                                      </TableCell>
+                                  )}
+                                  {resultIndex === 0 && (
+                                      <TableCell rowSpan={group.results.length} className="align-top border-r">
+                                          {format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")}
                                       </TableCell>
                                   )}
                                   {resultIndex === 0 && (
@@ -225,13 +260,22 @@ export default function DashboardPage() {
                                   )}
                                   <TableCell className="align-top">{result.deviceName}</TableCell>
                                   <TableCell className="align-top">{result.deviceIpAddress}</TableCell>
-                                   {resultIndex === 0 && (
-                                      <TableCell rowSpan={group.results.length} className="align-top">
-                                          {format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")}
-                                      </TableCell>
-                                  )}
                                   <TableCell className="align-top">
                                     <Badge variant={getStatusVariant(result.status)}>{result.status}</Badge>
+                                  </TableCell>
+                                  <TableCell className="align-top text-right">
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                           <Button variant="ghost" size="icon" className="h-7 w-7">
+                                            <Eye className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>View Details</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
                                   </TableCell>
                                 </TableRow>
                               ))}
@@ -239,7 +283,7 @@ export default function DashboardPage() {
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={6} className="h-24 text-center">
+                            <TableCell colSpan={8} className="h-24 text-center">
                               No compliance history found.
                             </TableCell>
                           </TableRow>
