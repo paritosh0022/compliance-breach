@@ -61,19 +61,20 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     }));
 
     const resultsByDevice = updatedResults.reduce((acc, result) => {
-      if (!acc[result.deviceName]) {
-        acc[result.deviceName] = {
-          name: result.deviceName,
-          ipAddress: result.deviceIpAddress,
+      const deviceName = devicesMap[result.deviceId]?.name || result.deviceName;
+      if (!acc[deviceName]) {
+        acc[deviceName] = {
+          name: deviceName,
+          ipAddress: devicesMap[result.deviceId]?.ipAddress || result.deviceIpAddress,
           port: devicesMap[result.deviceId]?.port || 'N/A',
           username: devicesMap[result.deviceId]?.username || 'N/A',
           results: [],
           overallStatus: 'Success'
         };
       }
-      acc[result.deviceName].results.push(result);
+      acc[deviceName].results.push(result);
       if (result.status === 'Failed') {
-        acc[result.deviceName].overallStatus = 'Failed';
+        acc[deviceName].overallStatus = 'Failed';
       }
       return acc;
     }, {});
@@ -252,7 +253,14 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                                   aria-label={`Select ${device.name}`}
                                 />
                             </TableCell>
-                            <TableCell className="font-medium">{device.name}</TableCell>
+                            <TableCell className="font-medium">
+                                <div className="group flex items-center justify-between">
+                                    <span>{device.name}</span>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => setSelectedDeviceForDetails(device)}>
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </TableCell>
                             <TableCell>
                               <Badge
                                 className={cn("cursor-pointer", getStatusBadgeClass(device.overallStatus))}
@@ -330,13 +338,18 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Job</TableHead>
+                        <TableHead>
+                          Jobs
+                          <p className="text-xs font-normal text-muted-foreground mt-1">
+                            Click a status badge to see the output.
+                          </p>
+                        </TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {selectedDeviceForDetails.results.map(result => (
-                        <TableRow key={result.jobName}>
+                        <TableRow key={`${result.deviceId}-${result.jobId}`}>
                           <TableCell className="font-medium">{result.jobName}</TableCell>
                           <TableCell>
                             <Badge
