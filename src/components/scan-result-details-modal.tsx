@@ -106,10 +106,10 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
           </div>
         </div>
         <div className={cn(
-          "flex-1 grid min-h-0 transition-all duration-300 ease-in-out",
+          "flex-1 grid min-h-0 transition-all duration-300 ease-in-out pb-4",
           selectedResultForOutput ? "grid-cols-[2fr_1fr]" : "grid-cols-1"
         )}>
-          <div className="flex-1 min-h-0 px-4 pb-4">
+          <div className="flex-1 min-h-0 px-4">
             <ScrollArea className="h-full border rounded-lg">
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
@@ -171,7 +171,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
             </ScrollArea>
           </div>
           {selectedResultForOutput && (
-            <div className="flex flex-col border-l bg-muted/30 min-h-0 pr-4 pb-4">
+            <div className="flex flex-col border-l bg-muted/30 min-h-0 pr-4">
               <div className="p-4 border-b flex items-center justify-between">
                  <h3 className="font-semibold text-base truncate">Output</h3>
                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedResultForOutput(null)}>
