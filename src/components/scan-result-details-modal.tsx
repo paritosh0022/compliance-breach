@@ -9,6 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
@@ -52,7 +53,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
       return acc;
     }, {});
 
-    return { uniqueJobs, uniqueDevices, resultsMap };
+    return { uniqueJobs, uniqueDevices, resultsMap, stats: scanGroup.stats };
   }, [scanGroup]);
 
   const filteredDevices = useMemo(() => {
@@ -88,16 +89,16 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
 
   if (!processedData || !scanGroup) return null;
 
-  const { uniqueJobs, resultsMap } = processedData;
+  const { uniqueJobs, resultsMap, stats } = processedData;
 
-  const getStatusVariant = (status) => {
+  const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'Success':
-        return 'default';
+        return 'bg-green-500 hover:bg-green-600 text-primary-foreground';
       case 'Failed':
-        return 'destructive';
+        return 'bg-destructive hover:bg-destructive/80 text-destructive-foreground';
       default:
-        return 'secondary';
+        return 'bg-secondary text-secondary-foreground';
     }
   };
   
@@ -170,11 +171,37 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl w-[90vw] h-[80vh] flex flex-col p-0">
         <DialogHeader className="p-4 border-b">
-          <DialogTitle>Scan Result Details: {scanGroup.scanId}</DialogTitle>
+          <DialogTitle>Scan Result Details</DialogTitle>
           <DialogDescription>
             Matrix view of job statuses across all devices for this scan. Click a status badge to see the output.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="px-4 py-3 border-b">
+            <Card>
+                <CardContent className="p-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                        <div>
+                            <p className="text-sm text-muted-foreground">Scan ID</p>
+                            <p className="font-semibold">{scanGroup.scanId}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-muted-foreground">Devices Run</p>
+                            <p className="font-semibold">{stats?.run || 0}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-muted-foreground">Devices Passed</p>
+                            <p className="font-semibold text-green-600">{stats?.passed || 0}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-muted-foreground">Devices Failed</p>
+                            <p className="font-semibold text-destructive">{stats?.failed || 0}</p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+
         <div className="px-4 py-2">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -186,6 +213,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
             />
           </div>
         </div>
+
         <div className={cn(
           "flex-1 grid min-h-0 transition-all duration-300 ease-in-out pb-4",
           (selectedResultForOutput || viewedDevice || viewedJob) ? "grid-cols-[2fr_1fr]" : "grid-cols-1"
@@ -240,8 +268,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                             <TableCell key={jobName}>
                               {status ? (
                                 <Badge
-                                  variant={getStatusVariant(status)}
-                                  className={cn("cursor-pointer", isSelected && "ring-2 ring-offset-2 ring-primary ring-offset-background")}
+                                  className={cn("cursor-pointer", getStatusBadgeClass(status), isSelected && "ring-2 ring-offset-2 ring-primary ring-offset-background")}
                                   onClick={() => handleBadgeClick(device.name, jobName)}
                                 >
                                   {status}
