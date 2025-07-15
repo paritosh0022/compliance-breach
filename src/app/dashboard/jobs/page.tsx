@@ -64,7 +64,7 @@ export default function JobsPage() {
     pageCount: Math.ceil(filteredJobs.length / 10),
   });
 
-  const paginatedJobs = table.getRowModel().rows.map(row => row.original);
+  const paginatedRows = table.getRowModel().rows;
   const selectedJobIds = table.getSelectedRowModel().rows.map(row => row.original.id);
   
   const handleRunCompliance = (selections) => {
@@ -300,7 +300,7 @@ export default function JobsPage() {
             </div>
           </div>
            <JobTable 
-              jobs={paginatedJobs} 
+              rows={paginatedRows} 
               table={table}
               onDelete={handleDeleteJob} 
               onEdit={handleEditJobClick}
