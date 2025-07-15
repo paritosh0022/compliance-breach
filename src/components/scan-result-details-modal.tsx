@@ -189,7 +189,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
         </DialogHeader>
 
         <div className="px-4 py-3 border-b">
-            <Card>
+            <Card className="bg-transparent shadow-none">
                 <CardContent className="p-3">
                     <div className="flex items-center justify-around text-center">
                         <div>
@@ -230,10 +230,10 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
         </div>
 
         <div className={cn(
-          "flex-1 grid min-h-0 transition-all duration-300 ease-in-out",
+          "flex-1 grid min-h-0 transition-all duration-300 ease-in-out pb-4",
           (selectedResultForOutput || viewedDevice || viewedJob) ? "grid-cols-[2fr_1fr]" : "grid-cols-1"
         )}>
-          <div className="flex-1 min-h-0 px-4 pb-4 overflow-hidden flex flex-col">
+          <div className="flex-1 min-h-0 px-4 overflow-hidden flex flex-col">
              <div className="flex-grow border rounded-lg overflow-hidden">
                 <ScrollArea className="h-full">
                   <Table className="min-w-[1200px]">
@@ -276,13 +276,15 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                               className="group"
                             >
                               <TableCell className="font-medium border-r truncate sticky left-0 bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted">
-                                <div className="flex items-center gap-2">
-                                  <Checkbox
-                                    checked={row.getIsSelected()}
-                                    onCheckedChange={(value) => row.toggleSelected(!!value)}
-                                    aria-label={`Select ${device.name}`}
-                                  />
-                                  <span className="flex-1">{device.name}</span>
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      checked={row.getIsSelected()}
+                                      onCheckedChange={(value) => row.toggleSelected(!!value)}
+                                      aria-label={`Select ${device.name}`}
+                                    />
+                                    <span className="flex-1">{device.name}</span>
+                                  </div>
                                   <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handlePanelOpen('device', device)}>
                                       <Eye className="h-4 w-4" />
                                   </Button>
@@ -392,3 +394,5 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     </Dialog>
   );
 }
+
+    
