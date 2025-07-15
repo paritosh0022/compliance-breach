@@ -266,28 +266,47 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
     });
   };
   
+  const getOrdinalSuffix = (day) => {
+    if (day > 3 && day < 21) return 'th';
+    switch (day % 10) {
+      case 1:  return "st";
+      case 2:  return "nd";
+      case 3:  return "rd";
+      default: return "th";
+    }
+  };
+
   const getFormattedSchedule = () => {
     const formatTime = (s) => `${s.hour.padStart(2, '0')}:${s.minute.padStart(2, '0')} ${s.ampm}`;
+    const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
     
     switch(scheduleMode) {
       case 'once':
         if (!scheduleDate) return "Not scheduled";
-        return `Once on ${format(scheduleDate, "PPP")} at ${formatTime(onceSchedule)}`;
+        return `Scheduled on ${format(scheduleDate, "dd MMMM yyyy")}, ${formatTime(onceSchedule)}`;
       case 'every':
-        return `Every ${everyInterval} ${everyUnit}`;
+        const unit = everyUnit.endsWith('s') && everyInterval === '1' ? everyUnit.slice(0, -1) : everyUnit;
+        return `Scheduled for every ${everyInterval} ${capitalize(unit)}`;
       case 'daily':
         if (dailySchedules.length === 0) return "No daily schedules set";
-        return `Daily at ${dailySchedules.map(formatTime).join(', ')}`;
+        const dailyTimes = dailySchedules.map(formatTime).join(', ');
+        return `Scheduled for everyday at ${dailyTimes}`;
       case 'weekly':
         if (weeklySchedules.length === 0) return "No weekly schedules set";
-        return weeklySchedules.map(s => `Weekly on ${s.days.join(', ')} at ${formatTime(s)}`).join('; ');
+        return weeklySchedules.map(s => {
+          const days = s.days.map(capitalize).join(', ');
+          return `Scheduled for every week ${days} at ${formatTime(s)}`;
+        }).join('; ');
       case 'monthly':
         if (monthlySchedules.length === 0) return "No monthly schedules set";
-        return monthlySchedules.map(s => `Monthly on day ${s.day} at ${formatTime(s)}`).join('; ');
+        return monthlySchedules.map(s => {
+            const dayWithSuffix = `${s.day}${getOrdinalSuffix(parseInt(s.day))}`;
+            return `Scheduled for every month ${dayWithSuffix} at ${formatTime(s)}`;
+        }).join('; ');
       default:
         return "Not scheduled";
     }
-  }
+  };
   
   const handleRunInBackground = () => {
     setIsComplianceModalOpen(false);
@@ -430,7 +449,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
                                </Button>
                            )}
                         </div>
-                        {schedule.error && <p className="text-sm text-destructive">{schedule.error}</p>}
+                        {schedule.error && index > 0 && <p className="text-sm text-destructive">{schedule.error}</p>}
                     </div>
                 ))}
                 {renderAddButton(() => handleAddSchedule(setDailySchedules, initialDailySchedule))}
@@ -458,7 +477,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
                             <Label>at *</Label>
                             {renderTimeInputs(schedule, (field, value) => handleUpdateSchedule(schedule.id, field, value, weeklySchedules, setWeeklySchedules))}
                         </div>
-                        {schedule.error && <p className="text-sm text-destructive">{schedule.error}</p>}
+                        {schedule.error && index > 0 && <p className="text-sm text-destructive">{schedule.error}</p>}
                     </div>
                 ))}
                 {renderAddButton(() => handleAddSchedule(setWeeklySchedules, initialWeeklySchedule))}
@@ -483,7 +502,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
                                 </Button>
                             )}
                          </div>
-                         {schedule.error && <p className="text-sm text-destructive">{schedule.error}</p>}
+                         {schedule.error && index > 0 && <p className="text-sm text-destructive">{schedule.error}</p>}
                      </div>
                 ))}
                 {renderAddButton(() => handleAddSchedule(setMonthlySchedules, initialMonthlySchedule))}
