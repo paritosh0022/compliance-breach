@@ -68,6 +68,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
   const [everyInterval, setEveryInterval] = useState("15");
   const [everyUnit, setEveryUnit] = useState("minutes");
   const [weeklyDays, setWeeklyDays] = useState(["mon"]);
+  const [monthlyDay, setMonthlyDay] = useState("1");
   
   const { toast } = useToast();
 
@@ -248,6 +249,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
       everyInterval,
       everyUnit,
       weeklyDays,
+      monthlyDay,
     };
     
     onScheduleJob(scheduleDetails, {
@@ -270,8 +272,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
           if (weeklyDays.length === 0) return `Select days to run weekly at ${displayTime}`;
           return `Scheduled to run on ${weeklyDays.join(', ')} at ${displayTime}`;
         case 'monthly':
-          if (!scheduleDate) return "Not scheduled";
-          return `Scheduled to run monthly on day ${format(scheduleDate, "do")} at ${displayTime}`;
+          return `Scheduled to run on day ${monthlyDay} of the month at ${displayTime}`;
         default:
           return "Not scheduled";
       }
@@ -308,7 +309,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
 
         <div className={cn("flex-1 grid gap-0 overflow-hidden", finalGridClass)}>
           {/* Column 1: Devices */}
-          <fieldset disabled={isComplianceRunning} className="flex flex-col border-r min-h-0 disabled:opacity-50 transition-opacity">
+          <fieldset className="flex flex-col border-r min-h-0 transition-opacity">
             <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
               <div className="flex items-center space-x-3">
                  <Checkbox
@@ -370,7 +371,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
           )}
 
           {/* Column 2: Jobs */}
-          <fieldset disabled={isComplianceRunning} className="flex flex-col border-r min-h-0 disabled:opacity-50 transition-opacity">
+          <fieldset className="flex flex-col border-r min-h-0 transition-opacity">
              <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
               <div className="flex items-center space-x-3">
                  <Checkbox
@@ -518,11 +519,41 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
                             </div>
                         )}
 
-                        {['once', 'daily', 'weekly', 'monthly'].includes(scheduleMode) && (
+                        {scheduleMode === 'monthly' && (
+                           <div className="space-y-2">
+                                <Label>at *</Label>
+                                <div className="flex flex-wrap items-center gap-2">
+                                   <Button variant="outline" className="font-normal" disabled>Day of the month</Button>
+                                    <Select value={monthlyDay} onValueChange={setMonthlyDay}>
+                                        <SelectTrigger className="w-24">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                                                <SelectItem key={day} value={String(day)}>{day}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <div className="flex items-center gap-2 flex-1">
+                                        <Input id="hour" type="number" className="w-16" value={scheduleHour} onChange={(e) => setScheduleHour(e.target.value)} min="1" max="12"/>
+                                        <span>:</span>
+                                        <Input id="minute" type="number" className="w-16" value={scheduleMinute} onChange={(e) => setScheduleMinute(e.target.value)} min="0" max="59"/>
+                                        <Tabs value={scheduleAmPm} onValueChange={setScheduleAmPm} className="w-[100px]">
+                                            <TabsList className="grid w-full grid-cols-2">
+                                                <TabsTrigger value="AM">AM</TabsTrigger>
+                                                <TabsTrigger value="PM">PM</TabsTrigger>
+                                            </TabsList>
+                                        </Tabs>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {(scheduleMode === 'once' || scheduleMode === 'daily') && (
                             <div className="space-y-2">
-                            <Label>At</Label>
+                            <Label>at *</Label>
                             <div className="flex flex-wrap items-center gap-2">
-                                {scheduleMode !== 'daily' && (
+                                {scheduleMode === 'once' && (
                                      <Popover>
                                         <PopoverTrigger asChild>
                                             <Button variant={"outline"} className={cn("w-[240px] justify-start text-left font-normal",!scheduleDate && "text-muted-foreground")}>
@@ -547,6 +578,23 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
                                     </Tabs>
                                 </div>
                             </div>
+                            </div>
+                        )}
+                        
+                        {scheduleMode === 'weekly' && (
+                            <div className="space-y-2">
+                                <Label>at *</Label>
+                                <div className="flex items-center gap-2 flex-1">
+                                    <Input id="hour" type="number" className="w-16" value={scheduleHour} onChange={(e) => setScheduleHour(e.target.value)} min="1" max="12"/>
+                                    <span>:</span>
+                                    <Input id="minute" type="number" className="w-16" value={scheduleMinute} onChange={(e) => setScheduleMinute(e.target.value)} min="0" max="59"/>
+                                    <Tabs value={scheduleAmPm} onValueChange={setScheduleAmPm} className="w-[100px]">
+                                        <TabsList className="grid w-full grid-cols-2">
+                                            <TabsTrigger value="AM">AM</TabsTrigger>
+                                            <TabsTrigger value="PM">PM</TabsTrigger>
+                                        </TabsList>
+                                    </Tabs>
+                                </div>
                             </div>
                         )}
 
