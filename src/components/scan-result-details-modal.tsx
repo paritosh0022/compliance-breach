@@ -238,6 +238,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                       </TableHead>
                       <TableHead>Device Name</TableHead>
                       <TableHead>Compliance Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -254,27 +255,24 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                                 />
                             </TableCell>
                             <TableCell className="font-medium">
-                                <div className="group flex items-center justify-between">
-                                    <span>{device.name}</span>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => setSelectedDeviceForDetails(device)}>
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                </div>
+                                {device.name}
                             </TableCell>
                             <TableCell>
-                              <Badge
-                                className={cn("cursor-pointer", getStatusBadgeClass(device.overallStatus))}
-                                onClick={() => setSelectedDeviceForDetails(device)}
-                              >
+                              <Badge className={cn(getStatusBadgeClass(device.overallStatus))}>
                                 {device.overallStatus}
                               </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedDeviceForDetails(device)}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
                             </TableCell>
                           </TableRow>
                         );
                       })
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={3} className="h-24 text-center">
+                        <TableCell colSpan={4} className="h-24 text-center">
                           No devices found for this search term.
                         </TableCell>
                       </TableRow>
