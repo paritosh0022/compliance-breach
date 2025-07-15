@@ -147,7 +147,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
           "flex-1 grid min-h-0 transition-all duration-300 ease-in-out pb-4",
           selectedResultForOutput ? "grid-cols-[2fr_1fr]" : "grid-cols-1"
         )}>
-          <div className="flex-1 min-h-0 px-4">
+          <div className="flex-1 min-h-0 px-4 overflow-hidden">
             <ScrollArea className="h-full border rounded-lg">
               <Table className="min-w-[1200px]">
                 <TableHeader className="sticky top-0 bg-background z-10">
