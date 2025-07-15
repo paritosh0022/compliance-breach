@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -14,13 +15,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Play, Copy, Download, Eye, X, Calendar as CalendarIcon } from "lucide-react";
+import { Search, Play, Copy, Download, Eye, X, Calendar as CalendarIcon, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "./ui/textarea";
 import { cn } from "@/lib/utils";
 import { useDashboard } from "@/contexts/DashboardContext";
+import { Label } from "./ui/label";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Calendar } from "./ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
+import { Alert, AlertDescription } from "./ui/alert";
 
-export default function RunComplianceModal({ devices, jobs, initialSelectedDeviceIds, initialSelectedJobIds, onOpenScheduleModal }) {
+const daysOfWeek = [
+    { value: "sun", label: "S" },
+    { value: "mon", label: "M" },
+    { value: "tue", label: "T" },
+    { value: "wed", label: "W" },
+    { value: "thu", label: "T" },
+    { value: "fri", label: "F" },
+    { value: "sat", label: "S" },
+];
+
+export default function RunComplianceModal({ devices, jobs, initialSelectedDeviceIds, initialSelectedJobIds, onScheduleJob }) {
   const {
     isComplianceModalOpen,
     setIsComplianceModalOpen,
@@ -39,15 +57,26 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
   const [output, setOutput] = useState("");
   const [viewedJob, setViewedJob] = useState(null);
   const [viewedDevice, setViewedDevice] = useState(null);
+  const [viewMode, setViewMode] = useState('output'); // 'output' or 'schedule'
+  
+  // State for scheduling
+  const [scheduleMode, setScheduleMode] = useState("once");
+  const [scheduleDate, setScheduleDate] = useState(new Date());
+  const [scheduleHour, setScheduleHour] = useState("11");
+  const [scheduleMinute, setScheduleMinute] = useState("30");
+  const [scheduleAmPm, setScheduleAmPm] = useState("AM");
+  const [everyInterval, setEveryInterval] = useState("15");
+  const [everyUnit, setEveryUnit] = useState("minutes");
+  const [weeklyDays, setWeeklyDays] = useState(["mon"]);
   
   const { toast } = useToast();
 
   useEffect(() => {
     if (isComplianceModalOpen) {
-      // Don't reset selections if a run is active
       if (!isComplianceRunning) {
         setSelectedDevices(initialSelectedDeviceIds || []);
         setSelectedJobIds(initialSelectedJobIds || []);
+        setViewMode('output');
       }
     }
   }, [isComplianceModalOpen, initialSelectedDeviceIds, initialSelectedJobIds, isComplianceRunning]);
@@ -108,15 +137,12 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
   };
 
   const handleOpenChangeAndReset = (isOpen) => {
-    // This is the new logic to handle closing via 'X' or Escape
     if (!isOpen && isComplianceRunning) {
-      handleRunInBackground(); // Keep it running
-      return; // Prevent reset logic below
+      handleRunInBackground();
+      return;
     }
     
-    // When closing the modal...
     if (!isOpen) {
-        // ...if a compliance check is NOT running, reset the modal to a clean state for next time.
         if (!isComplianceRunning) {
             setSelectedDevices(initialSelectedDeviceIds || []);
             setSelectedJobIds(initialSelectedJobIds || []);
@@ -125,9 +151,9 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
             setOutput("");
             setViewedJob(null);
             setViewedDevice(null);
+            setViewMode('output');
         }
     }
-    // Always update the modal's open state.
     setIsComplianceModalOpen(isOpen);
   };
 
@@ -182,12 +208,12 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
       setIsComplianceRunning(false);
       setComplianceRunProcess(null);
 
-    }, 3000); // 3 seconds
+    }, 3000);
 
     setComplianceRunProcess(process);
   };
 
-  const handleScheduleRun = () => {
+  const handleScheduleRunClick = () => {
     if (selectedJobIds.length === 0 || selectedDevices.length === 0) {
       toast({
         variant: "destructive",
@@ -196,11 +222,60 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
       });
       return;
     }
-    onOpenScheduleModal({
+    setViewMode('schedule');
+  };
+
+  const handleSaveSchedule = () => {
+    if (!scheduleDate && scheduleMode === 'once') {
+        toast({variant: 'destructive', title: "Please select a date."});
+        return;
+    }
+    const hourNum = parseInt(scheduleHour);
+    const minuteNum = parseInt(scheduleMinute);
+    if (isNaN(hourNum) || hourNum < 1 || hourNum > 12) {
+        toast({variant: 'destructive', title: "Please enter a valid hour (1-12)."});
+        return;
+    }
+    if (isNaN(minuteNum) || minuteNum < 0 || minuteNum > 59) {
+        toast({variant: 'destructive', title: "Please enter a valid minute (0-59)."});
+        return;
+    }
+
+    const scheduleDetails = {
+      mode: scheduleMode,
+      date: scheduleDate ? scheduleDate.toISOString() : undefined,
+      time: `${scheduleHour.padStart(2, "0")}:${scheduleMinute.padStart(2, "0")} ${scheduleAmPm}`,
+      everyInterval,
+      everyUnit,
+      weeklyDays,
+    };
+    
+    onScheduleJob(scheduleDetails, {
       deviceIds: selectedDevices,
       jobIds: selectedJobIds,
     });
   };
+  
+  const getFormattedSchedule = () => {
+      const displayTime = `${scheduleHour.padStart(2, "0")}:${scheduleMinute.padStart(2, "0")} ${scheduleAmPm}`;
+      switch(scheduleMode) {
+        case 'once':
+          if (!scheduleDate) return "Not scheduled";
+          return `Scheduled for once on ${format(scheduleDate, "PPP")} at ${displayTime}`;
+        case 'every':
+          return `Scheduled to run every ${everyInterval} ${everyUnit}`;
+        case 'daily':
+          return `Scheduled to run every day at ${displayTime}`;
+        case 'weekly':
+          if (weeklyDays.length === 0) return `Select days to run weekly at ${displayTime}`;
+          return `Scheduled to run on ${weeklyDays.join(', ')} at ${displayTime}`;
+        case 'monthly':
+          if (!scheduleDate) return "Not scheduled";
+          return `Scheduled to run monthly on day ${format(scheduleDate, "do")} at ${displayTime}`;
+        default:
+          return "Not scheduled";
+      }
+  }
   
   const handleRunInBackground = () => {
     setIsComplianceModalOpen(false);
@@ -208,15 +283,17 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
   };
   
   const finalGridClass = useMemo(() => {
-    let classParts = ['md:grid-cols-3'];
-    if (viewedDevice || viewedJob) {
-      classParts = ['md:grid-cols-[1fr_1.5fr_1fr_1fr]'];
+    let baseCols = 'grid-cols-1 md:grid-cols-3';
+    if(viewMode === 'schedule') {
+        baseCols = 'grid-cols-1 md:grid-cols-[1fr_1fr_1.5fr]'
+    } else if (viewedDevice || viewedJob) {
+        baseCols = 'grid-cols-1 md:grid-cols-[1fr_1.5fr_1fr_1fr]';
     }
     if (viewedDevice && viewedJob) {
-      classParts = ['md:grid-cols-[1fr_1.5fr_1fr_1.5fr_1fr]'];
+        baseCols = 'grid-cols-1 md:grid-cols-[1fr_1.5fr_1fr_1.5fr_1fr]';
     }
-    return cn('grid-cols-1', ...classParts);
-  }, [viewedDevice, viewedJob]);
+    return cn(baseCols);
+  }, [viewedDevice, viewedJob, viewMode]);
 
 
   return (
@@ -231,7 +308,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
 
         <div className={cn("flex-1 grid gap-0 overflow-hidden", finalGridClass)}>
           {/* Column 1: Devices */}
-          <fieldset disabled={isComplianceRunning} className="flex flex-col border-r min-h-0 disabled:opacity-50 transition-opacity">
+          <fieldset disabled={isComplianceRunning || viewMode === 'schedule'} className="flex flex-col border-r min-h-0 disabled:opacity-50 transition-opacity">
             <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
               <div className="flex items-center space-x-3">
                  <Checkbox
@@ -273,7 +350,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
           </fieldset>
 
           {/* Column 1.5: Device Details (Conditional) */}
-          {viewedDevice && (
+          {viewedDevice && viewMode === 'output' && (
             <div className="flex flex-col border-r bg-muted/30 min-h-0">
               <div className="p-4 border-b flex items-center justify-between h-[73px]">
                 <h3 className="font-semibold text-base truncate">Details: {viewedDevice.name}</h3>
@@ -293,7 +370,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
           )}
 
           {/* Column 2: Jobs */}
-          <fieldset disabled={isComplianceRunning} className="flex flex-col border-r min-h-0 disabled:opacity-50 transition-opacity">
+          <fieldset disabled={isComplianceRunning || viewMode === 'schedule'} className="flex flex-col border-r min-h-0 disabled:opacity-50 transition-opacity">
              <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
               <div className="flex items-center space-x-3">
                  <Checkbox
@@ -335,7 +412,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
           </fieldset>
 
           {/* Column 2.5: Job Details (Conditional) */}
-          {viewedJob && (
+          {viewedJob && viewMode === 'output' && (
             <div className="flex flex-col border-r bg-muted/30 min-h-0">
               <div className="p-4 border-b flex items-center justify-between h-[73px]">
                 <h3 className="font-semibold text-base truncate">Details: {viewedJob.name}</h3>
@@ -353,43 +430,133 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
             </div>
           )}
           
-          {/* Last Column: Output */}
-          <div className="flex flex-col min-h-0">
-            <div className="p-4 border-b flex items-center justify-between h-[73px]">
-              <h3 className="font-semibold text-base">Output</h3>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handleScheduleRun} disabled={isComplianceRunning || selectedJobIds.length === 0 || selectedDevices.length === 0}>
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  Schedule Run
-                </Button>
-                <Button size="sm" onClick={handleRunNow} disabled={isComplianceRunning || selectedJobIds.length === 0 || selectedDevices.length === 0}>
-                  <Play className="mr-2 h-4 w-4" />
-                  {isComplianceRunning ? 'Running...' : 'Run Now'}
-                </Button>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopyOutput} disabled={!output || isComplianceRunning}>
-                  <Copy className="h-4 w-4" />
-                  <span className="sr-only">Copy Output</span>
-                </Button>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleDownloadCsv} disabled={!output || isComplianceRunning}>
-                  <Download className="h-4 w-4" />
-                  <span className="sr-only">Download CSV</span>
-                </Button>
-              </div>
+          {/* Last Column: Output or Schedule */}
+          {viewMode === 'output' ? (
+            <div className="flex flex-col min-h-0">
+                <div className="p-4 border-b flex items-center justify-between h-[73px]">
+                <h3 className="font-semibold text-base">Output</h3>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={handleScheduleRunClick} disabled={isComplianceRunning || selectedJobIds.length === 0 || selectedDevices.length === 0}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    Schedule Run
+                    </Button>
+                    <Button size="sm" onClick={handleRunNow} disabled={isComplianceRunning || selectedJobIds.length === 0 || selectedDevices.length === 0}>
+                    <Play className="mr-2 h-4 w-4" />
+                    {isComplianceRunning ? 'Running...' : 'Run Now'}
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopyOutput} disabled={!output || isComplianceRunning}>
+                    <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleDownloadCsv} disabled={!output || isComplianceRunning}>
+                    <Download className="h-4 w-4" />
+                    </Button>
+                </div>
+                </div>
+                {isComplianceRunning && (
+                <div className="relative h-1 w-full overflow-hidden bg-primary/20">
+                    <div className="h-full w-full animate-progress-indeterminate bg-primary" />
+                </div>
+                )}
+                <div className="flex-1 min-h-0">
+                <Textarea
+                    readOnly
+                    value={output}
+                    placeholder="Compliance check output will be displayed here."
+                    className="h-full w-full resize-none border-0 rounded-none bg-muted/50 p-4 font-mono text-xs focus-visible:ring-transparent focus-visible:ring-offset-0"
+                />
+                </div>
             </div>
-            {isComplianceRunning && (
-              <div className="relative h-1 w-full overflow-hidden bg-primary/20">
-                  <div className="h-full w-full animate-progress-indeterminate bg-primary" />
-              </div>
-            )}
-            <div className="flex-1 min-h-0">
-              <Textarea
-                readOnly
-                value={output}
-                placeholder="Compliance check output will be displayed here."
-                className="h-full w-full resize-none border-0 rounded-none bg-muted/50 p-4 font-mono text-xs focus-visible:ring-transparent focus-visible:ring-offset-0"
-              />
+          ) : (
+            <div className="flex flex-col min-h-0">
+                 <div className="p-4 border-b flex items-center justify-between h-[73px]">
+                    <div className="flex items-center gap-2">
+                         <Button variant="ghost" size="icon" onClick={() => setViewMode('output')} className="h-8 w-8">
+                            <ArrowLeft className="h-4 w-4" />
+                         </Button>
+                         <h3 className="font-semibold text-base">Schedule Run</h3>
+                    </div>
+                    <Button size="sm" onClick={handleSaveSchedule}>Save Schedule</Button>
+                 </div>
+                 <ScrollArea className="flex-1">
+                    <div className="p-4 space-y-6">
+                        <div className="space-y-2">
+                            <Label>Schedule Mode</Label>
+                            <Tabs value={scheduleMode} onValueChange={setScheduleMode}>
+                            <TabsList className="grid w-full grid-cols-5">
+                                <TabsTrigger value="once">Once</TabsTrigger>
+                                <TabsTrigger value="every">Every</TabsTrigger>
+                                <TabsTrigger value="daily">Daily</TabsTrigger>
+                                <TabsTrigger value="weekly">Weekly</TabsTrigger>
+                                <TabsTrigger value="monthly">Monthly</TabsTrigger>
+                            </TabsList>
+                            </Tabs>
+                        </div>
+
+                        {scheduleMode === 'every' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="every-interval">Run every</Label>
+                                <div className="flex items-center gap-2">
+                                <Input id="every-interval" type="number" className="w-24" value={everyInterval} onChange={(e) => setEveryInterval(e.target.value)} min="1"/>
+                                <Select value={everyUnit} onValueChange={setEveryUnit}>
+                                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select unit" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="minutes">Minutes</SelectItem>
+                                        <SelectItem value="hours">Hours</SelectItem>
+                                        <SelectItem value="days">Days</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                </div>
+                            </div>
+                        )}
+
+                        {scheduleMode === 'weekly' && (
+                            <div className="space-y-2">
+                                <Label>Run on these days</Label>
+                                <ToggleGroup type="multiple" variant="outline" value={weeklyDays} onValueChange={(value) => { if (value) setWeeklyDays(value);}} className="justify-start">
+                                    {daysOfWeek.map(day => (<ToggleGroupItem key={day.value} value={day.value}>{day.label}</ToggleGroupItem>))}
+                                </ToggleGroup>
+                            </div>
+                        )}
+
+                        {['once', 'daily', 'weekly', 'monthly'].includes(scheduleMode) && (
+                            <div className="space-y-2">
+                            <Label>At</Label>
+                            <div className="flex flex-wrap items-center gap-2">
+                                {scheduleMode !== 'daily' && (
+                                     <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant={"outline"} className={cn("w-[240px] justify-start text-left font-normal",!scheduleDate && "text-muted-foreground")}>
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {scheduleDate ? format(scheduleDate, "PPP") : <span>Pick a date</span>}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar mode="single" selected={scheduleDate} onSelect={(newDate) => setScheduleDate(newDate || new Date())} initialFocus/>
+                                        </PopoverContent>
+                                    </Popover>
+                                )}
+                                <div className="flex items-center gap-2 flex-1">
+                                    <Input id="hour" type="number" className="w-16" value={scheduleHour} onChange={(e) => setScheduleHour(e.target.value)} min="1" max="12"/>
+                                    <span>:</span>
+                                    <Input id="minute" type="number" className="w-16" value={scheduleMinute} onChange={(e) => setScheduleMinute(e.target.value)} min="0" max="59"/>
+                                    <Tabs value={scheduleAmPm} onValueChange={setScheduleAmPm} className="w-[100px]">
+                                        <TabsList className="grid w-full grid-cols-2">
+                                            <TabsTrigger value="AM">AM</TabsTrigger>
+                                            <TabsTrigger value="PM">PM</TabsTrigger>
+                                        </TabsList>
+                                    </Tabs>
+                                </div>
+                            </div>
+                            </div>
+                        )}
+
+                        <Alert>
+                            <AlertDescription>{getFormattedSchedule()}</AlertDescription>
+                        </Alert>
+                    </div>
+                 </ScrollArea>
             </div>
-          </div>
+          )}
         </div>
 
         <DialogFooter className="p-4 border-t">

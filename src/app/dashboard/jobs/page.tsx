@@ -16,7 +16,6 @@ import useLocalStorageState from '@/hooks/use-local-storage-state';
 import ConfirmDeleteDialog from '@/components/confirm-delete-dialog';
 import { useDashboard } from '@/contexts/DashboardContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import ScheduleRunModal from '@/components/schedule-run-modal';
 
 export default function JobsPage() {
   const {
@@ -31,7 +30,6 @@ export default function JobsPage() {
   const [isJobDetailsModalOpen, setIsJobDetailsModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   
   const [devices, setDevices] = useLocalStorageState('devices', []);
   const [jobs, setJobs] = useLocalStorageState('jobs', []);
@@ -43,7 +41,6 @@ export default function JobsPage() {
   const [initialModalSelections, setInitialModalSelections] = useState({});
   const [itemToDelete, setItemToDelete] = useState(null);
   const [jobSearchTerm, setJobSearchTerm] = useState("");
-  const [complianceRunConfig, setComplianceRunConfig] = useState(null);
 
   const { toast } = useToast();
 
@@ -210,14 +207,8 @@ export default function JobsPage() {
     setJobToEdit(null);
     setIsJobDetailsModalOpen(true);
   }
-  
-  const handleOpenScheduleModal = (config) => {
-    setComplianceRunConfig(config);
-    setIsComplianceModalOpen(false);
-    setIsScheduleModalOpen(true);
-  };
 
-  const handleScheduleJob = (scheduleDetails) => {
+  const handleScheduleJob = (scheduleDetails, complianceRunConfig) => {
     const newScheduledJob = {
       id: crypto.randomUUID(),
       ...complianceRunConfig,
@@ -228,7 +219,7 @@ export default function JobsPage() {
       title: "Job Scheduled",
       description: "The compliance check has been scheduled successfully.",
     });
-    setIsScheduleModalOpen(false);
+    setIsComplianceModalOpen(false);
   };
 
   if (!isClient) {
@@ -328,13 +319,7 @@ export default function JobsPage() {
         jobs={jobs}
         initialSelectedDeviceIds={initialModalSelections.devices}
         initialSelectedJobIds={initialModalSelections.jobs}
-        onOpenScheduleModal={handleOpenScheduleModal}
-      />
-      
-      <ScheduleRunModal
-        isOpen={isScheduleModalOpen}
-        onOpenChange={setIsScheduleModalOpen}
-        onSchedule={handleScheduleJob}
+        onScheduleJob={handleScheduleJob}
       />
 
       <ReportModal 
