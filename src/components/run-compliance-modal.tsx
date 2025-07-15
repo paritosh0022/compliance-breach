@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Play, Copy, Download, Eye, X, Calendar as CalendarIcon, ArrowLeft } from "lucide-react";
+import { Search, Play, Copy, Download, Eye, X, Calendar as CalendarIcon, ArrowLeft, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "./ui/textarea";
 import { cn } from "@/lib/utils";
@@ -37,6 +37,10 @@ const daysOfWeek = [
     { value: "fri", label: "F" },
     { value: "sat", label: "S" },
 ];
+
+const initialDailySchedule = () => ({ id: crypto.randomUUID(), hour: '11', minute: '30', ampm: 'AM', error: null });
+const initialWeeklySchedule = () => ({ id: crypto.randomUUID(), days: ['mon'], hour: '11', minute: '30', ampm: 'AM', error: null });
+const initialMonthlySchedule = () => ({ id: crypto.randomUUID(), day: '1', hour: '11', minute: '30', ampm: 'AM', error: null });
 
 export default function RunComplianceModal({ devices, jobs, initialSelectedDeviceIds, initialSelectedJobIds, onScheduleJob }) {
   const {
@@ -62,13 +66,15 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
   // State for scheduling
   const [scheduleMode, setScheduleMode] = useState("once");
   const [scheduleDate, setScheduleDate] = useState(new Date());
-  const [scheduleHour, setScheduleHour] = useState("11");
-  const [scheduleMinute, setScheduleMinute] = useState("30");
-  const [scheduleAmPm, setScheduleAmPm] = useState("AM");
+  
+  const [onceSchedule, setOnceSchedule] = useState({ hour: "11", minute: "30", ampm: "AM" });
+  
   const [everyInterval, setEveryInterval] = useState("15");
   const [everyUnit, setEveryUnit] = useState("minutes");
-  const [weeklyDays, setWeeklyDays] = useState(["mon"]);
-  const [monthlyDay, setMonthlyDay] = useState("1");
+  
+  const [dailySchedules, setDailySchedules] = useState([initialDailySchedule()]);
+  const [weeklySchedules, setWeeklySchedules] = useState([initialWeeklySchedule()]);
+  const [monthlySchedules, setMonthlySchedules] = useState([initialMonthlySchedule()]);
   
   const { toast } = useToast();
 
@@ -153,6 +159,10 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
             setViewedJob(null);
             setViewedDevice(null);
             setViewMode('output');
+            setScheduleMode('once');
+            setDailySchedules([initialDailySchedule()]);
+            setWeeklySchedules([initialWeeklySchedule()]);
+            setMonthlySchedules([initialMonthlySchedule()]);
         }
     }
     setIsComplianceModalOpen(isOpen);
@@ -227,30 +237,28 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
   };
 
   const handleSaveSchedule = () => {
-    if (!scheduleDate && scheduleMode === 'once') {
-        toast({variant: 'destructive', title: "Please select a date."});
-        return;
-    }
-    const hourNum = parseInt(scheduleHour);
-    const minuteNum = parseInt(scheduleMinute);
-    if (isNaN(hourNum) || hourNum < 1 || hourNum > 12) {
-        toast({variant: 'destructive', title: "Please enter a valid hour (1-12)."});
-        return;
-    }
-    if (isNaN(minuteNum) || minuteNum < 0 || minuteNum > 59) {
-        toast({variant: 'destructive', title: "Please enter a valid minute (0-59)."});
-        return;
-    }
-
     const scheduleDetails = {
       mode: scheduleMode,
-      date: scheduleDate ? scheduleDate.toISOString() : undefined,
-      time: `${scheduleHour.padStart(2, "0")}:${scheduleMinute.padStart(2, "0")} ${scheduleAmPm}`,
-      everyInterval,
-      everyUnit,
-      weeklyDays,
-      monthlyDay,
+      once: { date: scheduleDate, ...onceSchedule },
+      every: { interval: everyInterval, unit: everyUnit },
+      daily: dailySchedules.map(({id, error, ...rest}) => rest),
+      weekly: weeklySchedules.map(({id, error, ...rest}) => rest),
+      monthly: monthlySchedules.map(({id, error, ...rest}) => rest),
     };
+    
+    // Validate before saving
+    if (
+      dailySchedules.some(s => s.error) ||
+      weeklySchedules.some(s => s.error) ||
+      monthlySchedules.some(s => s.error)
+    ) {
+      toast({
+        variant: 'destructive',
+        title: 'Duplicate Schedules',
+        description: 'Please fix the duplicate schedule entries before saving.',
+      });
+      return;
+    }
     
     onScheduleJob(scheduleDetails, {
       deviceIds: selectedDevices,
@@ -259,23 +267,26 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
   };
   
   const getFormattedSchedule = () => {
-      const displayTime = `${scheduleHour.padStart(2, "0")}:${scheduleMinute.padStart(2, "0")} ${scheduleAmPm}`;
-      switch(scheduleMode) {
-        case 'once':
-          if (!scheduleDate) return "Not scheduled";
-          return `Scheduled for once on ${format(scheduleDate, "PPP")} at ${displayTime}`;
-        case 'every':
-          return `Scheduled to run every ${everyInterval} ${everyUnit}`;
-        case 'daily':
-          return `Scheduled to run every day at ${displayTime}`;
-        case 'weekly':
-          if (weeklyDays.length === 0) return `Select days to run weekly at ${displayTime}`;
-          return `Scheduled to run on ${weeklyDays.join(', ')} at ${displayTime}`;
-        case 'monthly':
-          return `Scheduled to run on day ${monthlyDay} of the month at ${displayTime}`;
-        default:
-          return "Not scheduled";
-      }
+    const formatTime = (s) => `${s.hour.padStart(2, '0')}:${s.minute.padStart(2, '0')} ${s.ampm}`;
+    
+    switch(scheduleMode) {
+      case 'once':
+        if (!scheduleDate) return "Not scheduled";
+        return `Once on ${format(scheduleDate, "PPP")} at ${formatTime(onceSchedule)}`;
+      case 'every':
+        return `Every ${everyInterval} ${everyUnit}`;
+      case 'daily':
+        if (dailySchedules.length === 0) return "No daily schedules set";
+        return `Daily at ${dailySchedules.map(formatTime).join(', ')}`;
+      case 'weekly':
+        if (weeklySchedules.length === 0) return "No weekly schedules set";
+        return weeklySchedules.map(s => `Weekly on ${s.days.join(', ')} at ${formatTime(s)}`).join('; ');
+      case 'monthly':
+        if (monthlySchedules.length === 0) return "No monthly schedules set";
+        return monthlySchedules.map(s => `Monthly on day ${s.day} at ${formatTime(s)}`).join('; ');
+      default:
+        return "Not scheduled";
+    }
   }
   
   const handleRunInBackground = () => {
@@ -284,17 +295,195 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
   };
   
   const finalGridClass = useMemo(() => {
-    let baseCols = 'grid-cols-1 md:grid-cols-3';
+    let baseCols = 'grid-cols-1 md:grid-cols-[1fr_1fr]';
     if(viewMode === 'schedule') {
-        baseCols = 'grid-cols-1 md:grid-cols-[1fr_1fr_1.5fr]'
-    } else if (viewedDevice || viewedJob) {
-        baseCols = 'grid-cols-1 md:grid-cols-[1fr_1.5fr_1fr_1fr]';
+        baseCols = 'grid-cols-1 md:grid-cols-[1fr_1fr_1.5fr]';
+    } else {
+        baseCols = 'grid-cols-1 md:grid-cols-[1fr_1fr_2fr]';
     }
-    if (viewedDevice && viewedJob) {
-        baseCols = 'grid-cols-1 md:grid-cols-[1fr_1.5fr_1fr_1.5fr_1fr]';
+    
+    if (viewedDevice || viewedJob) {
+        if(viewedDevice && viewedJob) {
+          baseCols = 'grid-cols-1 md:grid-cols-[1fr_1.5fr_1fr_1.5fr_1fr]';
+        } else if (viewMode === 'schedule') {
+            baseCols = 'grid-cols-1 md:grid-cols-[1fr_1.5fr_1fr_1.5fr]';
+        } else {
+            baseCols = 'grid-cols-1 md:grid-cols-[1fr_1.5fr_1fr_2fr]';
+        }
     }
+    
     return cn(baseCols);
   }, [viewedDevice, viewedJob, viewMode]);
+
+  const validateSchedules = (schedules, setSchedules) => {
+    const newSchedules = schedules.map((currentSchedule, index) => {
+      const isDuplicate = schedules.some((otherSchedule, otherIndex) => {
+        if (index === otherIndex) return false;
+        
+        const stringifiedCurrent = JSON.stringify(Object.fromEntries(Object.entries(otherSchedule).filter(([key]) => key !== 'id' && key !== 'error')));
+        const stringifiedOther = JSON.stringify(Object.fromEntries(Object.entries(currentSchedule).filter(([key]) => key !== 'id' && key !== 'error')));
+        
+        return stringifiedCurrent === stringifiedOther;
+      });
+      return { ...currentSchedule, error: isDuplicate ? "Duplicate entry not allowed." : null };
+    });
+    setSchedules(newSchedules);
+  };
+  
+  useEffect(() => validateSchedules(dailySchedules, setDailySchedules), [dailySchedules]);
+  useEffect(() => validateSchedules(weeklySchedules, setWeeklySchedules), [weeklySchedules]);
+  useEffect(() => validateSchedules(monthlySchedules, setMonthlySchedules), [monthlySchedules]);
+
+
+  const renderScheduleControls = () => {
+    const handleUpdateSchedule = (id, field, value, schedules, setSchedules) => {
+      const newSchedules = schedules.map(s => s.id === id ? { ...s, [field]: value } : s);
+      setSchedules(newSchedules);
+    };
+
+    const handleAddSchedule = (setSchedules, initializer) => {
+        setSchedules(prev => [...prev, initializer()]);
+    };
+    
+    const handleDeleteSchedule = (id, schedules, setSchedules) => {
+        setSchedules(schedules.filter(s => s.id !== id));
+    };
+
+    const renderTimeInputs = (schedule, updateFn) => (
+       <div className="flex items-center gap-2">
+            <Input id="hour" type="number" className="w-16" value={schedule.hour} onChange={(e) => updateFn('hour', e.target.value)} min="1" max="12"/>
+            <span>:</span>
+            <Input id="minute" type="number" className="w-16" value={schedule.minute} onChange={(e) => updateFn('minute', e.target.value)} min="0" max="59"/>
+            <Tabs value={schedule.ampm} onValueChange={(v) => updateFn('ampm', v)} className="w-[100px]">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="AM">AM</TabsTrigger>
+                    <TabsTrigger value="PM">PM</TabsTrigger>
+                </TabsList>
+            </Tabs>
+        </div>
+    );
+    
+    const renderAddButton = (onClick) => (
+        <Button variant="outline" size="sm" onClick={onClick} className="mt-2">
+            <Plus className="mr-2 h-4 w-4" /> Add Schedule
+        </Button>
+    );
+
+    switch (scheduleMode) {
+      case 'once':
+        return (
+            <div className="space-y-2">
+                <Label>at *</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant={"outline"} className={cn("w-[240px] justify-start text-left font-normal",!scheduleDate && "text-muted-foreground")}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {scheduleDate ? format(scheduleDate, "PPP") : <span>Pick a date</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={scheduleDate} onSelect={(newDate) => setScheduleDate(newDate || new Date())} initialFocus/>
+                        </PopoverContent>
+                    </Popover>
+                    {renderTimeInputs(onceSchedule, (field, value) => setOnceSchedule(prev => ({...prev, [field]: value})))}
+                </div>
+            </div>
+        );
+      case 'every':
+        return (
+            <div className="space-y-2">
+                <Label htmlFor="every-interval">Run every</Label>
+                <div className="flex items-center gap-2">
+                <Input id="every-interval" type="number" className="w-24" value={everyInterval} onChange={(e) => setEveryInterval(e.target.value)} min="1"/>
+                <Select value={everyUnit} onValueChange={setEveryUnit}>
+                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select unit" /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="minutes">Minutes</SelectItem>
+                        <SelectItem value="hours">Hours</SelectItem>
+                        <SelectItem value="days">Days</SelectItem>
+                    </SelectContent>
+                </Select>
+                </div>
+            </div>
+        );
+      case 'daily':
+        return (
+            <>
+                {dailySchedules.map((schedule, index) => (
+                    <div key={schedule.id} className="space-y-2">
+                        {index === 0 && <Label>at *</Label>}
+                        <div className="flex items-center gap-2">
+                           {renderTimeInputs(schedule, (field, value) => handleUpdateSchedule(schedule.id, field, value, dailySchedules, setDailySchedules))}
+                           {dailySchedules.length > 1 && (
+                               <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteSchedule(schedule.id, dailySchedules, setDailySchedules)}>
+                                   <Trash2 className="h-4 w-4"/>
+                               </Button>
+                           )}
+                        </div>
+                        {schedule.error && <p className="text-sm text-destructive">{schedule.error}</p>}
+                    </div>
+                ))}
+                {renderAddButton(() => handleAddSchedule(setDailySchedules, initialDailySchedule))}
+            </>
+        );
+      case 'weekly':
+        return (
+            <>
+                {weeklySchedules.map((schedule, index) => (
+                    <div key={schedule.id} className="space-y-4 p-3 border rounded-lg">
+                        <div className="flex justify-between items-start">
+                             <div className="space-y-2">
+                                <Label>Run on these days</Label>
+                                <ToggleGroup type="multiple" variant="outline" value={schedule.days} onValueChange={(value) => handleUpdateSchedule(schedule.id, 'days', value.length > 0 ? value : schedule.days, weeklySchedules, setWeeklySchedules)} className="justify-start flex-wrap">
+                                    {daysOfWeek.map(day => (<ToggleGroupItem key={day.value} value={day.value}>{day.label}</ToggleGroupItem>))}
+                                </ToggleGroup>
+                            </div>
+                            {weeklySchedules.length > 1 && (
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteSchedule(schedule.id, weeklySchedules, setWeeklySchedules)}>
+                                   <Trash2 className="h-4 w-4"/>
+                                </Button>
+                            )}
+                        </div>
+                        <div className="space-y-2">
+                            <Label>at *</Label>
+                            {renderTimeInputs(schedule, (field, value) => handleUpdateSchedule(schedule.id, field, value, weeklySchedules, setWeeklySchedules))}
+                        </div>
+                        {schedule.error && <p className="text-sm text-destructive">{schedule.error}</p>}
+                    </div>
+                ))}
+                {renderAddButton(() => handleAddSchedule(setWeeklySchedules, initialWeeklySchedule))}
+            </>
+        );
+      case 'monthly':
+        return (
+            <>
+                {monthlySchedules.map((schedule, index) => (
+                     <div key={schedule.id} className="space-y-2">
+                        {index === 0 && <Label>at *</Label>}
+                         <div className="flex items-center gap-2">
+                            <Button variant="outline" className="font-normal" disabled>Day of the month</Button>
+                            <Select value={schedule.day} onValueChange={(v) => handleUpdateSchedule(schedule.id, 'day', v, monthlySchedules, setMonthlySchedules)}>
+                                <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+                                <SelectContent>{Array.from({ length: 31 }, (_, i) => i + 1).map(d => (<SelectItem key={d} value={String(d)}>{d}</SelectItem>))}</SelectContent>
+                            </Select>
+                            {renderTimeInputs(schedule, (field, value) => handleUpdateSchedule(schedule.id, field, value, monthlySchedules, setMonthlySchedules))}
+                            {monthlySchedules.length > 1 && (
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteSchedule(schedule.id, monthlySchedules, setMonthlySchedules)}>
+                                   <Trash2 className="h-4 w-4"/>
+                                </Button>
+                            )}
+                         </div>
+                         {schedule.error && <p className="text-sm text-destructive">{schedule.error}</p>}
+                     </div>
+                ))}
+                {renderAddButton(() => handleAddSchedule(setMonthlySchedules, initialMonthlySchedule))}
+            </>
+        );
+      default:
+        return null;
+    }
+  }
 
 
   return (
@@ -309,7 +498,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
 
         <div className={cn("flex-1 grid gap-0 overflow-hidden", finalGridClass)}>
           {/* Column 1: Devices */}
-          <fieldset className="flex flex-col border-r min-h-0 transition-opacity">
+          <fieldset className="flex flex-col border-r min-h-0">
             <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
               <div className="flex items-center space-x-3">
                  <Checkbox
@@ -351,7 +540,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
           </fieldset>
 
           {/* Column 1.5: Device Details (Conditional) */}
-          {viewedDevice && viewMode === 'output' && (
+          {viewedDevice && (
             <div className="flex flex-col border-r bg-muted/30 min-h-0">
               <div className="p-4 border-b flex items-center justify-between h-[73px]">
                 <h3 className="font-semibold text-base truncate">Details: {viewedDevice.name}</h3>
@@ -371,7 +560,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
           )}
 
           {/* Column 2: Jobs */}
-          <fieldset className="flex flex-col border-r min-h-0 transition-opacity">
+          <fieldset className="flex flex-col border-r min-h-0">
              <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
               <div className="flex items-center space-x-3">
                  <Checkbox
@@ -413,7 +602,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
           </fieldset>
 
           {/* Column 2.5: Job Details (Conditional) */}
-          {viewedJob && viewMode === 'output' && (
+          {viewedJob && (
             <div className="flex flex-col border-r bg-muted/30 min-h-0">
               <div className="p-4 border-b flex items-center justify-between h-[73px]">
                 <h3 className="font-semibold text-base truncate">Details: {viewedJob.name}</h3>
@@ -492,111 +681,8 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
                             </TabsList>
                             </Tabs>
                         </div>
-
-                        {scheduleMode === 'every' && (
-                            <div className="space-y-2">
-                                <Label htmlFor="every-interval">Run every</Label>
-                                <div className="flex items-center gap-2">
-                                <Input id="every-interval" type="number" className="w-24" value={everyInterval} onChange={(e) => setEveryInterval(e.target.value)} min="1"/>
-                                <Select value={everyUnit} onValueChange={setEveryUnit}>
-                                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select unit" /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="minutes">Minutes</SelectItem>
-                                        <SelectItem value="hours">Hours</SelectItem>
-                                        <SelectItem value="days">Days</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                </div>
-                            </div>
-                        )}
-
-                        {scheduleMode === 'weekly' && (
-                            <div className="space-y-2">
-                                <Label>Run on these days</Label>
-                                <ToggleGroup type="multiple" variant="outline" value={weeklyDays} onValueChange={(value) => { if (value) setWeeklyDays(value);}} className="justify-start">
-                                    {daysOfWeek.map(day => (<ToggleGroupItem key={day.value} value={day.value}>{day.label}</ToggleGroupItem>))}
-                                </ToggleGroup>
-                            </div>
-                        )}
-
-                        {scheduleMode === 'monthly' && (
-                           <div className="space-y-2">
-                                <Label>at *</Label>
-                                <div className="flex flex-wrap items-center gap-2">
-                                   <Button variant="outline" className="font-normal" disabled>Day of the month</Button>
-                                    <Select value={monthlyDay} onValueChange={setMonthlyDay}>
-                                        <SelectTrigger className="w-24">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                                                <SelectItem key={day} value={String(day)}>{day}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <div className="flex items-center gap-2 flex-1">
-                                        <Input id="hour" type="number" className="w-16" value={scheduleHour} onChange={(e) => setScheduleHour(e.target.value)} min="1" max="12"/>
-                                        <span>:</span>
-                                        <Input id="minute" type="number" className="w-16" value={scheduleMinute} onChange={(e) => setScheduleMinute(e.target.value)} min="0" max="59"/>
-                                        <Tabs value={scheduleAmPm} onValueChange={setScheduleAmPm} className="w-[100px]">
-                                            <TabsList className="grid w-full grid-cols-2">
-                                                <TabsTrigger value="AM">AM</TabsTrigger>
-                                                <TabsTrigger value="PM">PM</TabsTrigger>
-                                            </TabsList>
-                                        </Tabs>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {(scheduleMode === 'once' || scheduleMode === 'daily') && (
-                            <div className="space-y-2">
-                            <Label>at *</Label>
-                            <div className="flex flex-wrap items-center gap-2">
-                                {scheduleMode === 'once' && (
-                                     <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button variant={"outline"} className={cn("w-[240px] justify-start text-left font-normal",!scheduleDate && "text-muted-foreground")}>
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {scheduleDate ? format(scheduleDate, "PPP") : <span>Pick a date</span>}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar mode="single" selected={scheduleDate} onSelect={(newDate) => setScheduleDate(newDate || new Date())} initialFocus/>
-                                        </PopoverContent>
-                                    </Popover>
-                                )}
-                                <div className="flex items-center gap-2 flex-1">
-                                    <Input id="hour" type="number" className="w-16" value={scheduleHour} onChange={(e) => setScheduleHour(e.target.value)} min="1" max="12"/>
-                                    <span>:</span>
-                                    <Input id="minute" type="number" className="w-16" value={scheduleMinute} onChange={(e) => setScheduleMinute(e.target.value)} min="0" max="59"/>
-                                    <Tabs value={scheduleAmPm} onValueChange={setScheduleAmPm} className="w-[100px]">
-                                        <TabsList className="grid w-full grid-cols-2">
-                                            <TabsTrigger value="AM">AM</TabsTrigger>
-                                            <TabsTrigger value="PM">PM</TabsTrigger>
-                                        </TabsList>
-                                    </Tabs>
-                                </div>
-                            </div>
-                            </div>
-                        )}
                         
-                        {scheduleMode === 'weekly' && (
-                            <div className="space-y-2">
-                                <Label>at *</Label>
-                                <div className="flex items-center gap-2 flex-1">
-                                    <Input id="hour" type="number" className="w-16" value={scheduleHour} onChange={(e) => setScheduleHour(e.target.value)} min="1" max="12"/>
-                                    <span>:</span>
-                                    <Input id="minute" type="number" className="w-16" value={scheduleMinute} onChange={(e) => setScheduleMinute(e.target.value)} min="0" max="59"/>
-                                    <Tabs value={scheduleAmPm} onValueChange={setScheduleAmPm} className="w-[100px]">
-                                        <TabsList className="grid w-full grid-cols-2">
-                                            <TabsTrigger value="AM">AM</TabsTrigger>
-                                            <TabsTrigger value="PM">PM</TabsTrigger>
-                                        </TabsList>
-                                    </Tabs>
-                                </div>
-                            </div>
-                        )}
+                        {renderScheduleControls()}
 
                         <Alert>
                             <AlertDescription>{getFormattedSchedule()}</AlertDescription>
@@ -620,3 +706,5 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
     </Dialog>
   );
 }
+
+    
