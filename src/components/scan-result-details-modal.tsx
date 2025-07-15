@@ -189,7 +189,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
         </DialogHeader>
 
         <div className="px-4 py-3 border-b">
-            <Card className="bg-transparent shadow-none">
+            <Card className="bg-transparent shadow-none border">
                 <CardContent className="p-3">
                     <div className="flex items-center justify-around text-center">
                         <div>
@@ -238,8 +238,11 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                 <ScrollArea className="h-full">
                   <Table className="min-w-[1200px]">
                     <TableHeader className="sticky top-0 bg-background z-10">
-                       <TableRow>
-                        <TableHead colSpan={uniqueJobs.length + 1} className="text-center border-b font-bold">Job Status Matrix</TableHead>
+                      <TableRow>
+                        <TableHead colSpan={uniqueJobs.length + 1} className="text-center border-b p-2">
+                          <p className="font-bold">Jobs</p>
+                          <p className="text-xs text-muted-foreground font-normal">Click a status badge to see the output.</p>
+                        </TableHead>
                       </TableRow>
                       <TableRow>
                         <TableHead className="w-[250px] min-w-[250px] sticky left-0 bg-background z-10 border-r">
@@ -394,5 +397,3 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     </Dialog>
   );
 }
-
-    
