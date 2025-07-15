@@ -14,30 +14,25 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Input } from "./ui/input";
-import { Search, X, Copy, Download, Eye, ArrowLeft } from "lucide-react";
+import { Search, Eye, ArrowLeft, Maximize2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "./ui/checkbox";
-import { useToast } from "@/hooks/use-toast";
-import Papa from "papaparse";
 import { useDataTable } from "@/hooks/use-data-table";
 import { DataTablePagination } from "./data-table-pagination";
 
 export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup, jobs = [], devices = [] }) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedResultForOutput, setSelectedResultForOutput] = useState(null);
-  const [viewedJob, setViewedJob] = useState(null);
   const [selectedDeviceForDetails, setSelectedDeviceForDetails] = useState(null);
-  const { toast } = useToast();
+  const [expandedRows, setExpandedRows] = useState(new Set());
 
   const handleCloseModal = () => {
     onOpenChange(false);
     // Reset internal state when modal closes
     setTimeout(() => {
       setSelectedDeviceForDetails(null);
-      setSelectedResultForOutput(null);
       setSearchTerm("");
-      setViewedJob(null);
+      setExpandedRows(new Set());
     }, 300);
   };
   
@@ -56,6 +51,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
 
     const updatedResults = scanGroup.results.map(result => ({
       ...result,
+      id: `${result.deviceId}-${result.jobId}`, // Create a unique ID for the result
       deviceName: devicesMap[result.deviceId]?.name || result.deviceName,
       deviceIpAddress: devicesMap[result.deviceId]?.ipAddress || result.deviceIpAddress,
       jobName: jobsMap[result.jobId]?.name || result.jobName,
@@ -85,7 +81,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
       devices: Object.values(resultsByDevice),
       stats: scanGroup.stats,
       scanId: scanGroup.scanId,
-      allResults: updatedResults 
     };
   }, [scanGroup, jobs, devices]);
 
@@ -105,16 +100,10 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   });
 
   const paginatedRows = table.getRowModel().rows;
-  const selectedDeviceNames = table.getSelectedRowModel().rows.map(row => row.original.name);
   
-  const handlePanelClose = () => {
-    setSelectedResultForOutput(null);
-    setViewedJob(null);
-  }
-
   if (!processedData || !scanGroup) return null;
 
-  const { stats, scanId, allResults } = processedData;
+  const { stats, scanId } = processedData;
 
   const getStatusBadgeClass = (status) => {
     switch (status) {
@@ -127,90 +116,46 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     }
   };
   
-  const handleCopy = () => {
-    if (selectedResultForOutput?.message) {
-      navigator.clipboard.writeText(selectedResultForOutput.message);
-      toast({ title: "Success", description: "Output copied to clipboard." });
-    }
+  const toggleRowExpansion = (rowId) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(rowId)) {
+        newSet.delete(rowId);
+      } else {
+        newSet.add(rowId);
+      }
+      return newSet;
+    });
   };
 
-  const handleExport = () => {
-    const isExportingSelected = selectedDeviceNames.length > 0;
-    
-    let resultsToExport;
-    if (isExportingSelected) {
-      resultsToExport = allResults.filter(result => selectedDeviceNames.includes(result.deviceName));
-    } else {
-      resultsToExport = allResults;
-    }
-    
-    if (resultsToExport.length === 0) {
-      toast({
-        variant: 'destructive',
-        title: 'No Data to Export',
-        description: 'There are no results to export for the current selection.',
-      });
-      return;
-    }
-
-    const dataForCsv = resultsToExport.map(r => ({
-      scan_id: scanId,
-      device_name: r.deviceName,
-      ip_address: r.deviceIpAddress,
-      job_name: r.jobName,
-      status: r.status,
-      message: r.message,
-    }));
-
-    const csv = Papa.unparse(dataForCsv);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    const filename = `scan_results_${scanId}_${isExportingSelected ? 'selected' : 'all'}.csv`;
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-  
-  const handleJobDetailsClick = (jobName) => {
-    const job = jobs.find(j => j.name === jobName);
-    if (job) {
-      setViewedJob(job);
-      setSelectedResultForOutput(null);
-    }
-  };
-  
   const renderDeviceListView = () => (
     <>
-      <div className="px-4 py-3 border-b">
-          <Card className="bg-transparent shadow-none border">
-              <CardContent className="p-3">
-                  <div className="flex items-center justify-around text-center">
-                      <div>
-                          <p className="text-sm text-muted-foreground">Scan ID</p>
-                          <p className="font-semibold">{scanId}</p>
-                      </div>
-                      <div>
-                          <p className="text-sm text-muted-foreground">Devices Run</p>
-                          <Badge variant="secondary">{stats?.run || 0}</Badge>
-                      </div>
-                      <div>
-                          <p className="text-sm text-muted-foreground">Devices Passed</p>
-                          <Badge className="bg-green-500 hover:bg-green-600">{stats?.passed || 0}</Badge>
-                      </div>
-                      <div>
-                          <p className="text-sm text-muted-foreground">Devices Failed</p>
-                          <Badge variant="destructive">{stats?.failed || 0}</Badge>
-                      </div>
-                  </div>
-              </CardContent>
-          </Card>
+      <div className="p-4">
+        <Card className="bg-transparent shadow-none border">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-around text-center">
+              <div>
+                <p className="text-sm text-muted-foreground">Scan ID</p>
+                <p className="font-semibold">{scanId}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Devices Run</p>
+                <Badge variant="secondary">{stats?.run || 0}</Badge>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Devices Passed</p>
+                <Badge className="bg-green-500 hover:bg-green-600">{stats?.passed || 0}</Badge>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Devices Failed</p>
+                <Badge variant="destructive">{stats?.failed || 0}</Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="px-4 py-2 flex items-center justify-between gap-4">
+      <div className="px-4 pb-2 flex items-center justify-between gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -220,10 +165,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button variant="outline" onClick={handleExport}>
-          <Download className="mr-2 h-4 w-4" />
-          {selectedDeviceNames.length > 0 ? `Export (${selectedDeviceNames.length})` : 'Export All'}
-        </Button>
       </div>
        <div className="flex-1 min-h-0 px-4 pb-4 flex flex-col">
            <div className="flex-grow border rounded-lg overflow-hidden">
@@ -293,8 +234,8 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     
     return (
       <div className="flex flex-col h-full">
-         <div className="p-4 border-b flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedDeviceForDetails(null)}>
+        <div className="p-4 border-b flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedDeviceForDetails(null); setExpandedRows(new Set()); }}>
                 <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
@@ -325,12 +266,8 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                 </CardContent>
             </Card>
         </div>
-
-        <div className={cn(
-          "flex-1 grid min-h-0 transition-all duration-300 ease-in-out",
-          (selectedResultForOutput || viewedJob) ? "grid-cols-[2fr_1fr]" : "grid-cols-1"
-        )}>
-           <div className="flex-1 flex flex-col min-h-0 px-4 py-4">
+        
+        <div className="flex-1 flex flex-col min-h-0 px-4 py-4">
              <div className="flex-grow border rounded-lg overflow-hidden flex flex-col">
                 <ScrollArea className="h-full">
                   <Table>
@@ -338,24 +275,38 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                       <TableRow>
                         <TableHead>
                           Jobs
-                          <p className="text-xs font-normal text-muted-foreground mt-1">
-                            Click a status badge to see the output.
-                          </p>
                         </TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Output</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {selectedDeviceForDetails.results.map(result => (
-                        <TableRow key={`${result.deviceId}-${result.jobId}`}>
-                          <TableCell className="font-medium">{result.jobName}</TableCell>
-                          <TableCell>
-                            <Badge
-                              className={cn("cursor-pointer", getStatusBadgeClass(result.status))}
-                              onClick={() => setSelectedResultForOutput(result)}
-                            >
+                        <TableRow 
+                            key={result.id}
+                            className={cn(
+                                "transition-[height]",
+                                expandedRows.has(result.id) ? "h-32" : "h-16"
+                            )}
+                        >
+                          <TableCell className="font-medium align-top">{result.jobName}</TableCell>
+                          <TableCell className="align-top">
+                            <Badge className={cn(getStatusBadgeClass(result.status))}>
                               {result.status}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="relative group align-top">
+                            <p className={cn("overflow-hidden text-ellipsis whitespace-nowrap", !expandedRows.has(result.id) && "max-w-[300px]")}>
+                                {result.message}
+                            </p>
+                             <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100"
+                                onClick={() => toggleRowExpansion(result.id)}
+                            >
+                                <Maximize2 className="h-4 w-4" />
+                             </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -363,33 +314,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                   </Table>
                 </ScrollArea>
              </div>
-           </div>
-
-           {(selectedResultForOutput || viewedJob) && (
-            <div className="flex flex-col border-l bg-muted/30 min-h-0">
-               {selectedResultForOutput && (
-                    <>
-                        <div className="p-4 border-b flex items-center justify-between">
-                            <h3 className="font-semibold text-base truncate">Output</h3>
-                            <div className="flex items-center gap-2">
-                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopy}>
-                                    <Copy className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePanelClose}>
-                                    <X className="h-4 w-4" />
-                                    <span className="sr-only">Close Panel</span>
-                                </Button>
-                            </div>
-                        </div>
-                        <ScrollArea className="flex-1 p-4">
-                            <pre className="whitespace-pre-wrap text-sm font-mono">
-                            {selectedResultForOutput.message}
-                            </pre>
-                        </ScrollArea>
-                    </>
-               )}
-            </div>
-          )}
         </div>
       </div>
     );
@@ -410,4 +334,3 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     </Dialog>
   );
 }
-
