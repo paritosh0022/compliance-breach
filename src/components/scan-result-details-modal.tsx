@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Input } from "./ui/input";
-import { Search, X, Copy, Download, Eye } from "lucide-react";
+import { Search, X, Copy, Download, Eye, ArrowLeft } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "./ui/checkbox";
@@ -26,10 +26,20 @@ import { DataTablePagination } from "./data-table-pagination";
 export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup, jobs = [], devices = [] }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedResultForOutput, setSelectedResultForOutput] = useState(null);
-  const [viewedDevice, setViewedDevice] = useState(null);
   const [viewedJob, setViewedJob] = useState(null);
+  const [selectedDeviceForDetails, setSelectedDeviceForDetails] = useState(null);
   const { toast } = useToast();
 
+  const handleCloseModal = () => {
+    onOpenChange(false);
+    // Reset internal state when modal closes
+    setTimeout(() => {
+      setSelectedDeviceForDetails(null);
+      setSelectedResultForOutput(null);
+      setSearchTerm("");
+    }, 300);
+  };
+  
   const processedData = useMemo(() => {
     if (!scanGroup || !scanGroup.results) return null;
 
@@ -43,46 +53,44 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
         return acc;
     }, {});
 
-    const updatedResults = scanGroup.results.map(result => {
-        const currentDevice = devicesMap[result.deviceId];
-        const currentJob = jobsMap[result.jobId];
-        return {
-            ...result,
-            deviceName: currentDevice ? currentDevice.name : result.deviceName,
-            jobName: currentJob ? currentJob.name : result.jobName,
-        };
-    });
-    
-    const uniqueJobs = [...new Set(updatedResults.map(r => r.jobName))];
-    
-    const deviceMap = updatedResults.reduce((acc, result) => {
-        const currentDevice = devicesMap[result.deviceId];
-        if (!acc[result.deviceName]) {
-            acc[result.deviceName] = {
-                name: result.deviceName,
-                ipAddress: currentDevice ? currentDevice.ipAddress : result.deviceIpAddress,
-                username: currentDevice ? currentDevice.username : 'N/A', 
-                port: currentDevice ? currentDevice.port : 'N/A'
-            };
-        }
-        return acc;
-    }, {});
-    const uniqueDevices = Object.values(deviceMap);
+    const updatedResults = scanGroup.results.map(result => ({
+      ...result,
+      deviceName: devicesMap[result.deviceId]?.name || result.deviceName,
+      deviceIpAddress: devicesMap[result.deviceId]?.ipAddress || result.deviceIpAddress,
+      jobName: jobsMap[result.jobId]?.name || result.jobName,
+    }));
 
-    const resultsMap = updatedResults.reduce((acc, result) => {
-      const key = `${result.deviceName}-${result.jobName}`;
-      acc[key] = { status: result.status, message: result.message, timestamp: scanGroup.timestamp, scanId: scanGroup.scanId };
+    const resultsByDevice = updatedResults.reduce((acc, result) => {
+      if (!acc[result.deviceName]) {
+        acc[result.deviceName] = {
+          name: result.deviceName,
+          ipAddress: result.deviceIpAddress,
+          port: devicesMap[result.deviceId]?.port || 'N/A',
+          username: devicesMap[result.deviceId]?.username || 'N/A',
+          results: [],
+          overallStatus: 'Success'
+        };
+      }
+      acc[result.deviceName].results.push(result);
+      if (result.status === 'Failed') {
+        acc[result.deviceName].overallStatus = 'Failed';
+      }
       return acc;
     }, {});
 
-    return { uniqueJobs, uniqueDevices, resultsMap, stats: scanGroup.stats, allResults: updatedResults };
+    return { 
+      devices: Object.values(resultsByDevice),
+      stats: scanGroup.stats,
+      scanId: scanGroup.scanId,
+      allResults: updatedResults 
+    };
   }, [scanGroup, jobs, devices]);
 
   const filteredDevices = useMemo(() => {
     if (!processedData) return [];
-    if (!searchTerm) return processedData.uniqueDevices;
+    if (!searchTerm) return processedData.devices;
     
-    return processedData.uniqueDevices.filter(device =>
+    return processedData.devices.filter(device =>
       device.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [processedData, searchTerm]);
@@ -96,31 +104,14 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   const paginatedRows = table.getRowModel().rows;
   const selectedDeviceNames = table.getSelectedRowModel().rows.map(row => row.original.name);
   
-  const handlePanelOpen = (panelType, data) => {
-    if (panelType === 'output') {
-      setViewedDevice(null);
-      setViewedJob(null);
-      setSelectedResultForOutput(data);
-    } else if (panelType === 'device') {
-      setSelectedResultForOutput(null);
-      setViewedJob(null);
-      setViewedDevice(data);
-    } else if (panelType === 'job') {
-      setSelectedResultForOutput(null);
-      setViewedDevice(null);
-      setViewedJob(data);
-    }
-  };
-
   const handlePanelClose = () => {
     setSelectedResultForOutput(null);
-    setViewedDevice(null);
     setViewedJob(null);
   }
 
   if (!processedData || !scanGroup) return null;
 
-  const { uniqueJobs, resultsMap, stats, allResults } = processedData;
+  const { stats, scanId, allResults } = processedData;
 
   const getStatusBadgeClass = (status) => {
     switch (status) {
@@ -130,17 +121,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
         return 'bg-destructive hover:bg-destructive/80 text-destructive-foreground';
       default:
         return 'bg-secondary text-secondary-foreground';
-    }
-  };
-
-  const handleBadgeClick = (deviceName, jobName) => {
-    const result = resultsMap[`${deviceName}-${jobName}`];
-    if (result) {
-      handlePanelOpen('output', {
-        deviceName,
-        jobName,
-        ...result,
-      });
     }
   };
   
@@ -171,7 +151,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     }
 
     const dataForCsv = resultsToExport.map(r => ({
-      scan_id: scanGroup.scanId,
+      scan_id: scanId,
       device_name: r.deviceName,
       ip_address: r.deviceIpAddress,
       job_name: r.jobName,
@@ -183,7 +163,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    const filename = `scan_results_${scanGroup.scanId}_${isExportingSelected ? 'selected' : 'all'}.csv`;
+    const filename = `scan_results_${scanId}_${isExportingSelected ? 'selected' : 'all'}.csv`;
     link.setAttribute('href', url);
     link.setAttribute('download', filename);
     link.style.visibility = 'hidden';
@@ -195,164 +175,187 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   const handleJobDetailsClick = (jobName) => {
     const job = jobs.find(j => j.name === jobName);
     if (job) {
-      handlePanelOpen('job', job);
+      setViewedJob(job);
+      setSelectedResultForOutput(null);
     }
   };
+  
+  const renderDeviceListView = () => (
+    <>
+      <div className="px-4 py-3 border-b">
+          <Card className="bg-transparent shadow-none border">
+              <CardContent className="p-3">
+                  <div className="flex items-center justify-around text-center">
+                      <div>
+                          <p className="text-sm text-muted-foreground">Scan ID</p>
+                          <p className="font-semibold">{scanId}</p>
+                      </div>
+                      <div>
+                          <p className="text-sm text-muted-foreground">Devices Run</p>
+                          <Badge variant="secondary">{stats?.run || 0}</Badge>
+                      </div>
+                      <div>
+                          <p className="text-sm text-muted-foreground">Devices Passed</p>
+                          <Badge className="bg-green-500 hover:bg-green-600">{stats?.passed || 0}</Badge>
+                      </div>
+                      <div>
+                          <p className="text-sm text-muted-foreground">Devices Failed</p>
+                          <Badge variant="destructive">{stats?.failed || 0}</Badge>
+                      </div>
+                  </div>
+              </CardContent>
+          </Card>
+      </div>
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl w-[90vw] h-[80vh] flex flex-col p-0">
-        <DialogHeader className="p-4 border-b">
-          <DialogTitle>Scan Result Details</DialogTitle>
-          <DialogDescription>
-            Matrix view of job statuses across all devices for this scan. Click a status badge to see the output.
-          </DialogDescription>
-        </DialogHeader>
+      <div className="px-4 py-2 flex items-center justify-between gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search devices..."
+            className="pl-9"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <Button variant="outline" onClick={handleExport}>
+          <Download className="mr-2 h-4 w-4" />
+          {selectedDeviceNames.length > 0 ? `Export (${selectedDeviceNames.length})` : 'Export All'}
+        </Button>
+      </div>
+       <div className="flex-1 min-h-0 px-4 pb-4 flex flex-col">
+           <div className="flex-grow border rounded-lg overflow-hidden">
+              <ScrollArea className="h-full">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[40px]">
+                        <Checkbox
+                          checked={table.getIsAllPageRowsSelected()}
+                          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                          aria-label="Select all"
+                        />
+                      </TableHead>
+                      <TableHead>Device Name</TableHead>
+                      <TableHead>Compliance Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedRows.length > 0 ? (
+                      paginatedRows.map((row) => {
+                        const device = row.original;
+                        return (
+                          <TableRow key={device.name} data-state={row.getIsSelected() && "selected"}>
+                            <TableCell>
+                                <Checkbox
+                                  checked={row.getIsSelected()}
+                                  onCheckedChange={(value) => row.toggleSelected(!!value)}
+                                  aria-label={`Select ${device.name}`}
+                                />
+                            </TableCell>
+                            <TableCell className="font-medium">{device.name}</TableCell>
+                            <TableCell>
+                              <Badge
+                                className={cn("cursor-pointer", getStatusBadgeClass(device.overallStatus))}
+                                onClick={() => setSelectedDeviceForDetails(device)}
+                              >
+                                {device.overallStatus}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3} className="h-24 text-center">
+                          No devices found for this search term.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+           </div>
+           <DataTablePagination table={table} />
+      </div>
+    </>
+  );
+  
+  const renderDeviceDetailView = () => {
+    if (!selectedDeviceForDetails) return null;
+    
+    return (
+      <div className="flex flex-col h-full">
+         <div className="p-4 border-b flex items-center justify-between">
+           <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedDeviceForDetails(null)}>
+                  <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                  <h3 className="font-semibold text-lg leading-none">Compliance Details</h3>
+                  <p className="text-sm text-muted-foreground">{selectedDeviceForDetails.name}</p>
+              </div>
+           </div>
+        </div>
 
         <div className="px-4 py-3 border-b">
-            <Card className="bg-transparent shadow-none border">
+             <Card className="bg-transparent shadow-none border">
                 <CardContent className="p-3">
                     <div className="flex items-center justify-around text-center">
                         <div>
                             <p className="text-sm text-muted-foreground">Scan ID</p>
-                            <p className="font-semibold">{scanGroup.scanId}</p>
+                            <p className="font-semibold">{scanId}</p>
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Devices Run</p>
-                            <Badge variant="secondary">{stats?.run || 0}</Badge>
+                            <p className="text-sm text-muted-foreground">Device Name</p>
+                            <p className="font-semibold">{selectedDeviceForDetails.name}</p>
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Devices Passed</p>
-                            <Badge className="bg-green-500 hover:bg-green-600">{stats?.passed || 0}</Badge>
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Devices Failed</p>
-                            <Badge variant="destructive">{stats?.failed || 0}</Badge>
+                            <p className="text-sm text-muted-foreground">Compliance Result</p>
+                            <Badge className={getStatusBadgeClass(selectedDeviceForDetails.overallStatus)}>
+                                {selectedDeviceForDetails.overallStatus}
+                            </Badge>
                         </div>
                     </div>
                 </CardContent>
             </Card>
         </div>
 
-        <div className="px-4 py-2 flex items-center justify-between gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search devices..."
-              className="pl-9"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" />
-            {selectedDeviceNames.length > 0 ? `Export (${selectedDeviceNames.length})` : 'Export All'}
-          </Button>
-        </div>
-
         <div className={cn(
-          "flex-1 grid min-h-0 transition-all duration-300 ease-in-out pb-4",
-          (selectedResultForOutput || viewedDevice || viewedJob) ? "grid-cols-[2fr_1fr]" : "grid-cols-1"
+          "flex-1 grid min-h-0 transition-all duration-300 ease-in-out",
+          (selectedResultForOutput || viewedJob) ? "grid-cols-[2fr_1fr]" : "grid-cols-1"
         )}>
-          <div className="flex-1 min-h-0 px-4 overflow-hidden flex flex-col">
+           <div className="flex-1 min-h-0 px-4 py-4 flex flex-col">
              <div className="flex-grow border rounded-lg overflow-hidden">
                 <ScrollArea className="h-full">
-                  <Table className="min-w-[1200px]">
-                    <TableHeader className="sticky top-0 bg-background z-10">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableHead colSpan={uniqueJobs.length + 1} className="text-center border-b p-2">
-                          <p className="font-bold">Jobs</p>
-                          <p className="text-xs text-muted-foreground font-normal">Click a status badge to see the output.</p>
-                        </TableHead>
-                      </TableRow>
-                      <TableRow>
-                        <TableHead className="w-[250px] min-w-[250px] sticky left-0 bg-background z-10 border-r">
-                           <div className="flex items-center gap-2">
-                             <Checkbox
-                               id="select-all-devices-modal"
-                               checked={table.getIsAllPageRowsSelected()}
-                               onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-                               aria-label="Select all"
-                             />
-                             Device Name
-                           </div>
-                        </TableHead>
-                        {uniqueJobs.map(jobName => (
-                          <TableHead key={jobName} className="min-w-[150px]">
-                            <div className="group flex items-center gap-2">
-                              <span>{jobName}</span>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleJobDetailsClick(jobName)}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableHead>
-                        ))}
+                        <TableHead>Job</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginatedRows.length > 0 ? (
-                        paginatedRows.map((row) => {
-                          const device = row.original;
-                          return (
-                            <TableRow 
-                              key={device.name} 
-                              data-state={row.getIsSelected() || (selectedResultForOutput?.deviceName === device.name || viewedDevice?.name === device.name) ? "selected" : ""}
-                              className="group"
+                      {selectedDeviceForDetails.results.map(result => (
+                        <TableRow key={result.jobName}>
+                          <TableCell className="font-medium">{result.jobName}</TableCell>
+                          <TableCell>
+                            <Badge
+                              className={cn("cursor-pointer", getStatusBadgeClass(result.status))}
+                              onClick={() => setSelectedResultForOutput(result)}
                             >
-                              <TableCell className="font-medium border-r truncate sticky left-0 bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted">
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-2">
-                                    <Checkbox
-                                      checked={row.getIsSelected()}
-                                      onCheckedChange={(value) => row.toggleSelected(!!value)}
-                                      aria-label={`Select ${device.name}`}
-                                    />
-                                    <span className="flex-1">{device.name}</span>
-                                  </div>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handlePanelOpen('device', device)}>
-                                      <Eye className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                              {uniqueJobs.map(jobName => {
-                                const result = resultsMap[`${device.name}-${jobName}`];
-                                const status = result?.status;
-                                const isSelected = selectedResultForOutput?.deviceName === device.name && selectedResultForOutput?.jobName === jobName;
-                                return (
-                                  <TableCell key={jobName}>
-                                    {status ? (
-                                      <Badge
-                                        className={cn("cursor-pointer", getStatusBadgeClass(status), isSelected && "ring-2 ring-offset-2 ring-primary ring-offset-background")}
-                                        onClick={() => handleBadgeClick(device.name, jobName)}
-                                      >
-                                        {status}
-                                      </Badge>
-                                    ) : (
-                                      <Badge variant="secondary">N/A</Badge>
-                                    )}
-                                  </TableCell>
-                                );
-                              })}
-                            </TableRow>
-                          );
-                        })
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={uniqueJobs.length + 1} className="h-24 text-center">
-                            No devices found for this search term.
+                              {result.status}
+                            </Badge>
                           </TableCell>
                         </TableRow>
-                      )}
+                      ))}
                     </TableBody>
                   </Table>
                 </ScrollArea>
              </div>
-             <div className="pt-2">
-                <DataTablePagination table={table} />
-             </div>
-          </div>
-          {(selectedResultForOutput || viewedDevice || viewedJob) && (
-            <div className="flex flex-col border-l bg-muted/30 min-h-0 pr-4">
+           </div>
+
+           {(selectedResultForOutput || viewedJob) && (
+            <div className="flex flex-col border-l bg-muted/30 min-h-0">
                {selectedResultForOutput && (
                     <>
                         <div className="p-4 border-b flex items-center justify-between">
@@ -374,46 +377,27 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                         </ScrollArea>
                     </>
                )}
-               {viewedDevice && (
-                    <>
-                         <div className="p-4 border-b flex items-center justify-between">
-                            <h3 className="font-semibold text-base truncate">Details: {viewedDevice.name}</h3>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePanelClose}>
-                                <X className="h-4 w-4" />
-                                <span className="sr-only">Close Panel</span>
-                            </Button>
-                        </div>
-                        <ScrollArea className="flex-1 p-4">
-                            <div className="p-4 border rounded-lg bg-background/50 space-y-2 text-sm">
-                                <h4 className="font-semibold">Device Details</h4>
-                                <p className="break-words"><strong className="text-muted-foreground">IP Address:</strong> <code>{viewedDevice.ipAddress}</code></p>
-                                <p className="break-words"><strong className="text-muted-foreground">Username:</strong> <code>{viewedDevice.username}</code></p>
-                                <p className="break-words"><strong className="text-muted-foreground">Port:</strong> <code>{viewedDevice.port}</code></p>
-                            </div>
-                        </ScrollArea>
-                    </>
-               )}
-               {viewedJob && (
-                    <>
-                        <div className="p-4 border-b flex items-center justify-between">
-                            <h3 className="font-semibold text-base truncate">Details: {viewedJob.name}</h3>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePanelClose}>
-                                <X className="h-4 w-4" />
-                                <span className="sr-only">Close Panel</span>
-                            </Button>
-                        </div>
-                        <ScrollArea className="flex-1 p-4">
-                           <div className="p-4 border rounded-lg bg-background/50 space-y-2 text-sm">
-                              <h4 className="font-semibold">Job Details</h4>
-                              <p className="break-words"><strong className="text-muted-foreground">Command:</strong> <code>{viewedJob.command || 'N/A'}</code></p>
-                              <p className="break-words"><strong className="text-muted-foreground">Template:</strong> <code>{viewedJob.template || 'N/A'}</code></p>
-                          </div>
-                        </ScrollArea>
-                    </>
-               )}
             </div>
           )}
         </div>
+      </div>
+    );
+  };
+  
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleCloseModal}>
+      <DialogContent className="max-w-7xl w-[90vw] h-[80vh] flex flex-col p-0">
+        <DialogHeader className="p-4 border-b">
+          <DialogTitle>Scan Result Details</DialogTitle>
+          <DialogDescription>
+            {selectedDeviceForDetails 
+                ? `Showing job statuses for ${selectedDeviceForDetails.name}. Click a status badge to see output.`
+                : 'Aggregated compliance status for all devices in this scan. Click a status to see details.'
+            }
+          </DialogDescription>
+        </DialogHeader>
+        {selectedDeviceForDetails ? renderDeviceDetailView() : renderDeviceListView()}
       </DialogContent>
     </Dialog>
   );
