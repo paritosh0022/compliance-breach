@@ -316,32 +316,27 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
   }, [viewedDevice, viewedJob, viewMode]);
 
   const validateSchedules = useCallback((schedules, setSchedules) => {
-      let hasChanged = false;
-      const newSchedules = schedules.map(currentSchedule => {
-        const scheduleToCheck = { ...currentSchedule };
-        delete scheduleToCheck.id;
-        delete scheduleToCheck.error;
+    let hasChanged = false;
+    const seen = new Set();
+    const newSchedules = schedules.map(currentSchedule => {
+      const scheduleToCheck = { ...currentSchedule };
+      delete scheduleToCheck.id;
+      delete scheduleToCheck.error;
+      const key = JSON.stringify(scheduleToCheck);
 
-        const isDuplicate = schedules.some(otherSchedule => {
-          if (currentSchedule.id === otherSchedule.id) return false;
-          
-          const otherScheduleToCheck = { ...otherSchedule };
-          delete otherScheduleToCheck.id;
-          delete otherScheduleToCheck.error;
-          
-          return JSON.stringify(scheduleToCheck) === JSON.stringify(otherScheduleToCheck);
-        });
+      const isDuplicate = seen.has(key);
+      seen.add(key);
 
-        const newError = isDuplicate ? "Duplicate entry not allowed." : null;
-        if (currentSchedule.error !== newError) {
-          hasChanged = true;
-        }
-        return { ...currentSchedule, error: newError };
-      });
-
-      if (hasChanged) {
-        setSchedules(newSchedules);
+      const newError = isDuplicate ? "Duplicate entry not allowed." : null;
+      if (currentSchedule.error !== newError) {
+        hasChanged = true;
       }
+      return { ...currentSchedule, error: newError };
+    });
+    
+    if (hasChanged) {
+        setSchedules(newSchedules);
+    }
   }, []);
   
   useEffect(() => validateSchedules(dailySchedules, setDailySchedules), [dailySchedules, validateSchedules]);
@@ -429,7 +424,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
                         {index === 0 && <Label>at *</Label>}
                         <div className="flex items-center gap-2">
                            {renderTimeInputs(schedule, (field, value) => handleUpdateSchedule(schedule.id, field, value, dailySchedules, setDailySchedules))}
-                           {dailySchedules.length > 1 && (
+                           {index > 0 && (
                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteSchedule(schedule.id, dailySchedules, setDailySchedules)}>
                                    <Trash2 className="h-4 w-4"/>
                                </Button>
@@ -448,12 +443,12 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
                     <div key={schedule.id} className="space-y-4 p-3 border rounded-lg">
                         <div className="flex justify-between items-start">
                              <div className="space-y-2">
-                                <Label>Run on these days</Label>
+                                <Label>Run on these days *</Label>
                                 <ToggleGroup type="multiple" variant="outline" value={schedule.days} onValueChange={(value) => handleUpdateSchedule(schedule.id, 'days', value.length > 0 ? value : schedule.days, weeklySchedules, setWeeklySchedules)} className="justify-start flex-wrap">
                                     {daysOfWeek.map(day => (<ToggleGroupItem key={day.value} value={day.value}>{day.label}</ToggleGroupItem>))}
                                 </ToggleGroup>
                             </div>
-                            {weeklySchedules.length > 1 && (
+                            {index > 0 && (
                                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteSchedule(schedule.id, weeklySchedules, setWeeklySchedules)}>
                                    <Trash2 className="h-4 w-4"/>
                                 </Button>
@@ -482,7 +477,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
                                 <SelectContent>{Array.from({ length: 31 }, (_, i) => i + 1).map(d => (<SelectItem key={d} value={String(d)}>{d}</SelectItem>))}</SelectContent>
                             </Select>
                             {renderTimeInputs(schedule, (field, value) => handleUpdateSchedule(schedule.id, field, value, monthlySchedules, setMonthlySchedules))}
-                            {monthlySchedules.length > 1 && (
+                            {index > 0 && (
                                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteSchedule(schedule.id, monthlySchedules, setMonthlySchedules)}>
                                    <Trash2 className="h-4 w-4"/>
                                 </Button>
