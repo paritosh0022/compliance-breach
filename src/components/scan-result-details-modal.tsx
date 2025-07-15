@@ -127,7 +127,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                 <TableBody>
                   {filteredDevices.length > 0 ? (
                     filteredDevices.map(deviceName => (
-                      <TableRow key={deviceName}>
+                      <TableRow key={deviceName} data-state={selectedResultForOutput?.deviceName === deviceName ? "selected" : ""}>
                         <TableCell className="font-medium border-r">
                            <div className="flex items-center gap-2">
                             <Checkbox
@@ -140,12 +140,13 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                         {uniqueJobs.map(jobName => {
                           const result = resultsMap[`${deviceName}-${jobName}`];
                           const status = result?.status;
+                          const isSelected = selectedResultForOutput?.deviceName === deviceName && selectedResultForOutput?.jobName === jobName;
                           return (
                             <TableCell key={jobName}>
                               {status ? (
                                 <Badge
                                   variant={getStatusVariant(status)}
-                                  className="cursor-pointer"
+                                  className={cn("cursor-pointer", isSelected && "ring-2 ring-offset-2 ring-primary ring-offset-background")}
                                   onClick={() => handleBadgeClick(deviceName, jobName)}
                                 >
                                   {status}
@@ -179,20 +180,9 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                  </Button>
               </div>
               <ScrollArea className="flex-1 p-4">
-                 <div className="space-y-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Device</p>
-                      <p className="font-semibold">{selectedResultForOutput.deviceName}</p>
-                    </div>
-                     <div>
-                      <p className="text-muted-foreground">Job</p>
-                      <p className="font-semibold">{selectedResultForOutput.jobName}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Result</p>
-                      <p className="font-semibold whitespace-pre-wrap">{selectedResultForOutput.message}</p>
-                    </div>
-                 </div>
+                 <pre className="whitespace-pre-wrap text-sm font-mono">
+                  {selectedResultForOutput.message}
+                 </pre>
               </ScrollArea>
             </div>
           )}
