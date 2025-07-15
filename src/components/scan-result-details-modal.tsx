@@ -42,7 +42,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     );
   }, [processedData, searchTerm]);
 
-  if (!processedData) return null;
+  if (!processedData || !scanGroup) return null;
 
   const { uniqueJobs, statusMap } = processedData;
 
@@ -82,11 +82,11 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
-                  <TableHead className="w-[200px]"></TableHead>
+                  <TableHead className="w-[200px] border-r"></TableHead>
                   <TableHead colSpan={uniqueJobs.length} className="text-center border-b">Job Name</TableHead>
                 </TableRow>
                 <TableRow>
-                  <TableHead className="w-[200px]">Device Name</TableHead>
+                  <TableHead className="w-[200px] border-r">Device Name</TableHead>
                   {uniqueJobs.map(jobName => (
                     <TableHead key={jobName}>{jobName}</TableHead>
                   ))}
@@ -96,7 +96,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                 {filteredDevices.length > 0 ? (
                   filteredDevices.map(deviceName => (
                     <TableRow key={deviceName}>
-                      <TableCell className="font-medium">{deviceName}</TableCell>
+                      <TableCell className="font-medium border-r">{deviceName}</TableCell>
                       {uniqueJobs.map(jobName => {
                         const status = statusMap[`${deviceName}-${jobName}`];
                         return (
@@ -114,7 +114,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                 ) : (
                   <TableRow>
                     <TableCell colSpan={uniqueJobs.length + 1} className="h-24 text-center">
-                      No devices found.
+                      No devices found for this search term.
                     </TableCell>
                   </TableRow>
                 )}
