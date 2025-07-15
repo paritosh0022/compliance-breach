@@ -275,7 +275,7 @@ export default function DashboardPage() {
                               filteredLogs.map((group) => (
                                 <React.Fragment key={group.id}>
                                   {group.results.map((result, resultIndex) => (
-                                    <TableRow key={`${group.id}-${result.deviceId}`} data-state={selectedScanIds.includes(group.id) ? "selected" : ""}>
+                                    <TableRow key={`${group.id}-${result.deviceId}-${result.jobId}`} data-state={selectedScanIds.includes(group.id) ? "selected" : ""}>
                                       {resultIndex === 0 && (
                                           <TableCell rowSpan={group.results.length} className="font-medium align-top border-r">
                                               <Checkbox
@@ -359,5 +359,3 @@ export default function DashboardPage() {
         </>
     );
 }
-
-    
