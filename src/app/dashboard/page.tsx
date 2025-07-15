@@ -38,34 +38,55 @@ export default function DashboardPage() {
     const [selectedScanIds, setSelectedScanIds] = useState([]);
     const [itemToDelete, setItemToDelete] = useState(null);
     
-    const groupedLogs = useMemo(() => {
+    const aggregatedLogs = useMemo(() => {
       if (!complianceLog) return [];
-      const sortedLogs = [...complianceLog].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      return sortedLogs;
+      
+      const groupedByScan = complianceLog.reduce((acc, log) => {
+        if (!acc[log.scanId]) {
+          acc[log.scanId] = { ...log, originalResults: log.results };
+        }
+        return acc;
+      }, {});
+
+      return Object.values(groupedByScan)
+        .map(scan => {
+            const deviceResults = {};
+            scan.originalResults.forEach(result => {
+                if (!deviceResults[result.deviceId]) {
+                    deviceResults[result.deviceId] = { isSuccess: true };
+                }
+                if (result.status === 'Failed') {
+                    deviceResults[result.deviceId].isSuccess = false;
+                }
+            });
+
+            const devicesRun = Object.keys(deviceResults).length;
+            const devicesPassed = Object.values(deviceResults).filter(d => d.isSuccess).length;
+            const devicesFailed = devicesRun - devicesPassed;
+            
+            return {
+                ...scan,
+                results: scan.originalResults, // Keep original for details modal
+                stats: {
+                    run: devicesRun,
+                    passed: devicesPassed,
+                    failed: devicesFailed
+                }
+            };
+        })
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
     }, [complianceLog]);
   
     const filteredLogs = useMemo(() => {
-      if (!searchTerm) return groupedLogs;
+      if (!searchTerm) return aggregatedLogs;
       const lowercasedFilter = searchTerm.toLowerCase();
   
-      return groupedLogs.map(log => {
-        const filteredResults = log.results.filter(result => 
-          result.deviceName.toLowerCase().includes(lowercasedFilter) ||
-          result.deviceIpAddress.toLowerCase().includes(lowercasedFilter)
-        );
-        
-        if (log.scanId && log.scanId.toLowerCase().includes(lowercasedFilter)) {
-          return log;
-        }
-        
-        if (filteredResults.length > 0) {
-          return { ...log, results: filteredResults };
-        }
-        
-        return null;
-      }).filter(log => log !== null);
+      return aggregatedLogs.filter(log => 
+        log.scanId.toLowerCase().includes(lowercasedFilter)
+      );
   
-    }, [groupedLogs, searchTerm]);
+    }, [aggregatedLogs, searchTerm]);
 
     const handleSelectAll = (checked) => {
       setSelectedScanIds(checked ? filteredLogs.map(log => log.id) : []);
@@ -85,17 +106,6 @@ export default function DashboardPage() {
         setIsDetailsModalOpen(true);
     };
   
-    const getStatusVariant = (status) => {
-        switch (status) {
-            case 'Success':
-                return 'default';
-            case 'Failed':
-                return 'destructive';
-            default:
-                return 'secondary';
-        }
-    };
-    
     const handleDownloadCsv = () => {
       const csvData = filteredLogs.flatMap(group => 
         group.results.map(result => ({
@@ -140,25 +150,14 @@ export default function DashboardPage() {
       doc.text("Compliance Report", 14, 15);
   
       autoTable(doc, {
-        head: [['Scan ID', 'Device', 'IP Address', 'Last ran at', 'Status']],
-        body: filteredLogs.flatMap(group => 
-          group.results.map((result, index) => {
-            if (index === 0) {
-              return [
-                { content: group.scanId, rowSpan: group.results.length, styles: { valign: 'top' } },
-                result.deviceName,
-                result.deviceIpAddress,
-                { content: format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss"), rowSpan: group.results.length, styles: { valign: 'top' } },
-                result.status
-              ];
-            }
-            return [
-              result.deviceName,
-              result.deviceIpAddress,
-              result.status
-            ];
-          })
-        ),
+        head: [['Scan ID', 'Last ran at', 'Devices Run', 'Passed', 'Failed']],
+        body: filteredLogs.map(group => [
+            group.scanId,
+            format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss"),
+            group.stats.run,
+            group.stats.passed,
+            group.stats.failed
+        ]),
         startY: 22,
       });
   
@@ -204,10 +203,10 @@ export default function DashboardPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       <DropdownMenuItem onSelect={handleDownloadCsv}>
-                          Export as CSV
+                          Export Detailed CSV
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={handleDownloadPdf}>
-                          Export as PDF
+                          Export Summary PDF
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -226,7 +225,7 @@ export default function DashboardPage() {
                     <div className="relative flex-1">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Search by Scan ID, device, or IP..."
+                            placeholder="Search by Scan ID..."
                             className="pl-9"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -256,60 +255,42 @@ export default function DashboardPage() {
                               </TableHead>
                               <TableHead>Scan ID</TableHead>
                               <TableHead>Last ran at</TableHead>
-                              <TableHead>Device</TableHead>
-                              <TableHead>IP Address</TableHead>
-                              <TableHead>Status</TableHead>
+                              <TableHead>Devices Run</TableHead>
+                              <TableHead>Devices Passed</TableHead>
+                              <TableHead>Devices Failed</TableHead>
                               <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {filteredLogs.length > 0 ? (
                               filteredLogs.map((group) => (
-                                <React.Fragment key={group.id}>
-                                  {group.results.map((result, resultIndex) => (
-                                    <TableRow key={`${group.id}-${result.deviceId}-${result.jobId}`} data-state={selectedScanIds.includes(group.id) ? "selected" : ""}>
-                                      {resultIndex === 0 && (
-                                          <TableCell rowSpan={group.results.length} className="font-medium align-top border-r">
-                                              <Checkbox
-                                                checked={selectedScanIds.includes(group.id)}
-                                                onCheckedChange={(checked) => handleSelectRow(group.id, !!checked)}
-                                              />
-                                          </TableCell>
-                                      )}
-                                      {resultIndex === 0 && (
-                                          <TableCell rowSpan={group.results.length} className="font-medium align-top">
-                                              {group.scanId}
-                                          </TableCell>
-                                      )}
-                                      {resultIndex === 0 && (
-                                          <TableCell rowSpan={group.results.length} className="align-top border-r">
-                                              {format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")}
-                                          </TableCell>
-                                      )}
-                                      <TableCell className="align-top">{result.deviceName}</TableCell>
-                                      <TableCell className="align-top">{result.deviceIpAddress}</TableCell>
-                                      <TableCell className="align-top">
-                                        <Badge variant={getStatusVariant(result.status)}>{result.status}</Badge>
-                                      </TableCell>
-                                      {resultIndex === 0 && (
-                                          <TableCell rowSpan={group.results.length} className="align-top text-right">
-                                            <TooltipProvider>
-                                              <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleViewDetails(group)}>
-                                                    <Eye className="h-4 w-4" />
-                                                  </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                  <p>View Details</p>
-                                                </TooltipContent>
-                                              </Tooltip>
-                                            </TooltipProvider>
-                                          </TableCell>
-                                      )}
-                                    </TableRow>
-                                  ))}
-                                </React.Fragment>
+                                <TableRow key={group.id} data-state={selectedScanIds.includes(group.id) ? "selected" : ""}>
+                                  <TableCell>
+                                    <Checkbox
+                                      checked={selectedScanIds.includes(group.id)}
+                                      onCheckedChange={(checked) => handleSelectRow(group.id, !!checked)}
+                                    />
+                                  </TableCell>
+                                  <TableCell className="font-medium">{group.scanId}</TableCell>
+                                  <TableCell>{format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")}</TableCell>
+                                  <TableCell>{group.stats.run}</TableCell>
+                                  <TableCell className="text-green-600">{group.stats.passed}</TableCell>
+                                  <TableCell className="text-destructive">{group.stats.failed}</TableCell>
+                                  <TableCell className="text-right">
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleViewDetails(group)}>
+                                            <Eye className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>View Details</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  </TableCell>
+                                </TableRow>
                               ))
                             ) : (
                               <TableRow>
