@@ -243,7 +243,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
             </Button>
             <div>
                 <h3 className="font-semibold text-lg leading-none">Compliance Details</h3>
-                <p className="text-sm text-muted-foreground">{selectedDeviceForDetails.name}</p>
             </div>
         </div>
 
@@ -274,7 +273,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
              <div className="flex-grow border rounded-lg overflow-hidden flex flex-col">
                 <div className="p-4">
                     <h4 className="font-semibold">Jobs</h4>
-                    <p className="text-sm text-muted-foreground">Click a status badge to see the output.</p>
+                    <p className="text-sm text-muted-foreground">Click the expand icon to see the full output.</p>
                 </div>
                 <ScrollArea className="flex-1">
                   <Table>
@@ -290,8 +289,8 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                         <TableRow 
                             key={result.id}
                             className={cn(
-                                "transition-[height]",
-                                expandedRows.has(result.id) ? "h-32" : "h-16"
+                                "transition-all",
+                                expandedRows.has(result.id) ? "h-64" : "h-16"
                             )}
                         >
                           <TableCell className="font-medium align-top">{result.jobName}</TableCell>
@@ -301,7 +300,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                             </Badge>
                           </TableCell>
                           <TableCell className="relative group align-top">
-                            <p className={cn("overflow-hidden text-ellipsis whitespace-nowrap", !expandedRows.has(result.id) && "max-w-[300px]")}>
+                            <p className={cn("overflow-hidden text-ellipsis", !expandedRows.has(result.id) && "whitespace-nowrap max-w-[300px]")}>
                                 {result.message}
                             </p>
                              <Button 
