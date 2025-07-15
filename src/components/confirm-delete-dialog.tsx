@@ -20,13 +20,18 @@ export default function ConfirmDeleteDialog({
   itemType = "item",
   itemCount = 1,
 }) {
+  const description =
+    itemType === 'log'
+      ? `This action cannot be undone. This will permanently delete all ${itemCount} compliance log entr${itemCount > 1 ? 'ies' : 'y'}.`
+      : `This action cannot be undone. This will permanently delete the selected ${itemCount} ${itemType}${itemCount > 1 ? 's' : ''}.`;
+      
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete the selected {itemCount} {itemType}{itemCount > 1 ? 's' : ''}.
+            {description}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

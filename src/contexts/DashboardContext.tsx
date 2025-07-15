@@ -42,6 +42,7 @@ export function DashboardProvider({ children }) {
     complianceStatus,
     setComplianceStatus,
     complianceLog,
+    setComplianceLog,
     onRunComplete,
     complianceRunProcess,
     setComplianceRunProcess,

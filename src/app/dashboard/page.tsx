@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import Papa from 'papaparse';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,20 +15,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
-import { Download, Search, FileText, Eye } from 'lucide-react';
+import { Download, Search, FileText, Eye, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import useLocalStorageState from '@/hooks/use-local-storage-state';
 import ReportModal from '@/components/compliance-log-modal';
 import React from 'react';
 import { useDashboard } from '@/contexts/DashboardContext';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import ConfirmDeleteDialog from '@/components/confirm-delete-dialog';
 
 export default function DashboardPage() {
-    const { complianceLog } = useDashboard();
+    const { complianceLog, setComplianceLog } = useDashboard();
     const { toast } = useToast();
     const [searchTerm, setSearchTerm] = useState("");
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
     const [selectedScanIds, setSelectedScanIds] = useState([]);
     
     const groupedLogs = useMemo(() => {
@@ -175,6 +176,13 @@ export default function DashboardPage() {
       doc.save('compliance_report.pdf');
     };
 
+    const handleConfirmClear = () => {
+        setComplianceLog([]);
+        setSelectedScanIds([]);
+        setIsConfirmDialogOpen(false);
+        toast({ title: 'Success', description: 'All compliance results have been cleared.' });
+    };
+
     return (
         <>
             <div className="flex items-center justify-between mb-6">
@@ -191,6 +199,14 @@ export default function DashboardPage() {
                     />
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="destructive"
+                    onClick={() => setIsConfirmDialogOpen(true)}
+                    disabled={complianceLog.length === 0}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Clear Results
+                  </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline">
@@ -296,6 +312,13 @@ export default function DashboardPage() {
               isOpen={isReportModalOpen}
               onOpenChange={setIsReportModalOpen}
               logs={complianceLog}
+            />
+            <ConfirmDeleteDialog
+                isOpen={isConfirmDialogOpen}
+                onOpenChange={setIsConfirmDialogOpen}
+                onConfirm={handleConfirmClear}
+                itemType="log"
+                itemCount={complianceLog.length}
             />
         </>
     );
