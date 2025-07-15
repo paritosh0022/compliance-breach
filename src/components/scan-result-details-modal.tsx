@@ -53,7 +53,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
       return acc;
     }, {});
 
-    return { uniqueJobs, uniqueDevices, resultsMap, stats: scanGroup.stats };
+    return { uniqueJobs, uniqueDevices, resultsMap, stats: scanGroup.stats, allResults: scanGroup.results };
   }, [scanGroup]);
 
   const filteredDevices = useMemo(() => {
@@ -89,7 +89,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
 
   if (!processedData || !scanGroup) return null;
 
-  const { uniqueJobs, resultsMap, stats } = processedData;
+  const { uniqueJobs, resultsMap, stats, allResults } = processedData;
 
   const getStatusBadgeClass = (status) => {
     switch (status) {
@@ -103,7 +103,11 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   };
   
   const handleSelectAll = (checked) => {
-    setSelectedDeviceNames(checked ? filteredDevices.map(d => d.name) : []);
+    if (checked) {
+        setSelectedDeviceNames(filteredDevices.map(d => d.name));
+    } else {
+        setSelectedDeviceNames([]);
+    }
   };
   
   const handleSelectRow = (deviceName, checked) => {
@@ -132,32 +136,45 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     }
   };
 
-  const handleDownload = () => {
-    if (!selectedResultForOutput) return;
+  const handleExport = () => {
+    const isExportingSelected = selectedDeviceNames.length > 0;
+    
+    let resultsToExport;
+    if (isExportingSelected) {
+      resultsToExport = allResults.filter(result => selectedDeviceNames.includes(result.deviceName));
+    } else {
+      resultsToExport = allResults;
+    }
+    
+    if (resultsToExport.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No Data to Export',
+        description: 'There are no results to export for the current selection.',
+      });
+      return;
+    }
 
-    const { deviceName, jobName, status, message, timestamp, scanId } = selectedResultForOutput;
-    
-    const dataToExport = {
-      "Scan ID": scanId,
-      "Timestamp": timestamp,
-      "Device Name": deviceName,
-      "Job Name": jobName,
-      "Status": status,
-      "Output": message
-    };
-    
-    const csv = Papa.unparse([dataToExport]);
+    const dataForCsv = resultsToExport.map(r => ({
+      scan_id: scanGroup.scanId,
+      device_name: r.deviceName,
+      ip_address: r.deviceIpAddress,
+      job_name: r.jobName,
+      status: r.status,
+      message: r.message,
+    }));
+
+    const csv = Papa.unparse(dataForCsv);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    const filename = `scan_output_${scanId}_${deviceName}_${jobName}.csv`.replace(/\s+/g, '_');
+    const filename = `scan_results_${scanGroup.scanId}_${isExportingSelected ? 'selected' : 'all'}.csv`;
     link.setAttribute('href', url);
     link.setAttribute('download', filename);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast({ title: "Success", description: "Output downloaded as CSV." });
   };
   
   const handleJobDetailsClick = (jobName) => {
@@ -202,8 +219,8 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
             </Card>
         </div>
 
-        <div className="px-4 py-2">
-          <div className="relative">
+        <div className="px-4 py-2 flex items-center justify-between gap-4">
+          <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search devices..."
@@ -212,6 +229,10 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" />
+            {selectedDeviceNames.length > 0 ? `Export (${selectedDeviceNames.length})` : 'Export All'}
+          </Button>
         </div>
 
         <div className={cn(
@@ -223,11 +244,21 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                <Table className="min-w-[1200px]">
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
-                    <TableHead className="w-[250px] border-r"></TableHead>
+                    <TableHead className="w-[250px] border-r">
+                       <div className="flex items-center gap-2">
+                        <Checkbox
+                           id="select-all-devices"
+                           checked={filteredDevices.length > 0 && selectedDeviceNames.length === filteredDevices.length}
+                           onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                           aria-label="Select all"
+                        />
+                        Device Name
+                       </div>
+                    </TableHead>
                     <TableHead colSpan={uniqueJobs.length} className="text-center border-b">Job Name</TableHead>
                   </TableRow>
                   <TableRow>
-                    <TableHead className="w-[250px] border-r">Device Name</TableHead>
+                    <TableHead className="w-[250px] border-r"></TableHead>
                     {uniqueJobs.map(jobName => (
                       <TableHead key={jobName} className="min-w-[150px]">
                          <div className="group flex items-center gap-2">
@@ -253,6 +284,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                             <Checkbox
                               checked={selectedDeviceNames.includes(device.name)}
                               onCheckedChange={(checked) => handleSelectRow(device.name, !!checked)}
+                              aria-label={`Select ${device.name}`}
                             />
                             <span>{device.name}</span>
                             <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handlePanelOpen('device', device)}>
@@ -301,9 +333,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                             <div className="flex items-center gap-2">
                                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopy}>
                                     <Copy className="h-4 w-4" />
-                                </Button>
-                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleDownload}>
-                                    <Download className="h-4 w-4" />
                                 </Button>
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePanelClose}>
                                     <X className="h-4 w-4" />
