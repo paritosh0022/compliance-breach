@@ -261,7 +261,7 @@ export default function DashboardPage() {
                         <Button
                             variant="outline"
                             onClick={() => setIsCompareModalOpen(true)}
-                            disabled={selectedHistoryScans.length < 2 || selectedHistoryScans.length > 5}
+                            disabled={selectedHistoryScans.length < 2}
                         >
                             <Columns3 className="mr-2 h-4 w-4" />
                             Compare Scans ({selectedHistoryScans.length})
@@ -450,3 +450,5 @@ export default function DashboardPage() {
         </>
     );
 }
+
+    
