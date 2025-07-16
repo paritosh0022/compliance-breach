@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Play, Copy, Download, Eye, X, Calendar as CalendarIcon, ArrowLeft, Trash2, Plus, FileDown } from "lucide-react";
+import { Search, Play, Copy, Download, Eye, X, Calendar as CalendarIcon, ArrowLeft, Trash2, Plus, FileDown, Wifi, WifiOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "./ui/textarea";
 import { cn } from "@/lib/utils";
@@ -29,6 +29,7 @@ import { Alert, AlertDescription } from "./ui/alert";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import Papa from "papaparse";
 import ConfirmDeleteDialog from "./confirm-delete-dialog";
+import { Badge } from "./ui/badge";
 
 const daysOfWeek = [
     { value: "sun", label: "S" },
@@ -65,6 +66,8 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
   const [viewedDevice, setViewedDevice] = useState(null);
   const [viewMode, setViewMode] = useState('output'); // 'output' or 'schedule'
   const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false);
+  const [devicePingStatus, setDevicePingStatus] = useState(new Map());
+  const [hoveredDeviceId, setHoveredDeviceId] = useState(null);
   
   // State for scheduling
   const [scheduleMode, setScheduleMode] = useState("once");
@@ -99,6 +102,7 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
         setSelectedDevices([]);
         setSelectedJobIds([]);
         setViewMode('output');
+        setDevicePingStatus(new Map());
       }
     }
   }, [isComplianceModalOpen, jobToEdit, isEditing]);
@@ -280,6 +284,26 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
       return;
     }
     setViewMode('schedule');
+  };
+  
+  const handlePingDevice = (deviceId) => {
+    setDevicePingStatus(prev => new Map(prev).set(deviceId, { pingState: 'pinging' }));
+
+    setTimeout(() => {
+      const isSuccess = Math.random() > 0.3; // Simulate success/failure
+      
+      setDevicePingStatus(prev => new Map(prev).set(deviceId, { 
+        pingState: isSuccess ? 'success' : 'failed',
+        reachability: isSuccess ? 'Reachable' : 'Unreachable'
+      }));
+      
+      toast({
+        title: isSuccess ? "Ping Successful" : "Ping Failed",
+        description: isSuccess ? `Device is reachable.` : `Device could not be reached.`,
+        variant: isSuccess ? "default" : "destructive",
+      });
+
+    }, 2000);
   };
 
   const handleSaveSchedule = () => {
@@ -626,17 +650,57 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
               </div>
               <ScrollArea className="flex-1">
                 <div className="space-y-1 p-2">
-                  {filteredDevices.map((device) => (
-                    <div key={device.id} className="group flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
-                      <Checkbox id={`comp-device-${device.id}`} checked={selectedDevices.includes(device.id)} onCheckedChange={() => handleDeviceSelection(device.id)} />
-                      <label htmlFor={`comp-device-${device.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">
-                        {device.name}
-                      </label>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => { setViewedDevice(device); }}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                  {filteredDevices.map((device) => {
+                    const pingStatus = devicePingStatus.get(device.id) || { pingState: 'idle', reachability: 'Unreachable' };
+                    const isHovered = hoveredDeviceId === device.id;
+                    return (
+                    <div 
+                        key={device.id} 
+                        className="group flex items-center justify-between space-x-3 p-2 rounded-md hover:bg-muted"
+                        onMouseEnter={() => setHoveredDeviceId(device.id)}
+                        onMouseLeave={() => setHoveredDeviceId(null)}
+                    >
+                      <div className="flex items-center space-x-3 flex-1">
+                        <Checkbox id={`comp-device-${device.id}`} checked={selectedDevices.includes(device.id)} onCheckedChange={() => handleDeviceSelection(device.id)} />
+                        <label htmlFor={`comp-device-${device.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">
+                          {device.name}
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                         {isHovered ? (
+                           <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7"
+                              onClick={() => handlePingDevice(device.id)}
+                              disabled={pingStatus.pingState === 'pinging'}
+                           >
+                            {pingStatus.pingState === 'pinging' ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="M20 5H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M12 9v1"/><path d="m12 14.5 4.5-4.5"/><path d="m12 14.5-4.5-4.5"/></svg>
+                            )}
+                             Ping Device
+                           </Button>
+                         ) : (
+                            <Badge variant={pingStatus.reachability === 'Reachable' ? 'default' : 'secondary'} className={cn('transition-opacity', pingStatus.reachability === 'Reachable' && 'bg-green-500 hover:bg-green-600')}>
+                                {pingStatus.pingState === 'pinging' ? (
+                                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                ) : pingStatus.reachability === 'Reachable' ? (
+                                    <Wifi className="mr-2 h-3 w-3" />
+                                ) : (
+                                    <WifiOff className="mr-2 h-3 w-3" />
+                                )}
+                                {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
+                           </Badge>
+                         )}
+
+                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => { setViewedDevice(device); }}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                  ))}
+                  )})}
                   {devices.length === 0 && ( <div className="text-center text-sm text-muted-foreground p-4">No devices available.</div> )}
                 </div>
               </ScrollArea>
