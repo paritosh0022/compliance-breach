@@ -7,17 +7,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isClient, setIsClient] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   useEffect(() => {
     setIsClient(true);
-    if (!localStorage.getItem('masterPassword')) {
-      router.replace('/setup');
+    if (!localStorage.getItem('userAccount')) {
+      // If there's no master password, there can't be an account
+      if (!localStorage.getItem('masterPassword')) {
+        router.replace('/setup');
+      } else {
+        router.replace('/create-account');
+      }
     }
      // If already logged in, redirect to dashboard
     if (localStorage.getItem('isLoggedIn') === 'true') {
@@ -28,18 +36,21 @@ export default function LoginPage() {
   const handleLogin = (e) => {
     e.preventDefault();
     setError('');
-    const storedPassword = localStorage.getItem('masterPassword');
+    const storedUser = localStorage.getItem('userAccount');
     
-    if (!storedPassword) {
+    if (!storedUser) {
+        // This should theoretically not be reached due to the useEffect hook
         router.push('/setup');
         return;
     }
 
-    if (password === storedPassword) {
+    const userAccount = JSON.parse(storedUser);
+
+    if (email === userAccount.email && password === userAccount.password) {
       localStorage.setItem('isLoggedIn', 'true');
       router.push('/dashboard');
     } else {
-      setError('Incorrect password. Please try again.');
+      setError('Incorrect email or password. Please try again.');
     }
   };
 
@@ -77,21 +88,43 @@ export default function LoginPage() {
                     </g>
                 </svg>
             </div>
-          <CardTitle>Enter Master Password</CardTitle>
-          <CardDescription>Enter the password you created to access the dashboard.</CardDescription>
+          <CardTitle>Welcome Back</CardTitle>
+          <CardDescription>Enter your credentials to access the dashboard.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Your master password"
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Your password"
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full">

@@ -12,10 +12,14 @@ export default function RootPage() {
   useEffect(() => {
     // This effect runs only on the client
     const masterPassword = localStorage.getItem('masterPassword');
-    if (masterPassword) {
-      router.replace('/login');
-    } else {
+    const userAccount = localStorage.getItem('userAccount');
+
+    if (!masterPassword) {
       router.replace('/setup');
+    } else if (!userAccount) {
+      router.replace('/create-account');
+    } else {
+      router.replace('/login');
     }
   }, [router]);
 

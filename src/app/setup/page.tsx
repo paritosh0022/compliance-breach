@@ -43,10 +43,10 @@ export default function SetupPage() {
     // In a real app, this should be securely hashed.
     localStorage.setItem('masterPassword', password);
     toast({
-      title: 'Password Set!',
-      description: 'You can now log in with your new master password.',
+      title: 'Master Password Set!',
+      description: 'Next, create your user account.',
     });
-    router.push('/login');
+    router.push('/create-account');
   };
   
   if (!isClient) {
@@ -112,7 +112,7 @@ export default function SetupPage() {
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full">
-              Set Password & Login
+              Set Password
             </Button>
           </form>
         </CardContent>
