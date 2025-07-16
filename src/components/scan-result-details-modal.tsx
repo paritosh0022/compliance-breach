@@ -15,13 +15,14 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Input } from "./ui/input";
-import { Search, Eye, ArrowLeft, Maximize2, Copy, Download } from "lucide-react";
+import { Search, Eye, ArrowLeft, Maximize2, Copy, Download, FileDown } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "./ui/checkbox";
 import { useDataTable } from "@/hooks/use-data-table";
 import { DataTablePagination } from "./data-table-pagination";
 import { useToast } from "@/hooks/use-toast";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 
 export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup, jobs = [], devices = [] }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -168,7 +169,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     });
   };
 
-  const handleExport = () => {
+  const handleExport = (formatType) => {
     const devicesToExport = selectedRows.length > 0
       ? selectedRows.map(row => row.original)
       : filteredDevices;
@@ -195,16 +196,24 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
       return a.device_name.localeCompare(b.device_name);
     });
     
-    const csv = Papa.unparse(sortedData);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `scan-summary-${scanGroup?.scanId}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (formatType === 'csv') {
+      const csv = Papa.unparse(sortedData);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `scan-summary-${scanGroup?.scanId}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else if (formatType === 'pdf') {
+      // PDF export logic will be added later.
+      toast({
+        title: "Coming Soon",
+        description: "PDF export functionality is not yet available.",
+      });
+    }
   };
 
   const renderDeviceListView = () => (
@@ -254,10 +263,22 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" />
-            {selectedRows.length > 0 ? `Export (${selectedRows.length})` : 'Export All'}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <FileDown className="mr-2 h-4 w-4" />
+                {selectedRows.length > 0 ? `Export (${selectedRows.length})` : 'Export All'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onSelect={() => handleExport('csv')}>
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => handleExport('pdf')}>
+                Export as PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
          <div className="flex-1 min-h-0 px-4 pb-4 flex flex-col">
              <div className="flex-grow border rounded-lg overflow-hidden">
@@ -338,7 +359,17 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
             <div className="px-4 py-3 border-b">
                  <Card className="bg-transparent shadow-none border">
                     <CardContent className="p-3">
-                        <div className="flex items-center justify-around text-center flex-wrap gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
+                            <div>
+                                <p className="text-sm text-muted-foreground">Scan ID</p>
+                                <p className="font-semibold">{processedData?.scanId}</p>
+                            </div>
+                            {processedData?.timestamp && (
+                              <div>
+                                  <p className="text-sm text-muted-foreground">Last run at</p>
+                                  <p className="font-semibold">{format(new Date(processedData.timestamp), "PPp")}</p>
+                              </div>
+                            )}
                             <div>
                                 <p className="text-sm text-muted-foreground">Device Name</p>
                                 <p className="font-semibold">{selectedDeviceForDetails.name}</p>
@@ -439,10 +470,12 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     <Dialog open={isOpen} onOpenChange={handleCloseModal}>
        <DialogContent className={cn(
           "h-[80vh] flex flex-col p-0 transition-all duration-300",
-          selectedDeviceForDetails ? "max-w-5xl w-[60vw]" : "max-w-5xl w-[60vw]"
+          selectedDeviceForDetails ? "max-w-7xl w-[70vw]" : "max-w-5xl w-[60vw]"
         )}>
         {selectedDeviceForDetails ? renderDeviceDetailView() : renderDeviceListView()}
       </DialogContent>
     </Dialog>
   );
 }
+
+    
