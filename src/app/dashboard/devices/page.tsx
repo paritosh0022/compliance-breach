@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, PlusCircle, Upload, Search, Trash2, Bot, Download, Loader2, FileText } from 'lucide-react';
+import { ChevronDown, PlusCircle, Upload, Search, Trash2, Bot, Download, Loader2, FileText, FileDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import AddDeviceDrawer from '@/components/add-device-drawer';
 import DeviceTable from '@/components/device-table';
@@ -42,6 +42,7 @@ export default function DevicesPage() {
   const [devices, setDevices] = useLocalStorageState('devices', []);
   const [jobs, setJobs] = useLocalStorageState('jobs', []);
   const [scheduledJobs, setScheduledJobs] = useLocalStorageState('scheduledJobs', []);
+  const [devicePingStatus, setDevicePingStatus] = useState(new Map());
 
   const [deviceToEdit, setDeviceToEdit] = useState(null);
   const [initialModalSelections, setInitialModalSelections] = useState({});
@@ -152,16 +153,26 @@ export default function DevicesPage() {
     document.body.removeChild(link);
   };
 
-  const handleExportSelectedDevices = () => {
-    if (selectedDeviceIds.length === 0) return;
-    const devicesToExport = devices
-      .filter(d => selectedDeviceIds.includes(d.id))
-      .map(({ id, password, ...rest }) => rest);
-    downloadCsv(devicesToExport, 'selected-devices.csv');
-  };
+  const handleExport = (formatType, deviceId) => {
+    let devicesToExport;
+    let filename;
+    let subject;
 
-  const handleExportAllDevices = () => {
-    if (devices.length === 0) {
+    if (deviceId) {
+        devicesToExport = devices.filter(d => d.id === deviceId);
+        subject = devicesToExport[0].name.replace(/ /g, '_');
+    } else {
+        const selectedDevices = devices.filter(d => selectedDeviceIds.includes(d.id));
+        if (selectedDevices.length > 0) {
+            devicesToExport = selectedDevices;
+            subject = 'selected-devices';
+        } else {
+            devicesToExport = devices;
+            subject = 'all-devices';
+        }
+    }
+    
+    if (devicesToExport.length === 0) {
         toast({
             variant: "destructive",
             title: "No Devices",
@@ -169,18 +180,17 @@ export default function DevicesPage() {
         });
         return;
     }
-    const devicesToExport = devices
-      .map(({ id, password, ...rest }) => rest);
-    downloadCsv(devicesToExport, 'all-devices.csv');
-  };
-  
-  const handleExportDevice = (id) => {
-    const deviceToExport = devices
-      .filter(d => d.id === id)
-      .map(({ id, password, ...rest }) => rest);
-    if (deviceToExport.length > 0) {
-      const deviceName = deviceToExport[0].name.replace(/ /g, '_');
-      downloadCsv(deviceToExport, `${deviceName}-device.csv`);
+
+    const dataForExport = devicesToExport.map(({ id, password, ...rest }) => rest);
+
+    if (formatType === 'csv') {
+        downloadCsv(dataForExport, `${subject}.csv`);
+    } else if (formatType === 'pdf') {
+        // PDF export logic will be added later.
+        toast({
+            title: "Coming Soon",
+            description: "PDF export functionality is not yet available.",
+        });
     }
   };
 
@@ -203,6 +213,27 @@ export default function DevicesPage() {
     });
     setIsComplianceModalOpen(false);
   };
+
+  const handlePingDevice = (deviceId) => {
+    setDevicePingStatus(prev => new Map(prev).set(deviceId, { pingState: 'pinging' }));
+
+    setTimeout(() => {
+      const isSuccess = Math.random() > 0.3; // Simulate success/failure
+      
+      setDevicePingStatus(prev => new Map(prev).set(deviceId, { 
+        pingState: isSuccess ? 'success' : 'failed',
+        reachability: isSuccess ? 'Reachable' : 'Unreachable'
+      }));
+      
+      toast({
+        title: isSuccess ? "Ping Successful" : "Ping Failed",
+        description: isSuccess ? `Device is reachable.` : `Device could not be reached.`,
+        variant: isSuccess ? "default" : "destructive",
+      });
+
+    }, 2000);
+  };
+
 
   if (!isClient) {
     return (
@@ -277,10 +308,18 @@ export default function DevicesPage() {
                   </Tooltip>
                 </TooltipProvider>
               )}
-              <Button variant="outline" onClick={() => selectedDeviceIds.length > 0 ? handleExportSelectedDevices() : handleExportAllDevices()}>
-                <Download className="mr-2 h-4 w-4" />
-                {selectedDeviceIds.length > 0 ? `Export (${selectedDeviceIds.length})` : 'Export All'}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                        <FileDown className="mr-2 h-4 w-4" />
+                        {selectedDeviceIds.length > 0 ? `Export (${selectedDeviceIds.length})` : 'Export All'}
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                    <DropdownMenuItem onSelect={() => handleExport('csv')}>Export as CSV</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => handleExport('pdf')} disabled>Export as PDF</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
           <DeviceTable 
@@ -289,8 +328,10 @@ export default function DevicesPage() {
             onDelete={handleDeleteDevice}
             onEdit={handleEditDeviceClick}
             onRunCompliance={(deviceId) => handleRunCompliance({ devices: [deviceId] })}
-            onExport={handleExportDevice}
+            onExport={(format, deviceId) => handleExport(format, deviceId)}
             isComplianceRunning={isComplianceRunning}
+            devicePingStatus={devicePingStatus}
+            onPingDevice={handlePingDevice}
           />
           <DataTablePagination table={table} />
         </div>
