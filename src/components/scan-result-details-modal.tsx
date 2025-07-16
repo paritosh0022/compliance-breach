@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Input } from "./ui/input";
-import { Search, Eye, ArrowLeft, Maximize2, Copy, Download, FileDown, Wifi, WifiOff, Loader2 } from "lucide-react";
+import { Search, Eye, ArrowLeft, Maximize2, Copy, FileDown, Wifi, WifiOff, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "./ui/checkbox";
@@ -357,16 +357,12 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                                       <TooltipTrigger asChild>
                                         <Button
                                           variant="ghost"
-                                          size="icon"
-                                          className="h-7 w-7 opacity-0 group-hover:opacity-100"
+                                          size="sm"
+                                          className="h-7 px-2 opacity-0 group-hover:opacity-100"
                                           onClick={() => handlePingDevice(device.id)}
                                           disabled={pingStatus.pingState === 'pinging'}
                                         >
-                                          {pingStatus.pingState === 'pinging' ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                          ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 5H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M12 9v1"/><path d="m12 14.5 4.5-4.5"/><path d="m12 14.5-4.5-4.5"/></svg>
-                                          )}
+                                          {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping'}
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>

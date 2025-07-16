@@ -675,12 +675,7 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
                               onClick={() => handlePingDevice(device.id)}
                               disabled={pingStatus.pingState === 'pinging'}
                            >
-                            {pingStatus.pingState === 'pinging' ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="M20 5H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M12 9v1"/><path d="m12 14.5 4.5-4.5"/><path d="m12 14.5-4.5-4.5"/></svg>
-                            )}
-                             Ping Device
+                            {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping Device'}
                            </Button>
                          ) : (
                             <Badge variant={pingStatus.reachability === 'Reachable' ? 'default' : 'secondary'} className={cn('transition-opacity', pingStatus.reachability === 'Reachable' && 'bg-green-500 hover:bg-green-600')}>

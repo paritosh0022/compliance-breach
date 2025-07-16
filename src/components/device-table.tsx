@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Trash2, Edit, Bot, Download, FileDown, Wifi, WifiOff, Loader2 } from "lucide-react";
+import { Trash2, Edit, Bot, FileDown, Wifi, WifiOff, Loader2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { Badge } from "./ui/badge";
 import { cn } from "@/lib/utils";
@@ -117,18 +117,22 @@ export default function DeviceTable({
                       {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
                     </Badge>
                     <TooltipProvider>
-                      <ActionButton
-                        onAction={() => onPingDevice(device.id)}
-                        tooltipText="Ping Device"
-                        disabledTooltipText="Pinging..."
-                        disabled={pingStatus.pingState === 'pinging'}
-                      >
-                         {pingStatus.pingState === 'pinging' ? (
-                           <Loader2 className="h-4 w-4 animate-spin" />
-                         ) : (
-                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 5H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M12 9v1"/><path d="m12 14.5 4.5-4.5"/><path d="m12 14.5-4.5-4.5"/></svg>
-                         )}
-                      </ActionButton>
+                       <Tooltip>
+                        <TooltipTrigger asChild>
+                           <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={() => onPingDevice(device.id)}
+                            disabled={pingStatus.pingState === 'pinging'}
+                          >
+                           {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping'}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Ping Device</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </TooltipProvider>
                   </div>
                 </TableCell>
