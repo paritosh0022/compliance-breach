@@ -22,6 +22,7 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
   const [searchTerm, setSearchTerm] = useState("");
   const [devicePingStatus, setDevicePingStatus] = useState(new Map());
   const [hoveredDeviceId, setHoveredDeviceId] = useState(null);
+  const [hoveredCell, setHoveredCell] = useState(null);
   const { toast } = useToast();
 
   const comparisonData = useMemo(() => {
@@ -87,6 +88,7 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
       setSearchTerm("");
       setDevicePingStatus(new Map());
       setHoveredDeviceId(null);
+      setHoveredCell(null);
     }
   }
 
@@ -146,7 +148,7 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                         <TableBody>
                             {comparisonData.rows.length > 0 ? comparisonData.rows.map(row => {
                                 const pingStatus = devicePingStatus.get(row.deviceId) || { pingState: 'idle', reachability: 'Unreachable' };
-                                const isHovered = hoveredDeviceId === row.deviceId;
+                                const isHoveringDevice = hoveredDeviceId === row.deviceId;
 
                                 return (
                                 <TableRow 
@@ -156,7 +158,7 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                                 >
                                     <TableCell className="font-medium sticky left-0 bg-background z-10">{row.deviceName}</TableCell>
                                     <TableCell>
-                                      {isHovered ? (
+                                      {isHoveringDevice ? (
                                         <Button
                                           variant="outline"
                                           size="sm"
@@ -179,13 +181,30 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                                         </Badge>
                                       )}
                                     </TableCell>
-                                    {comparisonData.scans.map(scan => (
-                                        <TableCell key={`${row.deviceId}-${scan.id}`} className="text-center">
-                                            <Badge className={cn(getStatusBadgeClass(row[scan.id]))}>
-                                                {row[scan.id]}
-                                            </Badge>
+                                    {comparisonData.scans.map(scan => {
+                                      const cellId = `${row.deviceId}-${scan.id}`;
+                                      const isHoveringCell = hoveredCell === cellId;
+                                      const status = row[scan.id];
+
+                                      return (
+                                        <TableCell 
+                                          key={cellId} 
+                                          className="text-center"
+                                          onMouseEnter={() => setHoveredCell(cellId)}
+                                          onMouseLeave={() => setHoveredCell(null)}
+                                        >
+                                            <div className="flex items-center justify-center gap-2">
+                                              <Badge className={cn(getStatusBadgeClass(status))}>
+                                                  {status}
+                                              </Badge>
+                                              {isHoveringCell && (status === 'Success' || status === 'Failed') && (
+                                                <Button variant="outline" size="sm" className="h-7">
+                                                  View
+                                                </Button>
+                                              )}
+                                            </div>
                                         </TableCell>
-                                    ))}
+                                    )})}
                                 </TableRow>
                                 )
                             }) : (
