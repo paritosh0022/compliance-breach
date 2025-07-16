@@ -3,6 +3,7 @@
 
 import { useMemo, useState, useLayoutEffect, useRef } from "react";
 import Papa from "papaparse";
+import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -87,6 +88,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
       devices: Object.values(resultsByDevice),
       stats: scanGroup.stats,
       scanId: scanGroup.scanId,
+      timestamp: scanGroup.timestamp,
     };
   }, [scanGroup, jobs, devices]);
 
@@ -159,7 +161,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     const devicesToExport = selectedRows.length > 0
       ? selectedRows.map(row => row.original)
       : filteredDevices;
-
+  
     if (devicesToExport.length === 0) {
       toast({
         variant: "destructive",
@@ -168,29 +170,31 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
       });
       return;
     }
-
-    const csvData = devicesToExport.flatMap(device => {
+  
+    const csvData = devicesToExport.map(device => {
       const passedCount = device.results.filter(r => r.status === 'Success').length;
       const failedCount = device.results.length - passedCount;
-
-      return device.results.map(result => ({
+  
+      return {
         scan_id: scanGroup?.scanId || 'N/A',
+        last_run_at: scanGroup?.timestamp ? format(new Date(scanGroup.timestamp), "yyyy-MM-dd HH:mm:ss") : 'N/A',
         device_name: device.name,
-        device_compliance_status: device.overallStatus,
-        device_jobs_passed: passedCount,
-        device_jobs_failed: failedCount,
-        job_name: result.jobName,
-        job_status: result.status,
-        job_output: result.message,
-      }));
+        compliance_status: device.overallStatus,
+        jobs_passed: passedCount,
+        jobs_failed: failedCount,
+      };
+    });
+  
+    const sortedData = csvData.sort((a, b) => {
+      return a.device_name.localeCompare(b.device_name);
     });
     
-    const csv = Papa.unparse(csvData);
+    const csv = Papa.unparse(sortedData);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `scan-details-${scanGroup?.scanId}.csv`);
+    link.setAttribute('download', `scan-summary-${scanGroup?.scanId}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -198,215 +202,230 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   };
 
   const renderDeviceListView = () => (
-    <div className="flex flex-col h-full">
-      <DialogHeader className="p-4 border-b">
-        <DialogTitle className="text-lg">Scan Result Details</DialogTitle>
+    <>
+      <DialogHeader>
+        <DialogTitle className="text-lg p-4 border-b">Scan Result Details</DialogTitle>
       </DialogHeader>
-      <div className="p-4">
-        <Card className="bg-transparent shadow-none border">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-around text-center">
-              <div>
-                <p className="text-sm text-muted-foreground">Scan ID</p>
-                <p className="font-semibold">{processedData?.scanId}</p>
+      <div className="flex flex-col h-full overflow-hidden">
+        <div className="p-4">
+          <Card className="bg-transparent shadow-none border">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-around text-center flex-wrap gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Scan ID</p>
+                  <p className="font-semibold">{processedData?.scanId}</p>
+                </div>
+                {processedData?.timestamp && (
+                   <div>
+                      <p className="text-sm text-muted-foreground">Last run at</p>
+                      <p className="font-semibold">{format(new Date(processedData.timestamp), "PPp")}</p>
+                    </div>
+                )}
+                <div>
+                  <p className="text-sm text-muted-foreground">Devices Run</p>
+                  <Badge variant="secondary">{processedData?.stats?.run || 0}</Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Devices Passed</p>
+                  <Badge className="bg-green-500 hover:bg-green-600">{processedData?.stats?.passed || 0}</Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Devices Failed</p>
+                  <Badge variant="destructive">{processedData?.stats?.failed || 0}</Badge>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Devices Run</p>
-                <Badge variant="secondary">{processedData?.stats?.run || 0}</Badge>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Devices Passed</p>
-                <Badge className="bg-green-500 hover:bg-green-600">{processedData?.stats?.passed || 0}</Badge>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Devices Failed</p>
-                <Badge variant="destructive">{processedData?.stats?.failed || 0}</Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="px-4 pb-2 flex items-center justify-between gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search devices..."
-            className="pl-9"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+            </CardContent>
+          </Card>
         </div>
-        <Button variant="outline" onClick={handleExport}>
-          <Download className="mr-2 h-4 w-4" />
-          {selectedRows.length > 0 ? `Export (${selectedRows.length})` : 'Export All'}
-        </Button>
-      </div>
-       <div className="flex-1 min-h-0 px-4 pb-4 flex flex-col">
-           <div className="flex-grow border rounded-lg overflow-hidden">
-              <ScrollArea className="h-full">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[40px]">
-                        <Checkbox
-                          checked={table.getIsAllPageRowsSelected()}
-                          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-                          aria-label="Select all"
-                        />
-                      </TableHead>
-                      <TableHead>Device Name</TableHead>
-                      <TableHead>Compliance Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedRows.length > 0 ? (
-                      paginatedRows.map((row) => {
-                        const device = row.original;
-                        return (
-                          <TableRow key={device.id} data-state={row.getIsSelected() && "selected"}>
-                            <TableCell>
-                                <Checkbox
-                                  checked={row.getIsSelected()}
-                                  onCheckedChange={(value) => row.toggleSelected(!!value)}
-                                  aria-label={`Select ${device.name}`}
-                                />
-                            </TableCell>
-                            <TableCell className="font-medium">
-                                {device.name}
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={cn(getStatusBadgeClass(device.overallStatus))}>
-                                {device.overallStatus}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedDeviceForDetails(device)}>
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    ) : (
+
+        <div className="px-4 pb-2 flex items-center justify-between gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search devices..."
+              className="pl-9"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" />
+            {selectedRows.length > 0 ? `Export (${selectedRows.length})` : 'Export All'}
+          </Button>
+        </div>
+         <div className="flex-1 min-h-0 px-4 pb-4 flex flex-col">
+             <div className="flex-grow border rounded-lg overflow-hidden">
+                <ScrollArea className="h-full">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">
-                          No devices found for this search term.
-                        </TableCell>
+                        <TableHead className="w-[40px]">
+                          <Checkbox
+                            checked={table.getIsAllPageRowsSelected()}
+                            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                            aria-label="Select all"
+                          />
+                        </TableHead>
+                        <TableHead>Device Name</TableHead>
+                        <TableHead>Compliance Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-           </div>
-           <DataTablePagination table={table} />
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedRows.length > 0 ? (
+                        paginatedRows.map((row) => {
+                          const device = row.original;
+                          return (
+                            <TableRow key={device.id} data-state={row.getIsSelected() && "selected"}>
+                              <TableCell>
+                                  <Checkbox
+                                    checked={row.getIsSelected()}
+                                    onCheckedChange={(value) => row.toggleSelected(!!value)}
+                                    aria-label={`Select ${device.name}`}
+                                  />
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                  {device.name}
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={cn(getStatusBadgeClass(device.overallStatus))}>
+                                  {device.overallStatus}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedDeviceForDetails(device)}>
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="h-24 text-center">
+                            No devices found for this search term.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+             </div>
+             <DataTablePagination table={table} />
+        </div>
       </div>
-    </div>
+    </>
   );
   
   const renderDeviceDetailView = () => {
     if (!selectedDeviceForDetails) return null;
     
     return (
-      <div className="flex flex-col h-full">
+      <>
         <DialogHeader className="p-4 border-b flex flex-row items-center gap-2">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedDeviceForDetails(null); setExpandedRows(new Set()); }}>
                 <ArrowLeft className="h-4 w-4" />
             </Button>
             <DialogTitle className="text-lg">Compliance Details</DialogTitle>
         </DialogHeader>
-
-        <div className="px-4 py-3 border-b">
-             <Card className="bg-transparent shadow-none border">
-                <CardContent className="p-3">
-                    <div className="flex items-center justify-around text-center">
-                        <div>
-                            <p className="text-sm text-muted-foreground">Scan ID</p>
-                            <p className="font-semibold">{processedData?.scanId}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Device Name</p>
-                            <p className="font-semibold">{selectedDeviceForDetails.name}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Compliance Result</p>
-                            <Badge className={getStatusBadgeClass(selectedDeviceForDetails.overallStatus)}>
-                                {selectedDeviceForDetails.overallStatus}
-                            </Badge>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-        
-        <div className="flex-1 flex flex-col min-h-0 px-4 py-4">
-          <div className="flex-grow border rounded-lg overflow-hidden flex flex-col">
-            <ScrollArea className="flex-1">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Job</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Output</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedDeviceForDetails.results.map(result => (
-                    <TableRow 
-                        key={result.id}
-                        className={cn(
-                            "align-top transition-all",
-                            expandedRows.has(result.id) ? "h-64" : "h-16"
-                        )}
-                    >
-                      <TableCell className="font-medium align-top pt-3">{result.jobName}</TableCell>
-                      <TableCell className="align-top pt-3">
-                        <Badge className={cn(getStatusBadgeClass(result.status))}>
-                          {result.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="relative align-top pt-3">
-                        <p
-                            ref={el => outputRefs.current[result.id] = el}
-                            className={cn(
-                              "overflow-hidden text-ellipsis pr-20",
-                              !expandedRows.has(result.id) && "whitespace-nowrap"
+        <div className="flex flex-col h-full overflow-hidden">
+            <div className="px-4 py-3 border-b">
+                 <Card className="bg-transparent shadow-none border">
+                    <CardContent className="p-3">
+                        <div className="flex items-center justify-around text-center flex-wrap gap-4">
+                            <div>
+                                <p className="text-sm text-muted-foreground">Scan ID</p>
+                                <p className="font-semibold">{processedData?.scanId}</p>
+                            </div>
+                            {processedData?.timestamp && (
+                              <div>
+                                  <p className="text-sm text-muted-foreground">Last run at</p>
+                                  <p className="font-semibold">{format(new Date(processedData.timestamp), "PPp")}</p>
+                              </div>
                             )}
-                          >
-                            {result.message}
-                        </p>
-                          <div className="absolute top-1 right-1 flex items-center gap-1">
-                            {overflowingRows.has(result.id) && (
+                            <div>
+                                <p className="text-sm text-muted-foreground">Device Name</p>
+                                <p className="font-semibold">{selectedDeviceForDetails.name}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Compliance Result</p>
+                                <Badge className={getStatusBadgeClass(selectedDeviceForDetails.overallStatus)}>
+                                    {selectedDeviceForDetails.overallStatus}
+                                </Badge>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+            
+            <div className="flex-1 flex flex-col min-h-0 px-4 py-4">
+              <div className="flex-grow border rounded-lg overflow-hidden flex flex-col">
+                <ScrollArea className="flex-1">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Job</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Output</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedDeviceForDetails.results.map(result => (
+                        <TableRow 
+                            key={result.id}
+                            className={cn(
+                                "align-top transition-all",
+                                expandedRows.has(result.id) ? "h-64" : "h-16"
+                            )}
+                        >
+                          <TableCell className="font-medium align-top pt-3">{result.jobName}</TableCell>
+                          <TableCell className="align-top pt-3">
+                            <Badge className={cn(getStatusBadgeClass(result.status))}>
+                              {result.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="relative align-top pt-3">
+                            <p
+                                ref={el => outputRefs.current[result.id] = el}
+                                className={cn(
+                                  "overflow-hidden text-ellipsis pr-20",
+                                  !expandedRows.has(result.id) && "whitespace-nowrap"
+                                )}
+                              >
+                                {result.message}
+                            </p>
+                              <div className="absolute top-1 right-1 flex items-center gap-1">
+                                {overflowingRows.has(result.id) && (
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-6 w-6"
+                                        onClick={() => toggleRowExpansion(result.id)}
+                                    >
+                                        <Maximize2 className="h-4 w-4" />
+                                        <span className="sr-only">Expand Row</span>
+                                    </Button>
+                                )}
                                 <Button 
                                     variant="ghost" 
                                     size="icon" 
                                     className="h-6 w-6"
-                                    onClick={() => toggleRowExpansion(result.id)}
+                                    onClick={() => handleCopyOutput(result.message)}
                                 >
-                                    <Maximize2 className="h-4 w-4" />
-                                    <span className="sr-only">Expand Row</span>
+                                    <Copy className="h-4 w-4" />
+                                    <span className="sr-only">Copy Output</span>
                                 </Button>
-                            )}
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-6 w-6"
-                                onClick={() => handleCopyOutput(result.message)}
-                            >
-                                <Copy className="h-4 w-4" />
-                                <span className="sr-only">Copy Output</span>
-                            </Button>
-                          </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </div>
+                              </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </div>
+            </div>
         </div>
-      </div>
+      </>
     );
   };
   
@@ -415,11 +434,12 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseModal}>
       <DialogContent className={cn(
-          "h-[80vh] flex flex-col p-0 transition-all duration-300",
-          selectedDeviceForDetails ? "max-w-4xl w-[50vw]" : "max-w-4xl w-[50vw]"
+          "h-[80vh] flex flex-col p-0 transition-all duration-300 max-w-4xl w-[50vw]"
         )}>
         {selectedDeviceForDetails ? renderDeviceDetailView() : renderDeviceListView()}
       </DialogContent>
     </Dialog>
   );
 }
+
+    
