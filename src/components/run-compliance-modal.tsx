@@ -478,7 +478,6 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
                 <Select value={everyUnit} onValueChange={setEveryUnit}>
                     <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select unit" /></SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="minutes">Minutes</SelectItem>
                         <SelectItem value="hours">Hours</SelectItem>
                         <SelectItem value="days">Days</SelectItem>
                     </SelectContent>
