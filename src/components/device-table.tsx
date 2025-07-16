@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -60,6 +61,8 @@ export default function DeviceTable({
   devicePingStatus,
   onPingDevice
 }) {
+  const [hoveredDeviceId, setHoveredDeviceId] = useState(null);
+
   if (rows.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/20 py-20 text-center">
@@ -93,9 +96,16 @@ export default function DeviceTable({
           {rows.map((row) => {
             const device = row.original;
             const pingStatus = devicePingStatus.get(device.id) || { pingState: 'idle', reachability: 'Unreachable' };
+            const isHovered = hoveredDeviceId === device.id;
 
             return (
-              <TableRow key={device.id} data-state={row.getIsSelected() ? "selected" : ""} className="group">
+              <TableRow 
+                key={device.id} 
+                data-state={row.getIsSelected() ? "selected" : ""} 
+                className="group"
+                onMouseEnter={() => setHoveredDeviceId(device.id)}
+                onMouseLeave={() => setHoveredDeviceId(null)}
+              >
                 <TableCell>
                   <Checkbox
                     checked={row.getIsSelected()}
@@ -105,8 +115,18 @@ export default function DeviceTable({
                 </TableCell>
                 <TableCell className="font-medium">{device.name}</TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={pingStatus.reachability === 'Reachable' ? 'default' : 'secondary'} className={cn(pingStatus.reachability === 'Reachable' && 'bg-green-500 hover:bg-green-600')}>
+                  {isHovered ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7"
+                      onClick={() => onPingDevice(device.id)}
+                      disabled={pingStatus.pingState === 'pinging'}
+                    >
+                      {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping Device'}
+                    </Button>
+                  ) : (
+                    <Badge variant={pingStatus.reachability === 'Reachable' ? 'default' : 'secondary'} className={cn('transition-opacity', pingStatus.reachability === 'Reachable' && 'bg-green-500 hover:bg-green-600')}>
                       {pingStatus.pingState === 'pinging' ? (
                         <Loader2 className="mr-2 h-3 w-3 animate-spin" />
                       ) : pingStatus.reachability === 'Reachable' ? (
@@ -116,25 +136,7 @@ export default function DeviceTable({
                       )}
                       {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
                     </Badge>
-                    <TooltipProvider>
-                       <Tooltip>
-                        <TooltipTrigger asChild>
-                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2"
-                            onClick={() => onPingDevice(device.id)}
-                            disabled={pingStatus.pingState === 'pinging'}
-                          >
-                           {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping'}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Ping Device</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
+                  )}
                 </TableCell>
                 <TableCell>{device.ipAddress}</TableCell>
                 <TableCell>{device.username}</TableCell>
