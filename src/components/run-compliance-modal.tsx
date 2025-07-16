@@ -42,7 +42,7 @@ const initialDailySchedule = () => ({ id: crypto.randomUUID(), hour: '11', minut
 const initialWeeklySchedule = () => ({ id: crypto.randomUUID(), days: ['mon'], hour: '11', minute: '30', ampm: 'AM', error: null });
 const initialMonthlySchedule = () => ({ id: crypto.randomUUID(), day: '1', hour: '11', minute: '30', ampm: 'AM', error: null });
 
-export default function RunComplianceModal({ devices, jobs, initialSelectedDeviceIds, initialSelectedJobIds, onScheduleJob }) {
+export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobToEdit }) {
   const {
     isComplianceModalOpen,
     setIsComplianceModalOpen,
@@ -53,6 +53,8 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
     complianceRunProcess,
     setComplianceRunProcess
   } = useDashboard();
+
+  const isEditing = !!jobToEdit;
 
   const [selectedDevices, setSelectedDevices] = useState([]);
   const [selectedJobIds, setSelectedJobIds] = useState([]);
@@ -80,11 +82,25 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
 
   useEffect(() => {
     if (isComplianceModalOpen) {
-        setSelectedDevices(initialSelectedDeviceIds || []);
-        setSelectedJobIds(initialSelectedJobIds || []);
+      if (isEditing) {
+        setSelectedDevices(jobToEdit.deviceIds || []);
+        setSelectedJobIds(jobToEdit.jobIds || []);
+        setScheduleMode(jobToEdit.mode || 'once');
+        setScheduleDate(jobToEdit.once?.date ? new Date(jobToEdit.once.date) : new Date());
+        setOnceSchedule(jobToEdit.once || { hour: "11", minute: "30", ampm: "AM" });
+        setEveryInterval(jobToEdit.every?.interval || "1");
+        setEveryUnit(jobToEdit.every?.unit || "days");
+        setDailySchedules(jobToEdit.daily?.length > 0 ? jobToEdit.daily.map(s => ({...s, id: crypto.randomUUID()})) : [initialDailySchedule()]);
+        setWeeklySchedules(jobToEdit.weekly?.length > 0 ? jobToEdit.weekly.map(s => ({...s, id: crypto.randomUUID()})) : [initialWeeklySchedule()]);
+        setMonthlySchedules(jobToEdit.monthly?.length > 0 ? jobToEdit.monthly.map(s => ({...s, id: crypto.randomUUID()})) : [initialMonthlySchedule()]);
+        setViewMode('schedule');
+      } else {
+        setSelectedDevices([]);
+        setSelectedJobIds([]);
         setViewMode('output');
+      }
     }
-  }, [isComplianceModalOpen, initialSelectedDeviceIds, initialSelectedJobIds]);
+  }, [isComplianceModalOpen, jobToEdit, isEditing]);
 
   const filteredDevices = useMemo(() =>
     devices.filter((device) =>
@@ -149,8 +165,8 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
     
     if (!isOpen) {
         if (!isComplianceRunning) {
-            setSelectedDevices(initialSelectedDeviceIds || []);
-            setSelectedJobIds(initialSelectedJobIds || []);
+            setSelectedDevices([]);
+            setSelectedJobIds([]);
             setDeviceSearchTerm("");
             setJobSearchTerm("");
             setOutput("");
@@ -279,7 +295,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
     onScheduleJob(scheduleDetails, {
       deviceIds: selectedDevices,
       jobIds: selectedJobIds,
-    });
+    }, jobToEdit?.id);
   };
   
   const getOrdinalSuffix = (day) => {
@@ -461,7 +477,7 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
                                 {scheduleDate ? format(scheduleDate, "PPP") : <span>Pick a date</span>}
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                        <PopoverContent className="w-auto p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                             <Calendar mode="single" selected={scheduleDate} onSelect={(newDate) => setScheduleDate(newDate || new Date())} initialFocus/>
                         </PopoverContent>
                     </Popover>
@@ -567,9 +583,9 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
     <Dialog open={isComplianceModalOpen} onOpenChange={handleOpenChangeAndReset}>
       <DialogContent className="max-w-screen-2xl w-[95vw] h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-4 border-b">
-          <DialogTitle className="text-xl">Run Compliance Check</DialogTitle>
-          <DialogDescription>
-            Select devices and jobs to run a compliance check.
+          <DialogTitle className="text-xl">{isEditing ? 'Edit Scheduled Job' : 'Run Compliance Check'}</DialogTitle>
+           <DialogDescription>
+            {isEditing ? 'Update the details for this scheduled job.' : 'Select devices and jobs to run a compliance check.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -740,9 +756,9 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
                          <Button variant="ghost" size="icon" onClick={() => setViewMode('output')} className="h-8 w-8">
                             <ArrowLeft className="h-4 w-4" />
                          </Button>
-                         <h3 className="font-semibold text-base">Schedule Run</h3>
+                         <h3 className="font-semibold text-base">{isEditing ? 'Edit Schedule' : 'Schedule Run'}</h3>
                     </div>
-                    <Button size="sm" onClick={handleSaveSchedule}>Save Schedule</Button>
+                    <Button size="sm" onClick={handleSaveSchedule}>{isEditing ? 'Save Changes' : 'Save Schedule'}</Button>
                  </div>
                  <ScrollArea className="flex-1">
                     <div className="p-4 space-y-6">

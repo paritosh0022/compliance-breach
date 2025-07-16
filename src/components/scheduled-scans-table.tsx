@@ -17,14 +17,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Trash2 } from "lucide-react";
+import { Trash2, Edit } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { format } from "date-fns";
-import { useDataTable } from "@/hooks/use-data-table";
-import { DataTablePagination } from "./data-table-pagination";
+import { Checkbox } from "./ui/checkbox";
 
-export default function ScheduledScansTable({ scheduledJobs, onDelete }) {
+export default function ScheduledScansTable({ table, onDelete, onEdit }) {
   const getOrdinalSuffix = (day) => {
     if (!day) return '';
     const dayNum = parseInt(day, 10);
@@ -49,12 +48,12 @@ export default function ScheduledScansTable({ scheduledJobs, onDelete }) {
         const unit = schedule.every.interval === '1' ? schedule.every.unit.slice(0, -1) : schedule.every.unit;
         return `Every ${schedule.every.interval} ${unit}`;
       case 'daily': {
-        if (schedule.daily.length === 0) return "Daily (No times set)";
+        if (!schedule.daily || schedule.daily.length === 0) return "Daily (No times set)";
         const dailyTimes = schedule.daily.map(formatTime).join(', ');
         return `Daily at ${dailyTimes}`;
       }
       case 'weekly': {
-        if (schedule.weekly.length === 0) return "Weekly (No schedules set)";
+        if (!schedule.weekly || schedule.weekly.length === 0) return "Weekly (No schedules set)";
         const weeklyDetails = schedule.weekly.map(s => {
           const days = s.days.map(d => capitalize(d.substring(0, 3))).join(', ');
           return `${days} at ${formatTime(s)}`;
@@ -62,7 +61,7 @@ export default function ScheduledScansTable({ scheduledJobs, onDelete }) {
         return `Weekly on ${weeklyDetails}`;
       }
       case 'monthly': {
-        if (schedule.monthly.length === 0) return "Monthly (No schedules set)";
+        if (!schedule.monthly || schedule.monthly.length === 0) return "Monthly (No schedules set)";
         const monthlyDetails = schedule.monthly.map(s => {
             const dayWithSuffix = `${s.day}${getOrdinalSuffix(s.day)}`;
             return `${dayWithSuffix} at ${formatTime(s)}`;
@@ -74,15 +73,18 @@ export default function ScheduledScansTable({ scheduledJobs, onDelete }) {
     }
   };
 
-  const { table } = useDataTable({
-    data: scheduledJobs,
-    columns: [], // Columns defined in JSX
-    pageCount: Math.ceil(scheduledJobs.length / 10),
-  });
+  const paginatedRows = table.getRowModel().rows;
+  
+  if (paginatedRows.length === 0 && table.options.data.length > 0) {
+      return (
+        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/20 py-20 text-center mt-4">
+            <h3 className="text-lg font-semibold text-muted-foreground">No Results Found</h3>
+            <p className="text-sm text-muted-foreground">Try adjusting your search term.</p>
+        </div>
+      );
+  }
 
-  const paginatedJobs = table.getRowModel().rows.map(row => row.original);
-
-  if (scheduledJobs.length === 0) {
+  if (table.options.data.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/20 py-20 text-center mt-4">
         <h3 className="text-lg font-semibold text-muted-foreground">No Scheduled Scans</h3>
@@ -92,31 +94,57 @@ export default function ScheduledScansTable({ scheduledJobs, onDelete }) {
   }
 
   return (
-    <div className="mt-4">
-      <div className="rounded-lg border">
-        <ScrollArea className="h-[60vh]">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Scan ID</TableHead>
-                <TableHead>Schedule</TableHead>
-                <TableHead>Targets</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedJobs.map((job) => (
-                <TableRow key={job.id}>
+    <div className="rounded-lg border">
+      <ScrollArea className="h-[60vh]">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={table.getIsAllPageRowsSelected()}
+                  onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                  aria-label="Select all"
+                />
+              </TableHead>
+              <TableHead>Scan ID</TableHead>
+              <TableHead>Schedule</TableHead>
+              <TableHead>Jobs Count</TableHead>
+              <TableHead>Devices Count</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedRows.map((row) => {
+              const job = row.original;
+              return (
+                <TableRow key={job.id} data-state={row.getIsSelected() && "selected"}>
+                  <TableCell>
+                    <Checkbox
+                      checked={row.getIsSelected()}
+                      onCheckedChange={(value) => row.toggleSelected(!!value)}
+                      aria-label="Select row"
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{job.scanId}</TableCell>
                   <TableCell>{getFormattedSchedule(job)}</TableCell>
                   <TableCell>
-                    <div className="flex flex-col gap-1">
-                      <Badge variant="secondary">Jobs: {job.jobIds.length}</Badge>
-                      <Badge variant="secondary">Devices: {job.deviceIds.length}</Badge>
-                    </div>
+                     <Badge variant="secondary">{job.jobIds.length}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{job.deviceIds.length}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => onEdit(job)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Edit Schedule</p>
+                        </TooltipContent>
+                      </Tooltip>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={() => onDelete(job.id)}>
@@ -130,12 +158,11 @@ export default function ScheduledScansTable({ scheduledJobs, onDelete }) {
                     </TooltipProvider>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </ScrollArea>
-      </div>
-      <DataTablePagination table={table} />
+              )
+            })}
+          </TableBody>
+        </Table>
+      </ScrollArea>
     </div>
   );
 }

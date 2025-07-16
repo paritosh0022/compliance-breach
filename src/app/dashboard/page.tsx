@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
-import { Download, Search, Eye, Trash2, Bot, Columns3 } from 'lucide-react';
+import { Download, Search, Eye, Trash2, Bot, Columns3, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ReportModal from '@/components/compliance-log-modal';
 import React from 'react';
@@ -31,7 +31,8 @@ export default function DashboardPage() {
     const [devices] = useLocalStorageState('devices', []);
     const [jobs] = useLocalStorageState('jobs', []);
     const { toast } = useToast();
-    const [searchTerm, setSearchTerm] = useState("");
+    const [historySearchTerm, setHistorySearchTerm] = useState("");
+    const [scheduledSearchTerm, setScheduledSearchTerm] = useState("");
     const [activeTab, setActiveTab] = useState("history");
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -39,6 +40,7 @@ export default function DashboardPage() {
     const [selectedScanGroup, setSelectedScanGroup] = useState(null);
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
+    const [jobToEdit, setJobToEdit] = useState(null);
     
     const aggregatedLogs = useMemo(() => {
       if (!complianceLog) return [];
@@ -81,24 +83,38 @@ export default function DashboardPage() {
     }, [complianceLog]);
   
     const filteredLogs = useMemo(() => {
-      if (!searchTerm) return aggregatedLogs;
-      const lowercasedFilter = searchTerm.toLowerCase();
+      if (!historySearchTerm) return aggregatedLogs;
+      const lowercasedFilter = historySearchTerm.toLowerCase();
   
       return aggregatedLogs.filter(log => 
         log.scanId.toLowerCase().includes(lowercasedFilter)
       );
   
-    }, [aggregatedLogs, searchTerm]);
+    }, [aggregatedLogs, historySearchTerm]);
 
-    const { table } = useDataTable({
+    const filteredScheduledJobs = useMemo(() => {
+      if (!scheduledSearchTerm) return scheduledJobs;
+      const lowercasedFilter = scheduledSearchTerm.toLowerCase();
+      return scheduledJobs.filter(job => job.scanId.toLowerCase().includes(lowercasedFilter));
+    }, [scheduledJobs, scheduledSearchTerm]);
+
+    const historyTable = useDataTable({
       data: filteredLogs,
       columns: [], // Columns are defined directly in JSX
       pageCount: Math.ceil(filteredLogs.length / 10),
     });
 
-    const paginatedRows = table.getRowModel().rows;
-    const selectedScanIds = table.getSelectedRowModel().rows.map(row => row.original.id);
-    const selectedScans = table.getSelectedRowModel().rows.map(row => row.original);
+    const scheduledTable = useDataTable({
+      data: filteredScheduledJobs,
+      columns: [], // Columns are defined in component
+      pageCount: Math.ceil(filteredScheduledJobs.length / 10),
+    });
+
+    const paginatedHistoryRows = historyTable.table.getRowModel().rows;
+    const selectedHistoryScanIds = historyTable.table.getSelectedRowModel().rows.map(row => row.original.id);
+    const selectedHistoryScans = historyTable.table.getSelectedRowModel().rows.map(row => row.original);
+    
+    const selectedScheduledJobIds = scheduledTable.table.getSelectedRowModel().rows.map(row => row.original.id);
 
     const handleViewDetails = (group) => {
         if (!group.results || group.results.length === 0) return;
@@ -107,49 +123,68 @@ export default function DashboardPage() {
     };
   
     const handleDeleteSelected = () => {
-      setItemToDelete({ type: 'log', ids: selectedScanIds });
+      if (activeTab === 'history') {
+        setItemToDelete({ type: 'log', ids: selectedHistoryScanIds, onConfirm: () => {
+          setComplianceLog(prev => prev.filter(log => !selectedHistoryScanIds.includes(log.id)));
+          historyTable.table.resetRowSelection();
+        }});
+      } else {
+        setItemToDelete({ type: 'schedule', ids: selectedScheduledJobIds, onConfirm: () => {
+          setScheduledJobs(prev => prev.filter(job => !selectedScheduledJobIds.includes(job.id)));
+          scheduledTable.table.resetRowSelection();
+        }});
+      }
       setIsConfirmDialogOpen(true);
     };
 
     const handleConfirmDelete = () => {
-      if (!itemToDelete) return;
-
-      if (itemToDelete.type === 'log') {
-        setComplianceLog(prev => prev.filter(log => !itemToDelete.ids.includes(log.id)));
-        table.resetRowSelection();
-        toast({ title: 'Success', description: 'Selected log entries have been deleted.' });
-      } else if (itemToDelete.type === 'schedule') {
-        setScheduledJobs(prev => prev.filter(job => job.id !== itemToDelete.ids[0]));
-        toast({ title: 'Success', description: 'Scheduled job has been deleted.' });
-      }
-
+      if (!itemToDelete || !itemToDelete.onConfirm) return;
+      itemToDelete.onConfirm();
+      toast({ title: 'Success', description: `Selected ${itemToDelete.type}(s) have been deleted.` });
       setIsConfirmDialogOpen(false);
       setItemToDelete(null);
     };
 
     const handleDeleteScheduledJob = (id) => {
-      setItemToDelete({ type: 'schedule', ids: [id] });
+      setItemToDelete({ type: 'schedule', ids: [id], onConfirm: () => {
+        setScheduledJobs(prev => prev.filter(job => job.id !== id));
+      }});
       setIsConfirmDialogOpen(true);
     };
 
-    const handleScheduleJob = (scheduleDetails, complianceRunConfig) => {
-      const scanId = getNextScanId();
-      const newScheduledJob = {
-        id: crypto.randomUUID(),
-        scanId,
-        ...complianceRunConfig,
-        ...scheduleDetails,
-      };
-      setScheduledJobs(prev => [...prev, newScheduledJob]);
-      toast({
-        title: "Job Scheduled",
-        description: `The compliance check has been scheduled successfully with ${scanId}.`,
-      });
+    const handleEditScheduledJob = (job) => {
+        setJobToEdit(job);
+        setIsComplianceModalOpen(true);
+    };
+
+    const handleScheduleJob = (scheduleDetails, complianceRunConfig, editingId) => {
+      if (editingId) {
+        setScheduledJobs(prev => prev.map(job =>
+            job.id === editingId
+                ? { ...job, ...complianceRunConfig, ...scheduleDetails }
+                : job
+        ));
+        toast({ title: "Job Updated", description: "The scheduled job has been updated successfully."});
+      } else {
+        const scanId = getNextScanId();
+        const newScheduledJob = {
+          id: crypto.randomUUID(),
+          scanId,
+          ...complianceRunConfig,
+          ...scheduleDetails,
+        };
+        setScheduledJobs(prev => [...prev, newScheduledJob]);
+        toast({
+          title: "Job Scheduled",
+          description: `The compliance check has been scheduled successfully with ${scanId}.`,
+        });
+      }
       setIsComplianceModalOpen(false);
+      setJobToEdit(null);
     };
 
     const handleExport = () => {
-        const rowsToExport = table.getFilteredSelectedRowModel().rows;
+        const rowsToExport = historyTable.table.getFilteredSelectedRowModel().rows;
         const dataToExport = (rowsToExport.length > 0 ? rowsToExport.map(r => r.original) : aggregatedLogs);
 
         if (dataToExport.length === 0) {
@@ -180,6 +215,11 @@ export default function DashboardPage() {
         link.click();
         document.body.removeChild(link);
     };
+    
+    const handleOpenComplianceModal = () => {
+        setJobToEdit(null);
+        setIsComplianceModalOpen(true);
+    };
 
     return (
         <>
@@ -190,24 +230,24 @@ export default function DashboardPage() {
                         <Button
                             variant="outline"
                             onClick={() => setIsCompareModalOpen(true)}
-                            disabled={selectedScans.length < 2}
+                            disabled={selectedHistoryScans.length < 2}
                         >
                             <Columns3 className="mr-2 h-4 w-4" />
-                            Compare Scans {selectedScans.length > 0 ? `(${selectedScans.length})` : ''}
+                            Compare Scans {selectedHistoryScans.length > 0 ? `(${selectedHistoryScans.length})` : ''}
                         </Button>
                     )}
-                    <Button onClick={() => setIsComplianceModalOpen(true)}>
+                    <Button onClick={handleOpenComplianceModal}>
                         <Bot className="mr-2 h-4 w-4" />
                         Run Compliance
                     </Button>
                 </div>
             </div>
             
-            <Tabs defaultValue="history" onValueChange={setActiveTab}>
+            <Tabs defaultValue="history" onValueChange={(value) => { setActiveTab(value); historyTable.table.resetRowSelection(); scheduledTable.table.resetRowSelection(); }}>
               <TabsList>
                 <TabsTrigger value="history">Scan History</TabsTrigger>
                 <TabsTrigger value="scheduled">
-                  Scheduled & Running 
+                  Scheduled Scans
                   {scheduledJobs.length > 0 && <Badge className="ml-2">{scheduledJobs.length}</Badge>}
                 </TabsTrigger>
               </TabsList>
@@ -218,23 +258,23 @@ export default function DashboardPage() {
                         <Input
                             placeholder="Search by Scan ID..."
                             className="pl-9"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            value={historySearchTerm}
+                            onChange={(e) => setHistorySearchTerm(e.target.value)}
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        {selectedScanIds.length > 0 && (
+                        {selectedHistoryScanIds.length > 0 && (
                           <Button
                             variant="destructive"
                             onClick={handleDeleteSelected}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Delete ({selectedScanIds.length})
+                            Delete ({selectedHistoryScanIds.length})
                           </Button>
                         )}
                         <Button variant="outline" onClick={handleExport}>
                           <Download className="mr-2 h-4 w-4" />
-                           {selectedScanIds.length > 0 ? `Export (${selectedScanIds.length})` : 'Export All'}
+                           {selectedHistoryScanIds.length > 0 ? `Export (${selectedHistoryScanIds.length})` : 'Export All'}
                         </Button>
                     </div>
                 </div>
@@ -245,8 +285,8 @@ export default function DashboardPage() {
                             <TableRow>
                               <TableHead className="w-[40px]">
                                 <Checkbox
-                                  checked={table.getIsAllPageRowsSelected()}
-                                  onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                                  checked={historyTable.table.getIsAllPageRowsSelected()}
+                                  onCheckedChange={(value) => historyTable.table.toggleAllPageRowsSelected(!!value)}
                                   aria-label="Select all"
                                 />
                               </TableHead>
@@ -259,8 +299,8 @@ export default function DashboardPage() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {paginatedRows.length > 0 ? (
-                              paginatedRows.map((row) => {
+                            {paginatedHistoryRows.length > 0 ? (
+                              paginatedHistoryRows.map((row) => {
                                 const group = row.original;
                                 return (
                                   <TableRow key={group.id} data-state={row.getIsSelected() ? "selected" : ""}>
@@ -304,13 +344,37 @@ export default function DashboardPage() {
                         </Table>
                     </ScrollArea>
                 </div>
-                <DataTablePagination table={table} />
+                <DataTablePagination table={historyTable.table} />
               </TabsContent>
               <TabsContent value="scheduled">
+                 <div className="flex items-center justify-between gap-4 mb-4 mt-4">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search by Scan ID..."
+                            className="pl-9"
+                            value={scheduledSearchTerm}
+                            onChange={(e) => setScheduledSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {selectedScheduledJobIds.length > 0 && (
+                          <Button
+                            variant="destructive"
+                            onClick={handleDeleteSelected}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete ({selectedScheduledJobIds.length})
+                          </Button>
+                        )}
+                    </div>
+                </div>
                 <ScheduledScansTable
-                  scheduledJobs={scheduledJobs}
+                  table={scheduledTable.table}
                   onDelete={handleDeleteScheduledJob}
+                  onEdit={handleEditScheduledJob}
                 />
+                <DataTablePagination table={scheduledTable.table} />
               </TabsContent>
             </Tabs>
 
@@ -318,9 +382,8 @@ export default function DashboardPage() {
                 isOpen={isComplianceModalOpen}
                 devices={devices}
                 jobs={jobs}
-                initialSelectedDeviceIds={[]}
-                initialSelectedJobIds={[]}
                 onScheduleJob={handleScheduleJob}
+                jobToEdit={jobToEdit}
             />
             <ScanResultDetailsModal 
               isOpen={isDetailsModalOpen}
@@ -332,7 +395,7 @@ export default function DashboardPage() {
             <CompareScansModal
                 isOpen={isCompareModalOpen}
                 onOpenChange={setIsCompareModalOpen}
-                selectedScans={selectedScans}
+                selectedScans={selectedHistoryScans}
                 devices={devices}
                 jobs={jobs}
             />
@@ -341,10 +404,8 @@ export default function DashboardPage() {
                 onOpenChange={setIsConfirmDialogOpen}
                 onConfirm={handleConfirmDelete}
                 itemType={itemToDelete?.type}
-                itemCount={itemToDelete?.ids.length}
+                itemCount={itemToDelete?.ids?.length}
             />
         </>
     );
 }
-
-    
