@@ -511,7 +511,7 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
                                 {scheduleDate ? format(scheduleDate, "PPP") : <span>Pick a date</span>}
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                        <PopoverContent className="w-auto p-0">
                             <Calendar mode="single" selected={scheduleDate} onSelect={(newDate) => setScheduleDate(newDate || new Date())} initialFocus/>
                         </PopoverContent>
                     </Popover>
@@ -653,7 +653,6 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
                 <div className="space-y-1 p-2">
                   {filteredDevices.map((device) => {
                     const pingStatus = devicePingStatus.get(device.id) || { pingState: 'idle', reachability: 'Unreachable' };
-                    const isHoveringPingWidget = hoveredPingWidgetId === device.id;
                     return (
                     <div 
                         key={device.id} 
@@ -670,7 +669,7 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
                             onMouseEnter={() => setHoveredPingWidgetId(device.id)}
                             onMouseLeave={() => setHoveredPingWidgetId(null)}
                          >
-                            {isHoveringPingWidget ? (
+                            {hoveredPingWidgetId === device.id ? (
                                <Button
                                   variant="outline"
                                   size="sm"
