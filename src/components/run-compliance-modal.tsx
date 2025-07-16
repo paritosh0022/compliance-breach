@@ -811,7 +811,8 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
         onConfirm={handleConfirmClose}
         itemType="running-scan"
         title="Close Window?"
-        continueText="Continue"
+        yesText="Yes"
+        noText="No"
         isDestructive={false}
       />
     </>

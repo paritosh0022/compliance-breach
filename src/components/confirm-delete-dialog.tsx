@@ -21,7 +21,8 @@ export default function ConfirmDeleteDialog({
   itemType = "item",
   itemCount = 1,
   title = "Are you absolutely sure?",
-  continueText = "Delete",
+  yesText = "Delete",
+  noText = "Cancel",
   isDestructive = true,
 }) {
   let description;
@@ -48,12 +49,12 @@ export default function ConfirmDeleteDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{noText}</AlertDialogCancel>
           <AlertDialogAction 
             onClick={onConfirm} 
             className={cn(isDestructive && buttonVariants({ variant: "destructive" }))}
           >
-            {continueText}
+            {yesText}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
