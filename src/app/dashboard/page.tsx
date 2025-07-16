@@ -28,7 +28,7 @@ import CompareScansModal from '@/components/compare-scans-modal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export default function DashboardPage() {
-    const { complianceLog, setComplianceLog, scheduledJobs, setScheduledJobs, isComplianceModalOpen, setIsComplianceModalOpen, getNextScanId } = useDashboard();
+    const { complianceLog, setComplianceLog, scheduledJobs, setScheduledJobs, isComplianceModalOpen, setIsComplianceModalOpen } = useDashboard();
     const [devices] = useLocalStorageState('devices', []);
     const [jobs] = useLocalStorageState('jobs', []);
     const { toast } = useToast();
@@ -167,17 +167,16 @@ export default function DashboardPage() {
         ));
         toast({ title: "Job Updated", description: "The scheduled job has been updated successfully."});
       } else {
-        const scanId = getNextScanId();
         const newScheduledJob = {
           id: crypto.randomUUID(),
-          scanId,
+          scanId: 'Scheduled', // Placeholder ID
           ...complianceRunConfig,
           ...scheduleDetails,
         };
         setScheduledJobs(prev => [...prev, newScheduledJob]);
         toast({
           title: "Job Scheduled",
-          description: `The compliance check has been scheduled successfully with ${scanId}.`,
+          description: `The compliance check has been scheduled successfully.`,
         });
       }
       setIsComplianceModalOpen(false);

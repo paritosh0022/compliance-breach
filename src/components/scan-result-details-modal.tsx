@@ -470,12 +470,10 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     <Dialog open={isOpen} onOpenChange={handleCloseModal}>
        <DialogContent className={cn(
           "h-[80vh] flex flex-col p-0 transition-all duration-300",
-          selectedDeviceForDetails ? "max-w-7xl w-[70vw]" : "max-w-5xl w-[60vw]"
+          selectedDeviceForDetails ? "max-w-7xl w-[80vw]" : "max-w-5xl w-[70vw]"
         )}>
         {selectedDeviceForDetails ? renderDeviceDetailView() : renderDeviceListView()}
       </DialogContent>
     </Dialog>
   );
 }
-
-    

@@ -20,20 +20,26 @@ export function DashboardProvider({ children }) {
   const [complianceStatus, setComplianceStatus] = useState('idle'); // idle, running, completed, failed
   const [complianceLog, setComplianceLog] = useLocalStorageState('complianceLog', []);
   const [complianceRunProcess, setComplianceRunProcess] = useState(null); // To hold the timeout ID
-  const [scanCounter, setScanCounter] = useLocalStorageState('scanCounter', 1);
   const [scheduledJobs, setScheduledJobs] = useLocalStorageState('scheduledJobs', []);
 
-  const getNextScanId = () => {
-    const id = `Scan ${scanCounter}`;
-    setScanCounter(prev => prev + 1);
-    return id;
-  };
-
   const onRunComplete = useCallback((logEntry) => {
-    const scanId = getNextScanId();
-    const newLogEntry = { ...logEntry, id: crypto.randomUUID(), scanId, timestamp: new Date().toISOString() };
-    setComplianceLog(prev => [newLogEntry, ...prev]);
-  }, [setComplianceLog, getNextScanId]);
+    setComplianceLog(prev => {
+      // Add new log entry and sort by timestamp to ensure the newest is first
+      const updatedLogs = [...prev, { ...logEntry, id: crypto.randomUUID(), timestamp: new Date().toISOString() }]
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      // Keep only the last 10 scans
+      const cappedLogs = updatedLogs.slice(0, 10);
+      
+      // Re-number the scan IDs from "Scan 01" to "Scan 10"
+      const renumberedLogs = cappedLogs.map((log, index) => ({
+        ...log,
+        scanId: `Scan ${String(cappedLogs.length - index).padStart(2, '0')}`
+      })).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      return renumberedLogs;
+    });
+  }, [setComplianceLog]);
 
   const value = {
     isComplianceModalOpen,
@@ -47,7 +53,6 @@ export function DashboardProvider({ children }) {
     onRunComplete,
     complianceRunProcess,
     setComplianceRunProcess,
-    getNextScanId,
     scheduledJobs,
     setScheduledJobs,
   };
