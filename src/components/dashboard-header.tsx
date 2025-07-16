@@ -12,18 +12,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, CheckCircle2, XCircle, Loader2, Trash2 } from 'lucide-react';
+import { LogOut, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useDashboard } from '@/contexts/DashboardContext';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import ConfirmDeleteDialog from './confirm-delete-dialog';
 import { useState } from 'react';
 
 export default function DashboardHeader() {
   const router = useRouter();
-  const { complianceStatus } = useDashboard();
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -42,34 +38,6 @@ export default function DashboardHeader() {
     setIsConfirmDialogOpen(false);
   };
   
-  const getStatusContent = () => {
-    switch (complianceStatus) {
-      case 'running':
-        return {
-          text: 'Compliance Running',
-          icon: <Loader2 className="mr-2 h-4 w-4 animate-spin" />,
-          variant: 'default',
-        };
-      case 'completed':
-        return {
-          text: 'Compliance Completed',
-          icon: <CheckCircle2 className="mr-2 h-4 w-4" />,
-          variant: 'default',
-          className: 'bg-green-500 hover:bg-green-600 text-white',
-        };
-      case 'failed':
-        return {
-          text: 'Compliance Failed',
-          icon: <XCircle className="mr-2 h-4 w-4" />,
-          variant: 'destructive',
-        };
-      default:
-        return null;
-    }
-  };
-
-  const statusContent = getStatusContent();
-
   return (
     <>
       <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
@@ -78,15 +46,6 @@ export default function DashboardHeader() {
           {/* Can add breadcrumbs or title here later */}
         </div>
         <div className="flex items-center gap-4">
-          {statusContent && (
-            <Badge 
-              variant={statusContent.variant} 
-              className={cn("transition-all", statusContent.className)}
-            >
-              {statusContent.icon}
-              {statusContent.text}
-            </Badge>
-          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -123,7 +82,6 @@ export default function DashboardHeader() {
         onOpenChange={setIsConfirmDialogOpen}
         onConfirm={handleConfirmReset}
         itemType="application data"
-        itemCount={-1} // Special case for a custom message
       />
     </>
   );

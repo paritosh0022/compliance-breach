@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +28,7 @@ import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { Alert, AlertDescription } from "./ui/alert";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import Papa from "papaparse";
+import ConfirmDeleteDialog from "./confirm-delete-dialog";
 
 const daysOfWeek = [
     { value: "sun", label: "S" },
@@ -64,6 +64,7 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
   const [viewedJob, setViewedJob] = useState(null);
   const [viewedDevice, setViewedDevice] = useState(null);
   const [viewMode, setViewMode] = useState('output'); // 'output' or 'schedule'
+  const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false);
   
   // State for scheduling
   const [scheduleMode, setScheduleMode] = useState("once");
@@ -168,32 +169,35 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
     }
   };
 
-  const handleOpenChangeAndReset = (isOpen) => {
-    // Prevent closing modal while compliance is running
+  const handleModalCloseAttempt = (isOpen) => {
     if (!isOpen && isComplianceRunning) {
-        toast({
-            title: "Compliance Check in Progress",
-            description: "Please wait for the current scan to complete before closing.",
-        });
-        return;
+      setIsConfirmCloseOpen(true);
+      return; // Prevent closing immediately
     }
-    
-    if (!isOpen) {
-      setSelectedDevices([]);
-      setSelectedJobIds([]);
-      setDeviceSearchTerm("");
-      setJobSearchTerm("");
-      setOutput("");
-      setViewedJob(null);
-      setViewedDevice(null);
-      setViewMode('output');
-      setScheduleMode('once');
-      setDailySchedules([initialDailySchedule()]);
-      setWeeklySchedules([initialWeeklySchedule()]);
-      setMonthlySchedules([initialMonthlySchedule()]);
-    }
-    setIsComplianceModalOpen(isOpen);
+    resetAndCloseModal();
   };
+
+  const resetAndCloseModal = () => {
+    setIsComplianceModalOpen(false);
+    setSelectedDevices([]);
+    setSelectedJobIds([]);
+    setDeviceSearchTerm("");
+    setJobSearchTerm("");
+    setOutput("");
+    setViewedJob(null);
+    setViewedDevice(null);
+    setViewMode('output');
+    setScheduleMode('once');
+    setDailySchedules([initialDailySchedule()]);
+    setWeeklySchedules([initialWeeklySchedule()]);
+    setMonthlySchedules([initialMonthlySchedule()]);
+  };
+  
+  const handleConfirmClose = () => {
+    setIsConfirmCloseOpen(false);
+    resetAndCloseModal();
+  }
+
 
   const handleRunNow = () => {
     const selectedJobsList = jobs.filter(j => selectedJobIds.includes(j.id));
@@ -585,220 +589,231 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
   };
 
   return (
-    <Dialog open={isComplianceModalOpen} onOpenChange={handleOpenChangeAndReset}>
-      <DialogContent className="max-w-screen-2xl w-[95vw] h-[90vh] flex flex-col p-0">
-        <DialogHeader className="p-4 border-b">
-          <DialogTitle className="text-xl">{isEditing ? 'Edit Scheduled Job' : 'Run Compliance Check'}</DialogTitle>
-           <DialogDescription>
-            {isEditing ? 'Update the details for this scheduled job.' : 'Select devices and jobs to run a compliance check.'}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={isComplianceModalOpen} onOpenChange={handleModalCloseAttempt}>
+        <DialogContent className="max-w-screen-2xl w-[95vw] h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle className="text-xl">{isEditing ? 'Edit Scheduled Job' : 'Run Compliance Check'}</DialogTitle>
+             <DialogDescription>
+              {isEditing ? 'Update the details for this scheduled job.' : 'Select devices and jobs to run a compliance check.'}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className={cn("flex-1 grid gap-0 overflow-hidden", finalGridClass)}>
-          {/* Column 1: Devices */}
-          <div className="flex flex-col border-r min-h-0">
-            <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
-              <div className="flex items-center space-x-3">
-                 <Checkbox
-                    id="select-all-devices"
-                    onCheckedChange={(checked) => handleSelectAllDevices(!!checked)}
-                    checked={
-                      filteredDevices.length > 0 && selectedDevices.length === filteredDevices.length
-                        ? true
-                        : selectedDevices.length > 0 && selectedDevices.length < filteredDevices.length
-                        ? 'indeterminate'
-                        : false
-                    }
-                 />
-                 <label htmlFor="select-all-devices" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer whitespace-nowrap">
-                    Devices ({selectedDevices.length})
-                 </label>
+          <div className={cn("flex-1 grid gap-0 overflow-hidden", finalGridClass)}>
+            {/* Column 1: Devices */}
+            <div className="flex flex-col border-r min-h-0">
+              <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
+                <div className="flex items-center space-x-3">
+                   <Checkbox
+                      id="select-all-devices"
+                      onCheckedChange={(checked) => handleSelectAllDevices(!!checked)}
+                      checked={
+                        filteredDevices.length > 0 && selectedDevices.length === filteredDevices.length
+                          ? true
+                          : selectedDevices.length > 0 && selectedDevices.length < filteredDevices.length
+                          ? 'indeterminate'
+                          : false
+                      }
+                   />
+                   <label htmlFor="select-all-devices" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer whitespace-nowrap">
+                      Devices ({selectedDevices.length})
+                   </label>
+                </div>
+                <div className="relative w-full max-w-sm">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Search devices..." className="pl-9 h-9" value={deviceSearchTerm} onChange={(e) => setDeviceSearchTerm(e.target.value)} />
+                </div>
               </div>
-              <div className="relative w-full max-w-sm">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search devices..." className="pl-9 h-9" value={deviceSearchTerm} onChange={(e) => setDeviceSearchTerm(e.target.value)} />
-              </div>
-            </div>
-            <ScrollArea className="flex-1">
-              <div className="space-y-1 p-2">
-                {filteredDevices.map((device) => (
-                  <div key={device.id} className="group flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
-                    <Checkbox id={`comp-device-${device.id}`} checked={selectedDevices.includes(device.id)} onCheckedChange={() => handleDeviceSelection(device.id)} />
-                    <label htmlFor={`comp-device-${device.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">
-                      {device.name}
-                    </label>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => { setViewedDevice(device); }}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                {devices.length === 0 && ( <div className="text-center text-sm text-muted-foreground p-4">No devices available.</div> )}
-              </div>
-            </ScrollArea>
-          </div>
-
-          {/* Column 1.5: Device Details (Conditional) */}
-          {viewedDevice && (
-            <div className="flex flex-col border-r bg-muted/30 min-h-0">
-              <div className="p-4 border-b flex items-center justify-between h-[73px]">
-                <h3 className="font-semibold text-base truncate">Details: {viewedDevice.name}</h3>
-                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewedDevice(null)}>
-                    <X className="h-4 w-4" />
-                 </Button>
-              </div>
-              <ScrollArea className="flex-1 p-4">
-                 <div className="p-4 border rounded-lg bg-background/50 space-y-2 text-sm">
-                    <h4 className="font-semibold">Device Details</h4>
-                    <p className="break-words"><strong className="text-muted-foreground">IP Address:</strong> <code>{viewedDevice.ipAddress}</code></p>
-                    <p className="break-words"><strong className="text-muted-foreground">Username:</strong> <code>{viewedDevice.username}</code></p>
-                    <p className="break-words"><strong className="text-muted-foreground">Port:</strong> <code>{viewedDevice.port}</code></p>
+              <ScrollArea className="flex-1">
+                <div className="space-y-1 p-2">
+                  {filteredDevices.map((device) => (
+                    <div key={device.id} className="group flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
+                      <Checkbox id={`comp-device-${device.id}`} checked={selectedDevices.includes(device.id)} onCheckedChange={() => handleDeviceSelection(device.id)} />
+                      <label htmlFor={`comp-device-${device.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">
+                        {device.name}
+                      </label>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => { setViewedDevice(device); }}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  {devices.length === 0 && ( <div className="text-center text-sm text-muted-foreground p-4">No devices available.</div> )}
                 </div>
               </ScrollArea>
             </div>
-          )}
 
-          {/* Column 2: Jobs */}
-          <div className="flex flex-col border-r min-h-0">
-             <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
-              <div className="flex items-center space-x-3">
-                 <Checkbox
-                    id="select-all-jobs"
-                    onCheckedChange={(checked) => handleSelectAllJobs(!!checked)}
-                    checked={
-                      filteredJobs.length > 0 && selectedJobIds.length === filteredJobs.length
-                        ? true
-                        : selectedJobIds.length > 0  && selectedJobIds.length < filteredJobs.length
-                        ? 'indeterminate'
-                        : false
-                    }
-                 />
-                 <label htmlFor="select-all-jobs" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer whitespace-nowrap">
-                    Jobs ({selectedJobIds.length})
-                 </label>
-              </div>
-              <div className="relative w-full max-w-sm">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search jobs..." className="pl-9 h-9" value={jobSearchTerm} onChange={(e) => setJobSearchTerm(e.target.value)} />
-              </div>
-            </div>
-            <ScrollArea className="flex-1">
-              <div className="space-y-1 p-2">
-                {filteredJobs.map((job) => (
-                  <div key={job.id} className="group flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
-                    <Checkbox id={`comp-job-${job.id}`} checked={selectedJobIds.includes(job.id)} onCheckedChange={() => handleJobSelection(job.id)} />
-                    <label htmlFor={`comp-job-${job.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">
-                      {job.name}
-                    </label>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => { setViewedJob(job); }}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                {jobs.length === 0 && ( <div className="text-center text-sm text-muted-foreground p-4">No jobs available.</div> )}
-              </div>
-            </ScrollArea>
-          </div>
-
-          {/* Column 2.5: Job Details (Conditional) */}
-          {viewedJob && (
-            <div className="flex flex-col border-r bg-muted/30 min-h-0">
-              <div className="p-4 border-b flex items-center justify-between h-[73px]">
-                <h3 className="font-semibold text-base truncate">Details: {viewedJob.name}</h3>
-                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewedJob(null)}>
-                    <X className="h-4 w-4" />
-                 </Button>
-              </div>
-              <ScrollArea className="flex-1 p-4">
-                 <div className="p-4 border rounded-lg bg-background/50 space-y-2 text-sm">
-                    <h4 className="font-semibold">Job Details</h4>
-                    <p className="break-words"><strong className="text-muted-foreground">Command:</strong> <code>{viewedJob.command || 'N/A'}</code></p>
-                    <p className="break-words"><strong className="text-muted-foreground">Template:</strong> <code>{viewedJob.template || 'N/A'}</code></p>
-                </div>
-              </ScrollArea>
-            </div>
-          )}
-          
-          {/* Last Column: Output or Schedule */}
-          {viewMode === 'output' ? (
-            <div className="flex flex-col min-h-0">
+            {/* Column 1.5: Device Details (Conditional) */}
+            {viewedDevice && (
+              <div className="flex flex-col border-r bg-muted/30 min-h-0">
                 <div className="p-4 border-b flex items-center justify-between h-[73px]">
-                <h3 className="font-semibold text-base">Output</h3>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={handleScheduleRunClick} disabled={isComplianceRunning || selectedJobIds.length === 0 || selectedDevices.length === 0}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    Schedule Run
-                    </Button>
-                    <Button size="sm" onClick={handleRunNow} disabled={isComplianceRunning || selectedJobIds.length === 0 || selectedDevices.length === 0}>
-                    <Play className="mr-2 h-4 w-4" />
-                    {isComplianceRunning ? 'Running...' : 'Run Now'}
-                    </Button>
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopyOutput} disabled={!output || isComplianceRunning}>
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-8 w-8" disabled={!output || isComplianceRunning}>
-                          <FileDown className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => handleDownloadOutput('pdf')}>Export as PDF</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleDownloadOutput('csv')}>Export as CSV</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <h3 className="font-semibold text-base truncate">Details: {viewedDevice.name}</h3>
+                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewedDevice(null)}>
+                      <X className="h-4 w-4" />
+                   </Button>
                 </div>
-                </div>
-                {isComplianceRunning && (
-                <div className="relative h-1 w-full overflow-hidden bg-primary/20">
-                    <div className="h-full w-full animate-progress-indeterminate bg-primary" />
-                </div>
-                )}
-                <div className="flex-1 min-h-0">
-                <Textarea
-                    readOnly
-                    value={output}
-                    placeholder="Compliance check output will be displayed here."
-                    className="h-full w-full resize-none border-0 rounded-none bg-muted/50 p-4 font-mono text-xs focus-visible:ring-transparent focus-visible:ring-offset-0"
-                />
-                </div>
-            </div>
-          ) : (
-            <div className="flex flex-col min-h-0">
-                 <div className="p-4 border-b flex items-center justify-between h-[73px]">
-                    <div className="flex items-center gap-2">
-                         <Button variant="ghost" size="icon" onClick={() => setViewMode('output')} className="h-8 w-8">
-                            <ArrowLeft className="h-4 w-4" />
-                         </Button>
-                         <h3 className="font-semibold text-base">{isEditing ? 'Edit Schedule' : 'Schedule Run'}</h3>
-                    </div>
-                    <Button size="sm" onClick={handleSaveSchedule}>{isEditing ? 'Save Changes' : 'Save Schedule'}</Button>
-                 </div>
-                 <ScrollArea className="flex-1">
-                    <div className="p-4 space-y-6">
-                        <div className="space-y-2">
-                            <Label>Schedule Mode</Label>
-                            <Tabs value={scheduleMode} onValueChange={setScheduleMode}>
-                            <TabsList className="grid w-full grid-cols-5">
-                                <TabsTrigger value="once">Once</TabsTrigger>
-                                <TabsTrigger value="every">Every</TabsTrigger>
-                                <TabsTrigger value="daily">Daily</TabsTrigger>
-                                <TabsTrigger value="weekly">Weekly</TabsTrigger>
-                                <TabsTrigger value="monthly">Monthly</TabsTrigger>
-                            </TabsList>
-                            </Tabs>
-                        </div>
-                        
-                        {renderScheduleControls()}
+                <ScrollArea className="flex-1 p-4">
+                   <div className="p-4 border rounded-lg bg-background/50 space-y-2 text-sm">
+                      <h4 className="font-semibold">Device Details</h4>
+                      <p className="break-words"><strong className="text-muted-foreground">IP Address:</strong> <code>{viewedDevice.ipAddress}</code></p>
+                      <p className="break-words"><strong className="text-muted-foreground">Username:</strong> <code>{viewedDevice.username}</code></p>
+                      <p className="break-words"><strong className="text-muted-foreground">Port:</strong> <code>{viewedDevice.port}</code></p>
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
 
-                        <Alert>
-                            <AlertDescription>{getFormattedSchedule()}</AlertDescription>
-                        </Alert>
+            {/* Column 2: Jobs */}
+            <div className="flex flex-col border-r min-h-0">
+               <div className="p-4 border-b flex items-center justify-between gap-4 h-[73px]">
+                <div className="flex items-center space-x-3">
+                   <Checkbox
+                      id="select-all-jobs"
+                      onCheckedChange={(checked) => handleSelectAllJobs(!!checked)}
+                      checked={
+                        filteredJobs.length > 0 && selectedJobIds.length === filteredJobs.length
+                          ? true
+                          : selectedJobIds.length > 0  && selectedJobIds.length < filteredJobs.length
+                          ? 'indeterminate'
+                          : false
+                      }
+                   />
+                   <label htmlFor="select-all-jobs" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer whitespace-nowrap">
+                      Jobs ({selectedJobIds.length})
+                   </label>
+                </div>
+                <div className="relative w-full max-w-sm">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Search jobs..." className="pl-9 h-9" value={jobSearchTerm} onChange={(e) => setJobSearchTerm(e.target.value)} />
+                </div>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="space-y-1 p-2">
+                  {filteredJobs.map((job) => (
+                    <div key={job.id} className="group flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
+                      <Checkbox id={`comp-job-${job.id}`} checked={selectedJobIds.includes(job.id)} onCheckedChange={() => handleJobSelection(job.id)} />
+                      <label htmlFor={`comp-job-${job.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">
+                        {job.name}
+                      </label>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => { setViewedJob(job); }}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
                     </div>
-                 </ScrollArea>
+                  ))}
+                  {jobs.length === 0 && ( <div className="text-center text-sm text-muted-foreground p-4">No jobs available.</div> )}
+                </div>
+              </ScrollArea>
             </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+
+            {/* Column 2.5: Job Details (Conditional) */}
+            {viewedJob && (
+              <div className="flex flex-col border-r bg-muted/30 min-h-0">
+                <div className="p-4 border-b flex items-center justify-between h-[73px]">
+                  <h3 className="font-semibold text-base truncate">Details: {viewedJob.name}</h3>
+                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewedJob(null)}>
+                      <X className="h-4 w-4" />
+                   </Button>
+                </div>
+                <ScrollArea className="flex-1 p-4">
+                   <div className="p-4 border rounded-lg bg-background/50 space-y-2 text-sm">
+                      <h4 className="font-semibold">Job Details</h4>
+                      <p className="break-words"><strong className="text-muted-foreground">Command:</strong> <code>{viewedJob.command || 'N/A'}</code></p>
+                      <p className="break-words"><strong className="text-muted-foreground">Template:</strong> <code>{viewedJob.template || 'N/A'}</code></p>
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+            
+            {/* Last Column: Output or Schedule */}
+            {viewMode === 'output' ? (
+              <div className="flex flex-col min-h-0">
+                  <div className="p-4 border-b flex items-center justify-between h-[73px]">
+                  <h3 className="font-semibold text-base">Output</h3>
+                  <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={handleScheduleRunClick} disabled={isComplianceRunning || selectedJobIds.length === 0 || selectedDevices.length === 0}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      Schedule Run
+                      </Button>
+                      <Button size="sm" onClick={handleRunNow} disabled={isComplianceRunning || selectedJobIds.length === 0 || selectedDevices.length === 0}>
+                      <Play className="mr-2 h-4 w-4" />
+                      {isComplianceRunning ? 'Running...' : 'Run Now'}
+                      </Button>
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopyOutput} disabled={!output || isComplianceRunning}>
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="icon" className="h-8 w-8" disabled={!output || isComplianceRunning}>
+                            <FileDown className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onSelect={() => handleDownloadOutput('pdf')}>Export as PDF</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleDownloadOutput('csv')}>Export as CSV</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                  </div>
+                  </div>
+                  {isComplianceRunning && (
+                  <div className="relative h-1 w-full overflow-hidden bg-primary/20">
+                      <div className="h-full w-full animate-progress-indeterminate bg-primary" />
+                  </div>
+                  )}
+                  <div className="flex-1 min-h-0">
+                  <Textarea
+                      readOnly
+                      value={output}
+                      placeholder="Compliance check output will be displayed here."
+                      className="h-full w-full resize-none border-0 rounded-none bg-muted/50 p-4 font-mono text-xs focus-visible:ring-transparent focus-visible:ring-offset-0"
+                  />
+                  </div>
+              </div>
+            ) : (
+              <div className="flex flex-col min-h-0">
+                   <div className="p-4 border-b flex items-center justify-between h-[73px]">
+                      <div className="flex items-center gap-2">
+                           <Button variant="ghost" size="icon" onClick={() => setViewMode('output')} className="h-8 w-8">
+                              <ArrowLeft className="h-4 w-4" />
+                           </Button>
+                           <h3 className="font-semibold text-base">{isEditing ? 'Edit Schedule' : 'Schedule Run'}</h3>
+                      </div>
+                      <Button size="sm" onClick={handleSaveSchedule}>{isEditing ? 'Save Changes' : 'Save Schedule'}</Button>
+                   </div>
+                   <ScrollArea className="flex-1">
+                      <div className="p-4 space-y-6">
+                          <div className="space-y-2">
+                              <Label>Schedule Mode</Label>
+                              <Tabs value={scheduleMode} onValueChange={setScheduleMode}>
+                              <TabsList className="grid w-full grid-cols-5">
+                                  <TabsTrigger value="once">Once</TabsTrigger>
+                                  <TabsTrigger value="every">Every</TabsTrigger>
+                                  <TabsTrigger value="daily">Daily</TabsTrigger>
+                                  <TabsTrigger value="weekly">Weekly</TabsTrigger>
+                                  <TabsTrigger value="monthly">Monthly</TabsTrigger>
+                              </TabsList>
+                              </Tabs>
+                          </div>
+                          
+                          {renderScheduleControls()}
+
+                          <Alert>
+                              <AlertDescription>{getFormattedSchedule()}</AlertDescription>
+                          </Alert>
+                      </div>
+                   </ScrollArea>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      <ConfirmDeleteDialog
+        isOpen={isConfirmCloseOpen}
+        onOpenChange={setIsConfirmCloseOpen}
+        onConfirm={handleConfirmClose}
+        itemType="running-scan"
+        title="Close Window?"
+        continueText="Continue"
+        isDestructive={false}
+      />
+    </>
   );
 }
