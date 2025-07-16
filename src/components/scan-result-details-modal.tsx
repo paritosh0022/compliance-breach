@@ -83,9 +83,20 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
       }
       return acc;
     }, {});
+    
+    const finalDeviceData = Object.values(resultsByDevice).map(device => {
+        const passedCount = device.results.filter(r => r.status === 'Success').length;
+        const failedCount = device.results.length - passedCount;
+        return {
+            ...device,
+            passedCount,
+            failedCount,
+        };
+    });
+
 
     return { 
-      devices: Object.values(resultsByDevice),
+      devices: finalDeviceData,
       stats: scanGroup.stats,
       scanId: scanGroup.scanId,
       timestamp: scanGroup.timestamp,
@@ -171,19 +182,14 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
       return;
     }
   
-    const csvData = devicesToExport.map(device => {
-      const passedCount = device.results.filter(r => r.status === 'Success').length;
-      const failedCount = device.results.length - passedCount;
-  
-      return {
-        scan_id: scanGroup?.scanId || 'N/A',
-        last_run_at: scanGroup?.timestamp ? format(new Date(scanGroup.timestamp), "yyyy-MM-dd HH:mm:ss") : 'N/A',
-        device_name: device.name,
-        compliance_status: device.overallStatus,
-        jobs_passed: passedCount,
-        jobs_failed: failedCount,
-      };
-    });
+    const csvData = devicesToExport.map(device => ({
+        'scan_id': scanGroup?.scanId || 'N/A',
+        'last_run_at': scanGroup?.timestamp ? format(new Date(scanGroup.timestamp), "yyyy-MM-dd HH:mm:ss") : 'N/A',
+        'device_name': device.name,
+        'compliance_status': device.overallStatus,
+        'jobs_passed': device.passedCount,
+        'jobs_failed': device.failedCount,
+    }));
   
     const sortedData = csvData.sort((a, b) => {
       return a.device_name.localeCompare(b.device_name);
@@ -268,7 +274,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                         </TableHead>
                         <TableHead>Device Name</TableHead>
                         <TableHead>Compliance Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="text-right">View</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -334,24 +340,22 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                     <CardContent className="p-3">
                         <div className="flex items-center justify-around text-center flex-wrap gap-4">
                             <div>
-                                <p className="text-sm text-muted-foreground">Scan ID</p>
-                                <p className="font-semibold">{processedData?.scanId}</p>
-                            </div>
-                            {processedData?.timestamp && (
-                              <div>
-                                  <p className="text-sm text-muted-foreground">Last run at</p>
-                                  <p className="font-semibold">{format(new Date(processedData.timestamp), "PPp")}</p>
-                              </div>
-                            )}
-                            <div>
                                 <p className="text-sm text-muted-foreground">Device Name</p>
                                 <p className="font-semibold">{selectedDeviceForDetails.name}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-muted-foreground">Compliance Result</p>
+                                <p className="text-sm text-muted-foreground">Compliance</p>
                                 <Badge className={getStatusBadgeClass(selectedDeviceForDetails.overallStatus)}>
                                     {selectedDeviceForDetails.overallStatus}
                                 </Badge>
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Jobs Passed</p>
+                                <Badge className="bg-green-500 hover:bg-green-600">{selectedDeviceForDetails.passedCount}</Badge>
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Jobs Failed</p>
+                                <Badge variant="destructive">{selectedDeviceForDetails.failedCount}</Badge>
                             </div>
                         </div>
                     </CardContent>
@@ -384,7 +388,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                               {result.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="relative align-top pt-3">
+                          <TableCell className="relative align-top pt-3 p-4">
                             <p
                                 ref={el => outputRefs.current[result.id] = el}
                                 className={cn(
@@ -433,13 +437,12 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseModal}>
-      <DialogContent className={cn(
-          "h-[80vh] flex flex-col p-0 transition-all duration-300 max-w-4xl w-[50vw]"
+       <DialogContent className={cn(
+          "h-[80vh] flex flex-col p-0 transition-all duration-300",
+          selectedDeviceForDetails ? "max-w-4xl w-[50vw]" : "max-w-4xl w-[50vw]"
         )}>
         {selectedDeviceForDetails ? renderDeviceDetailView() : renderDeviceListView()}
       </DialogContent>
     </Dialog>
   );
 }
-
-    

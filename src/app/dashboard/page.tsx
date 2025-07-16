@@ -191,34 +191,37 @@ export default function DashboardPage() {
       setIsConfirmDialogOpen(true);
     };
 
-    const handleExportAll = () => {
-      if (aggregatedLogs.length === 0) {
-        toast({
-          variant: "destructive",
-          title: "No Data",
-          description: "There is no scan history to export.",
-        });
-        return;
-      }
-  
-      const dataToExport = aggregatedLogs.map(log => ({
-        'Scan ID': log.scanId,
-        'Last Run at': format(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss"),
-        'Devices Run Total': log.stats.run,
-        'Devices Passed Total': log.stats.passed,
-        'Devices Failed Total': log.stats.failed,
-      }));
-  
-      const csv = Papa.unparse(dataToExport);
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', 'scan_history_summary.csv');
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    const handleExport = () => {
+        const rowsToExport = table.getFilteredSelectedRowModel().rows;
+        const dataToExport = (rowsToExport.length > 0 ? rowsToExport.map(r => r.original) : aggregatedLogs);
+
+        if (dataToExport.length === 0) {
+            toast({
+            variant: "destructive",
+            title: "No Data",
+            description: "There is no scan history to export.",
+            });
+            return;
+        }
+
+        const csvData = dataToExport.map(log => ({
+            'Scan ID': log.scanId,
+            'Last Run at': format(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss"),
+            'Devices Run Total': log.stats.run,
+            'Devices Passed Total': log.stats.passed,
+            'Devices Failed Total': log.stats.failed,
+        }));
+    
+        const csv = Papa.unparse(csvData);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'scan_history_summary.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     return (
@@ -263,10 +266,6 @@ export default function DashboardPage() {
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" onClick={handleExportAll}>
-                          <Download className="mr-2 h-4 w-4" />
-                          Export All
-                        </Button>
                         {selectedScanIds.length > 0 && (
                           <Button
                             variant="destructive"
@@ -276,6 +275,10 @@ export default function DashboardPage() {
                             Delete ({selectedScanIds.length})
                           </Button>
                         )}
+                        <Button variant="outline" onClick={handleExport}>
+                          <Download className="mr-2 h-4 w-4" />
+                           {selectedScanIds.length > 0 ? `Export (${selectedScanIds.length})` : 'Export All'}
+                        </Button>
                     </div>
                 </div>
                 <div className="rounded-lg border">
@@ -295,7 +298,7 @@ export default function DashboardPage() {
                               <TableHead>Devices Run</TableHead>
                               <TableHead>Devices Passed</TableHead>
                               <TableHead>Devices Failed</TableHead>
-                              <TableHead className="text-right">Actions</TableHead>
+                              <TableHead className="text-right">View</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
