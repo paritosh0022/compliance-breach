@@ -108,12 +108,11 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
           newOverflowingRows.add(id);
         }
       }
-      // Check if there's a change to avoid infinite loops
       if (newOverflowingRows.size !== overflowingRows.size || ![...newOverflowingRows].every(id => overflowingRows.has(id))) {
           setOverflowingRows(newOverflowingRows);
       }
     }
-  }, [selectedDeviceForDetails, processedData, expandedRows, overflowingRows.size]); // Re-check on data change or expansion
+  }, [selectedDeviceForDetails, processedData, expandedRows, overflowingRows.size]);
 
 
   const { table } = useDataTable({
@@ -156,10 +155,10 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   };
 
   const renderDeviceListView = () => (
-    <>
-      <div className="p-4 border-b">
-        <h3 className="font-semibold text-lg">Scan Result Details</h3>
-      </div>
+    <div className="flex flex-col h-full">
+      <DialogHeader className="p-4 border-b">
+        <DialogTitle className="text-lg">Scan Result Details</DialogTitle>
+      </DialogHeader>
       <div className="p-4">
         <Card className="bg-transparent shadow-none border">
           <CardContent className="p-3">
@@ -256,7 +255,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
            </div>
            <DataTablePagination table={table} />
       </div>
-    </>
+    </div>
   );
   
   const renderDeviceDetailView = () => {
@@ -264,14 +263,12 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     
     return (
       <div className="flex flex-col h-full">
-        <div className="p-4 border-b flex items-center gap-2">
+        <DialogHeader className="p-4 border-b flex flex-row items-center gap-2">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedDeviceForDetails(null); setExpandedRows(new Set()); }}>
                 <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div className="flex flex-col">
-              <h3 className="font-semibold text-lg leading-none">Compliance Details</h3>
-            </div>
-        </div>
+            <DialogTitle className="text-lg">Compliance Details</DialogTitle>
+        </DialogHeader>
 
         <div className="px-4 py-3 border-b">
              <Card className="bg-transparent shadow-none border">
