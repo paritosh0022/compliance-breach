@@ -182,19 +182,28 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
     setOutput(`Running ${selectedJobsList.length} job(s) on ${selectedDevices.length} device(s)...\n`);
 
     const process = setTimeout(() => {
-      let rawOutput = `\n`;
+      let rawOutput = ``;
       const runResults = [];
       let overallSuccess = true;
+      let failedOutputs = [];
       
       selectedDevices.forEach(deviceId => {
         const device = devices.find(d => d.id === deviceId);
         if(device) {
-          rawOutput += `--- Device: ${device.name} ---\n`;
           selectedJobsList.forEach(job => {
               const isSuccess = Math.random() > 0.3;
-              if (!isSuccess) overallSuccess = false;
-              const message = isSuccess ? `Compliance check passed.` : `Device did not meet compliance standard 'XYZ-1.2'.`;
-              rawOutput += `  [Job: ${job.name}] - ${isSuccess ? 'SUCCESS' : 'FAILED'}: ${message}\n`;
+              if (!isSuccess) {
+                overallSuccess = false;
+                const failureDetails = {
+                  device: device.name,
+                  job: job.name,
+                  rule: job.name === 'SNMP Check' ? 'SNMP_VERSION' : 'SNMP_ENABLE',
+                  expected: job.name === 'SNMP Check' ? 'snmp-version-2c' : 'yes',
+                  actual: job.name === 'SNMP Check' ? 'snmp-version-3' : 'no'
+                };
+                failedOutputs.push(failureDetails);
+              }
+              const message = isSuccess ? `Compliance check passed.` : `One or more rules failed!`;
 
               runResults.push({
                 deviceId: device.id,
@@ -206,11 +215,20 @@ export default function RunComplianceModal({ devices, jobs, initialSelectedDevic
                 message,
               });
           });
-          rawOutput += `\n`;
         }
       });
+
+      if(failedOutputs.length > 0) {
+        failedOutputs.forEach(fail => {
+          rawOutput += `\n[FAILED] on ${fail.device} for job "${fail.job}"\n`;
+          rawOutput += `   MESSAGE: One or more rules failed!\n`;
+          rawOutput += `RULE    : '${fail.rule}'\n`;
+          rawOutput += `EXPECTED: '${fail.expected}'\n`;
+          rawOutput += `ACTUAL  : '${fail.actual}'\n`;
+        });
+      }
       
-      rawOutput += `--- COMPLIANCE CHECK COMPLETE ---`;
+      rawOutput += `\n--- COMPLIANCE RUN COMPLETE ---`;
       setOutput(prev => prev + rawOutput);
       onRunComplete({ results: runResults, });
       setComplianceStatus(overallSuccess ? 'completed' : 'failed');

@@ -388,17 +388,17 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                               {result.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="relative align-top pt-3 p-4">
+                          <TableCell className="relative align-top p-4 pr-12">
                             <p
                                 ref={el => outputRefs.current[result.id] = el}
                                 className={cn(
-                                  "overflow-hidden text-ellipsis pr-20",
+                                  "overflow-hidden text-ellipsis",
                                   !expandedRows.has(result.id) && "whitespace-nowrap"
                                 )}
                               >
                                 {result.message}
                             </p>
-                              <div className="absolute top-1 right-1 flex items-center gap-1">
+                              <div className="absolute top-2 right-2 flex items-center gap-1">
                                 {overflowingRows.has(result.id) && (
                                     <Button 
                                         variant="ghost" 
@@ -439,7 +439,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     <Dialog open={isOpen} onOpenChange={handleCloseModal}>
        <DialogContent className={cn(
           "h-[80vh] flex flex-col p-0 transition-all duration-300",
-          selectedDeviceForDetails ? "max-w-4xl w-[50vw]" : "max-w-4xl w-[50vw]"
+          selectedDeviceForDetails ? "max-w-5xl w-[60vw]" : "max-w-5xl w-[60vw]"
         )}>
         {selectedDeviceForDetails ? renderDeviceDetailView() : renderDeviceListView()}
       </DialogContent>
