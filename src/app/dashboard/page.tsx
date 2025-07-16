@@ -4,18 +4,12 @@
 import { useState, useMemo } from 'react';
 import Papa from 'papaparse';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
-import { Download, Search, FileText, Eye, Trash2 } from 'lucide-react';
+import { Download, Search, Eye, Trash2, Bot } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ReportModal from '@/components/compliance-log-modal';
 import React from 'react';
@@ -29,9 +23,10 @@ import ScanResultDetailsModal from '@/components/scan-result-details-modal';
 import useLocalStorageState from '@/hooks/use-local-storage-state';
 import { useDataTable } from '@/hooks/use-data-table';
 import { DataTablePagination } from '@/components/data-table-pagination';
+import RunComplianceModal from '@/components/run-compliance-modal';
 
 export default function DashboardPage() {
-    const { complianceLog, setComplianceLog, scheduledJobs, setScheduledJobs } = useDashboard();
+    const { complianceLog, setComplianceLog, scheduledJobs, setScheduledJobs, isComplianceModalOpen, setIsComplianceModalOpen } = useDashboard();
     const [devices] = useLocalStorageState('devices', []);
     const [jobs] = useLocalStorageState('jobs', []);
     const { toast } = useToast();
@@ -107,64 +102,6 @@ export default function DashboardPage() {
         setIsDetailsModalOpen(true);
     };
   
-    const handleDownloadDetailedCsv = () => {
-      const csvData = aggregatedLogs.flatMap(group => 
-        group.results.map(result => ({
-          scan_id: group.scanId,
-          job_name: result.jobName,
-          device_name: result.deviceName,
-          ip_address: result.deviceIpAddress,
-          status: result.status,
-          message: result.message,
-          last_ran_at: format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss")
-        }))
-      );
-  
-      if (csvData.length === 0) {
-          toast({ variant: 'destructive', title: 'No data to download.' });
-          return;
-      }
-  
-      const csv = Papa.unparse(csvData);
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', 'compliance_detailed_report.csv');
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    };
-    
-    const handleDownloadSummaryPdf = async () => {
-      if (aggregatedLogs.length === 0) {
-        toast({ variant: 'destructive', title: 'No data to download.' });
-        return;
-      }
-  
-      const { default: jsPDF } = await import('jspdf');
-      const { default: autoTable } = await import('jspdf-autotable');
-  
-      const doc = new jsPDF();
-      
-      doc.text("Compliance Report", 14, 15);
-  
-      autoTable(doc, {
-        head: [['Scan ID', 'Last ran at', 'Devices Run', 'Passed', 'Failed']],
-        body: aggregatedLogs.map(group => [
-            group.scanId,
-            format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss"),
-            group.stats.run,
-            group.stats.passed,
-            group.stats.failed
-        ]),
-        startY: 22,
-      });
-  
-      doc.save('compliance_summary_report.pdf');
-    };
-    
     const handleDeleteSelected = () => {
       setItemToDelete({ type: 'log', ids: selectedScanIds });
       setIsConfirmDialogOpen(true);
@@ -228,22 +165,10 @@ export default function DashboardPage() {
         <>
             <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-semibold font-headline">Manage Job Compliance</h1>
-                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline">
-                        <Download className="mr-2 h-4 w-4" />
-                        Export Report
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onSelect={handleDownloadDetailedCsv}>
-                          Export Detailed CSV
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={handleDownloadSummaryPdf}>
-                          Export Summary PDF
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <Button onClick={() => setIsComplianceModalOpen(true)}>
+                    <Bot className="mr-2 h-4 w-4" />
+                    Run Compliance
+                </Button>
             </div>
             
             <Tabs defaultValue="history">
@@ -357,10 +282,12 @@ export default function DashboardPage() {
               </TabsContent>
             </Tabs>
 
-            <ReportModal 
-              isOpen={isReportModalOpen}
-              onOpenChange={setIsReportModalOpen}
-              logs={complianceLog}
+            <RunComplianceModal
+                isOpen={isComplianceModalOpen}
+                devices={devices}
+                jobs={jobs}
+                initialSelectedDeviceIds={[]}
+                initialSelectedJobIds={[]}
             />
             <ScanResultDetailsModal 
               isOpen={isDetailsModalOpen}
