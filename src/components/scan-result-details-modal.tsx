@@ -35,26 +35,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   const outputRefs = useRef({});
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (isOpen && initialSelectedDevice) {
-      setSelectedDeviceForDetails(initialSelectedDevice);
-    }
-  }, [isOpen, initialSelectedDevice]);
-
-  const handleCloseModal = () => {
-    onOpenChange(false);
-    // Reset internal state when modal closes
-    setTimeout(() => {
-      setSelectedDeviceForDetails(null);
-      setSearchTerm("");
-      setExpandedRows(new Set());
-      setOverflowingRows(new Set());
-      setDevicePingStatus(new Map());
-      setHoveredPingWidgetId(null);
-      outputRefs.current = {};
-    }, 300);
-  };
-  
   const processedData = useMemo(() => {
     if (!scanGroup || !scanGroup.results) return null;
 
@@ -115,6 +95,30 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     };
   }, [scanGroup, jobs, devices]);
 
+  useEffect(() => {
+    if (isOpen && initialSelectedDevice && processedData) {
+        const fullDeviceDetails = processedData.devices.find(d => d.id === initialSelectedDevice.id);
+        if (fullDeviceDetails) {
+            setSelectedDeviceForDetails(fullDeviceDetails);
+        }
+    }
+  }, [isOpen, initialSelectedDevice, processedData]);
+
+
+  const handleCloseModal = () => {
+    onOpenChange(false);
+    // Reset internal state when modal closes
+    setTimeout(() => {
+      setSelectedDeviceForDetails(null);
+      setSearchTerm("");
+      setExpandedRows(new Set());
+      setOverflowingRows(new Set());
+      setDevicePingStatus(new Map());
+      setHoveredPingWidgetId(null);
+      outputRefs.current = {};
+    }, 300);
+  };
+  
   const filteredDevices = useMemo(() => {
     if (!processedData) return [];
     if (!searchTerm) return processedData.devices;
@@ -352,10 +356,11 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                               <TableCell className="font-medium">
                                   {device.name}
                               </TableCell>
-                              <TableCell
-                                onMouseEnter={() => setHoveredPingWidgetId(device.id)}
-                                onMouseLeave={() => setHoveredPingWidgetId(null)}
-                              >
+                              <TableCell>
+                                <div
+                                  onMouseEnter={() => setHoveredPingWidgetId(device.id)}
+                                  onMouseLeave={() => setHoveredPingWidgetId(null)}
+                                >
                                 {hoveredPingWidgetId === device.id ? (
                                     <Button
                                       variant="outline"
@@ -378,6 +383,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                                       {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
                                     </Badge>
                                   )}
+                                  </div>
                               </TableCell>
                               <TableCell>
                                 <Badge className={cn(getStatusBadgeClass(device.overallStatus))}>
@@ -441,12 +447,12 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                                 <p className="text-sm text-muted-foreground">Device Name</p>
                                 <p className="font-semibold">{selectedDeviceForDetails.name}</p>
                             </div>
-                            <div
-                              onMouseEnter={() => setHoveredPingWidgetId(selectedDeviceForDetails.id)}
-                              onMouseLeave={() => setHoveredPingWidgetId(null)}
-                            >
+                            <div>
                                 <p className="text-sm text-muted-foreground">Device Status</p>
-                                <div className="mt-1">
+                                <div className="mt-1"
+                                    onMouseEnter={() => setHoveredPingWidgetId(selectedDeviceForDetails.id)}
+                                    onMouseLeave={() => setHoveredPingWidgetId(null)}
+                                >
                                 {hoveredPingWidgetId === selectedDeviceForDetails.id ? (
                                   <Button
                                     variant="outline"
@@ -502,7 +508,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {selectedDeviceForDetails.results.map(result => (
+                      {selectedDeviceForDetails && selectedDeviceForDetails.results && selectedDeviceForDetails.results.map(result => (
                         <TableRow 
                             key={result.id}
                             className={cn(
@@ -592,3 +598,5 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     </Dialog>
   );
 }
+
+    
