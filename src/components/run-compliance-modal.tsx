@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Play, Copy, Download, Eye, X, Calendar as CalendarIcon, ArrowLeft, Trash2, Plus } from "lucide-react";
+import { Search, Play, Copy, Download, Eye, X, Calendar as CalendarIcon, ArrowLeft, Trash2, Plus, FileDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "./ui/textarea";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,8 @@ import { Calendar } from "./ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { Alert, AlertDescription } from "./ui/alert";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import Papa from "papaparse";
 
 const daysOfWeek = [
     { value: "sun", label: "S" },
@@ -50,8 +52,6 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
     setIsComplianceRunning,
     setComplianceStatus,
     onRunComplete,
-    complianceRunProcess,
-    setComplianceRunProcess
   } = useDashboard();
 
   const isEditing = !!jobToEdit;
@@ -143,8 +143,13 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
     }
   };
 
-  const handleDownloadCsv = () => {
-    if (output) {
+  const handleDownloadOutput = async (format) => {
+     if (!output) {
+      toast({ variant: 'destructive', title: 'No output to download.' });
+      return;
+    }
+    
+    if (format === 'csv') {
       const csvContent = "data:text/csv;charset=utf-8," + `"${output.replace(/"/g, '""')}"`;
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
@@ -153,31 +158,39 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      toast({ title: "Success", description: "Output downloaded as CSV." });
+    } else if (format === 'pdf') {
+      const { default: jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+      doc.setFont('courier');
+      doc.setFontSize(10);
+      doc.text(output, 10, 10);
+      doc.save('compliance_output.pdf');
     }
   };
 
   const handleOpenChangeAndReset = (isOpen) => {
+    // Prevent closing modal while compliance is running
     if (!isOpen && isComplianceRunning) {
-      handleRunInBackground();
-      return;
+        toast({
+            title: "Compliance Check in Progress",
+            description: "Please wait for the current scan to complete before closing.",
+        });
+        return;
     }
     
     if (!isOpen) {
-        if (!isComplianceRunning) {
-            setSelectedDevices([]);
-            setSelectedJobIds([]);
-            setDeviceSearchTerm("");
-            setJobSearchTerm("");
-            setOutput("");
-            setViewedJob(null);
-            setViewedDevice(null);
-            setViewMode('output');
-            setScheduleMode('once');
-            setDailySchedules([initialDailySchedule()]);
-            setWeeklySchedules([initialWeeklySchedule()]);
-            setMonthlySchedules([initialMonthlySchedule()]);
-        }
+      setSelectedDevices([]);
+      setSelectedJobIds([]);
+      setDeviceSearchTerm("");
+      setJobSearchTerm("");
+      setOutput("");
+      setViewedJob(null);
+      setViewedDevice(null);
+      setViewMode('output');
+      setScheduleMode('once');
+      setDailySchedules([initialDailySchedule()]);
+      setWeeklySchedules([initialWeeklySchedule()]);
+      setMonthlySchedules([initialMonthlySchedule()]);
     }
     setIsComplianceModalOpen(isOpen);
   };
@@ -197,7 +210,7 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
     setComplianceStatus('running');
     setOutput(`Running ${selectedJobsList.length} job(s) on ${selectedDevices.length} device(s)...\n`);
 
-    const process = setTimeout(() => {
+    setTimeout(() => {
       let rawOutput = ``;
       const runResults = [];
       let overallSuccess = true;
@@ -249,11 +262,8 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
       onRunComplete({ results: runResults, });
       setComplianceStatus(overallSuccess ? 'completed' : 'failed');
       setIsComplianceRunning(false);
-      setComplianceRunProcess(null);
 
     }, 3000);
-
-    setComplianceRunProcess(process);
   };
 
   const handleScheduleRunClick = () => {
@@ -344,11 +354,6 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
       default:
         return "Not scheduled";
     }
-  };
-  
-  const handleRunInBackground = () => {
-    setIsComplianceModalOpen(false);
-    toast({ title: "Running in background", description: "Check status in the header." });
   };
   
   const finalGridClass = useMemo(() => {
@@ -728,11 +733,19 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
                     {isComplianceRunning ? 'Running...' : 'Run Now'}
                     </Button>
                     <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCopyOutput} disabled={!output || isComplianceRunning}>
-                    <Copy className="h-4 w-4" />
+                      <Copy className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleDownloadCsv} disabled={!output || isComplianceRunning}>
-                    <Download className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-8 w-8" disabled={!output || isComplianceRunning}>
+                          <FileDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => handleDownloadOutput('pdf')}>Export as PDF</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleDownloadOutput('csv')}>Export as CSV</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
                 </div>
                 {isComplianceRunning && (
@@ -785,16 +798,6 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
             </div>
           )}
         </div>
-
-        <DialogFooter className="p-4 border-t">
-          {isComplianceRunning ? (
-            <div className="flex justify-end gap-2 w-full">
-               <Button variant="outline" onClick={handleRunInBackground}>Run in Background</Button>
-            </div>
-          ) : (
-             <Button variant="outline" onClick={() => handleOpenChangeAndReset(false)}>Close</Button>
-          )}
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

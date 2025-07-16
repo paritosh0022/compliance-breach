@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -145,9 +144,6 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                 </div>
             )}
         </div>
-        <DialogFooter className="pt-4">
-          <Button variant="outline" onClick={() => handleOpenChangeAndReset(false)}>Close</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
