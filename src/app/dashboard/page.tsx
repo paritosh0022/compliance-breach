@@ -42,6 +42,7 @@ export default function DashboardPage() {
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
     const [jobToEdit, setJobToEdit] = useState(null);
+    const [initialSelectedDevice, setInitialSelectedDevice] = useState(null);
     
     const aggregatedLogs = useMemo(() => {
       if (!complianceLog) return [];
@@ -119,7 +120,15 @@ export default function DashboardPage() {
 
     const handleViewDetails = (group) => {
         if (!group.results || group.results.length === 0) return;
+        setInitialSelectedDevice(null);
         setSelectedScanGroup(group);
+        setIsDetailsModalOpen(true);
+    };
+
+    const handleViewScanDetails = (scan, device) => {
+        setInitialSelectedDevice(device);
+        setSelectedScanGroup(scan);
+        setIsCompareModalOpen(false);
         setIsDetailsModalOpen(true);
     };
   
@@ -252,10 +261,10 @@ export default function DashboardPage() {
                         <Button
                             variant="outline"
                             onClick={() => setIsCompareModalOpen(true)}
-                            disabled={selectedHistoryScans.length < 2}
+                            disabled={selectedHistoryScans.length < 2 || selectedHistoryScans.length > 5}
                         >
                             <Columns3 className="mr-2 h-4 w-4" />
-                            Compare Scans {selectedHistoryScans.length > 0 ? `(${selectedHistoryScans.length})` : ''}
+                            Compare Scans ({selectedHistoryScans.length})
                         </Button>
                     )}
                     <Button onClick={handleOpenComplianceModal}>
@@ -419,6 +428,7 @@ export default function DashboardPage() {
               isOpen={isDetailsModalOpen}
               onOpenChange={setIsDetailsModalOpen}
               scanGroup={selectedScanGroup}
+              initialSelectedDevice={initialSelectedDevice}
               jobs={jobs}
               devices={devices}
             />
@@ -428,6 +438,7 @@ export default function DashboardPage() {
                 selectedScans={selectedHistoryScans}
                 devices={devices}
                 jobs={jobs}
+                onViewDetails={handleViewScanDetails}
             />
             <ConfirmDeleteDialog
                 isOpen={isConfirmDialogOpen}
