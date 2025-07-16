@@ -32,6 +32,7 @@ export default function DashboardPage() {
     const [jobs] = useLocalStorageState('jobs', []);
     const { toast } = useToast();
     const [searchTerm, setSearchTerm] = useState("");
+    const [activeTab, setActiveTab] = useState("history");
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
@@ -168,11 +169,17 @@ export default function DashboardPage() {
         <>
             <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-semibold font-headline">Manage Job Compliance</h1>
-                <div className="flex items-center gap-2">
-                    <Button onClick={() => setIsCompareModalOpen(true)} disabled={selectedScans.length < 2}>
-                        <Columns3 className="mr-2 h-4 w-4" />
-                        Compare Scans
-                    </Button>
+                 <div className="flex items-center gap-2">
+                    {activeTab === 'history' && (
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsCompareModalOpen(true)}
+                            disabled={selectedScans.length < 2}
+                        >
+                            <Columns3 className="mr-2 h-4 w-4" />
+                            Compare Scans {selectedScans.length > 0 ? `(${selectedScans.length})` : ''}
+                        </Button>
+                    )}
                     <Button onClick={() => setIsComplianceModalOpen(true)}>
                         <Bot className="mr-2 h-4 w-4" />
                         Run Compliance
@@ -180,7 +187,7 @@ export default function DashboardPage() {
                 </div>
             </div>
             
-            <Tabs defaultValue="history">
+            <Tabs defaultValue="history" onValueChange={setActiveTab}>
               <TabsList>
                 <TabsTrigger value="history">Scan History</TabsTrigger>
                 <TabsTrigger value="scheduled">
