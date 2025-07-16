@@ -17,13 +17,19 @@ import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
 import { Search, Loader2, Wifi, WifiOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import ScanResultDetailsModal from './scan-result-details-modal';
 
-export default function CompareScansModal({ isOpen, onOpenChange, selectedScans, devices }) {
+export default function CompareScansModal({ isOpen, onOpenChange, selectedScans, devices, jobs }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [devicePingStatus, setDevicePingStatus] = useState(new Map());
   const [hoveredPingWidgetId, setHoveredPingWidgetId] = useState(null);
   const [hoveredCell, setHoveredCell] = useState(null);
   const { toast } = useToast();
+
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedScanGroup, setSelectedScanGroup] = useState(null);
+  const [selectedDeviceForDetails, setSelectedDeviceForDetails] = useState(null);
+
 
   const comparisonData = useMemo(() => {
     if (!selectedScans || selectedScans.length < 2) return null;
@@ -89,6 +95,9 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
       setDevicePingStatus(new Map());
       setHoveredPingWidgetId(null);
       setHoveredCell(null);
+      setSelectedScanGroup(null);
+      setSelectedDeviceForDetails(null);
+      setIsDetailsModalOpen(false);
     }
   }
 
@@ -111,8 +120,18 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
 
     }, 2000);
   };
+  
+  const handleViewDetailsClick = (scan, deviceId) => {
+    const device = devices.find(d => d.id === deviceId);
+    if (scan && device) {
+      setSelectedScanGroup(scan);
+      setSelectedDeviceForDetails(device);
+      setIsDetailsModalOpen(true);
+    }
+  };
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={handleOpenChangeAndReset}>
       <DialogContent className="max-w-7xl h-[80vh] flex flex-col">
         <DialogHeader>
@@ -148,19 +167,17 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                         <TableBody>
                             {comparisonData.rows.length > 0 ? comparisonData.rows.map(row => {
                                 const pingStatus = devicePingStatus.get(row.deviceId) || { pingState: 'idle', reachability: 'Unreachable' };
-                                const isHoveringPingWidget = hoveredPingWidgetId === row.deviceId;
 
                                 return (
                                 <TableRow 
                                   key={row.deviceId}
                                 >
                                     <TableCell className="font-medium sticky left-0 bg-background z-10">{row.deviceName}</TableCell>
-                                    <TableCell>
-                                      <div
-                                        onMouseEnter={() => setHoveredPingWidgetId(row.deviceId)}
-                                        onMouseLeave={() => setHoveredPingWidgetId(null)}
-                                      >
-                                        {isHoveringPingWidget ? (
+                                    <TableCell
+                                      onMouseEnter={() => setHoveredPingWidgetId(row.deviceId)}
+                                      onMouseLeave={() => setHoveredPingWidgetId(null)}
+                                    >
+                                      {hoveredPingWidgetId === row.deviceId ? (
                                           <Button
                                             variant="outline"
                                             size="sm"
@@ -182,11 +199,9 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                                             {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
                                           </Badge>
                                         )}
-                                      </div>
                                     </TableCell>
                                     {comparisonData.scans.map(scan => {
                                       const cellId = `${row.deviceId}-${scan.id}`;
-                                      const isHoveringCell = hoveredCell === cellId;
                                       const status = row[scan.id];
                                       const canShowView = (status === 'Success' || status === 'Failed');
 
@@ -197,8 +212,8 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                                           onMouseEnter={() => setHoveredCell(cellId)}
                                           onMouseLeave={() => setHoveredCell(null)}
                                         >
-                                            {isHoveringCell && canShowView ? (
-                                              <Button variant="outline" size="sm" className="h-7">
+                                            {hoveredCell === cellId && canShowView ? (
+                                              <Button variant="outline" size="sm" className="h-7" onClick={() => handleViewDetailsClick(scan, row.deviceId)}>
                                                 View
                                               </Button>
                                             ) : (
@@ -228,5 +243,15 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
         </div>
       </DialogContent>
     </Dialog>
+    
+    <ScanResultDetailsModal
+        isOpen={isDetailsModalOpen}
+        onOpenChange={setIsDetailsModalOpen}
+        scanGroup={selectedScanGroup}
+        initialSelectedDevice={selectedDeviceForDetails}
+        devices={devices}
+        jobs={jobs}
+    />
+    </>
   );
 }
