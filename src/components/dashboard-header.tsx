@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { LogOut, CheckCircle2, XCircle, Loader2, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useDashboard } from '@/contexts/DashboardContext';
 import { Badge } from '@/components/ui/badge';
