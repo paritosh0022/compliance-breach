@@ -95,7 +95,7 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
           </DialogDescription>
         </DialogHeader>
 
-        <div className="relative flex-1 max-w-xs mb-4">
+        <div className="relative max-w-xs my-4">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
                 placeholder="Search devices..."
@@ -145,7 +145,7 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                 </div>
             )}
         </div>
-        <DialogFooter>
+        <DialogFooter className="pt-4">
           <Button variant="outline" onClick={() => handleOpenChangeAndReset(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>
