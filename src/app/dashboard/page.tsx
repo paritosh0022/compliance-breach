@@ -27,7 +27,7 @@ import RunComplianceModal from '@/components/run-compliance-modal';
 import CompareScansModal from '@/components/compare-scans-modal';
 
 export default function DashboardPage() {
-    const { complianceLog, setComplianceLog, scheduledJobs, setScheduledJobs, isComplianceModalOpen, setIsComplianceModalOpen } = useDashboard();
+    const { complianceLog, setComplianceLog, scheduledJobs, setScheduledJobs, isComplianceModalOpen, setIsComplianceModalOpen, getNextScanId } = useDashboard();
     const [devices] = useLocalStorageState('devices', []);
     const [jobs] = useLocalStorageState('jobs', []);
     const { toast } = useToast();
@@ -130,6 +130,22 @@ export default function DashboardPage() {
     const handleDeleteScheduledJob = (id) => {
       setItemToDelete({ type: 'schedule', ids: [id] });
       setIsConfirmDialogOpen(true);
+    };
+
+    const handleScheduleJob = (scheduleDetails, complianceRunConfig) => {
+      const scanId = getNextScanId();
+      const newScheduledJob = {
+        id: crypto.randomUUID(),
+        scanId,
+        ...complianceRunConfig,
+        ...scheduleDetails,
+      };
+      setScheduledJobs(prev => [...prev, newScheduledJob]);
+      toast({
+        title: "Job Scheduled",
+        description: `The compliance check has been scheduled successfully with ${scanId}.`,
+      });
+      setIsComplianceModalOpen(false);
     };
 
     const handleExport = () => {
@@ -304,6 +320,7 @@ export default function DashboardPage() {
                 jobs={jobs}
                 initialSelectedDeviceIds={[]}
                 initialSelectedJobIds={[]}
+                onScheduleJob={handleScheduleJob}
             />
             <ScanResultDetailsModal 
               isOpen={isDetailsModalOpen}
@@ -317,6 +334,7 @@ export default function DashboardPage() {
                 onOpenChange={setIsCompareModalOpen}
                 selectedScans={selectedScans}
                 devices={devices}
+                jobs={jobs}
             />
             <ConfirmDeleteDialog
                 isOpen={isConfirmDialogOpen}
@@ -328,3 +346,5 @@ export default function DashboardPage() {
         </>
     );
 }
+
+    
