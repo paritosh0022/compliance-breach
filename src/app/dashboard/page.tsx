@@ -107,8 +107,8 @@ export default function DashboardPage() {
         setIsDetailsModalOpen(true);
     };
   
-    const handleDownloadCsv = () => {
-      const csvData = filteredLogs.flatMap(group => 
+    const handleDownloadDetailedCsv = () => {
+      const csvData = aggregatedLogs.flatMap(group => 
         group.results.map(result => ({
           scan_id: group.scanId,
           job_name: result.jobName,
@@ -130,15 +130,15 @@ export default function DashboardPage() {
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      link.setAttribute('download', 'compliance_report.csv');
+      link.setAttribute('download', 'compliance_detailed_report.csv');
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     };
     
-    const handleDownloadPdf = async () => {
-      if (filteredLogs.length === 0) {
+    const handleDownloadSummaryPdf = async () => {
+      if (aggregatedLogs.length === 0) {
         toast({ variant: 'destructive', title: 'No data to download.' });
         return;
       }
@@ -152,7 +152,7 @@ export default function DashboardPage() {
   
       autoTable(doc, {
         head: [['Scan ID', 'Last ran at', 'Devices Run', 'Passed', 'Failed']],
-        body: filteredLogs.map(group => [
+        body: aggregatedLogs.map(group => [
             group.scanId,
             format(new Date(group.timestamp), "yyyy-MM-dd HH:mm:ss"),
             group.stats.run,
@@ -162,7 +162,7 @@ export default function DashboardPage() {
         startY: 22,
       });
   
-      doc.save('compliance_report.pdf');
+      doc.save('compliance_summary_report.pdf');
     };
     
     const handleDeleteSelected = () => {
@@ -191,6 +191,36 @@ export default function DashboardPage() {
       setIsConfirmDialogOpen(true);
     };
 
+    const handleExportAll = () => {
+      if (aggregatedLogs.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "No Data",
+          description: "There is no scan history to export.",
+        });
+        return;
+      }
+  
+      const dataToExport = aggregatedLogs.map(log => ({
+        'Scan ID': log.scanId,
+        'Last Run at': format(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss"),
+        'Devices Run Total': log.stats.run,
+        'Devices Passed Total': log.stats.passed,
+        'Devices Failed Total': log.stats.failed,
+      }));
+  
+      const csv = Papa.unparse(dataToExport);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'scan_history_summary.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
     return (
         <>
             <div className="flex items-center justify-between mb-6">
@@ -203,10 +233,10 @@ export default function DashboardPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                      <DropdownMenuItem onSelect={handleDownloadCsv}>
+                      <DropdownMenuItem onSelect={handleDownloadDetailedCsv}>
                           Export Detailed CSV
                       </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={handleDownloadPdf}>
+                      <DropdownMenuItem onSelect={handleDownloadSummaryPdf}>
                           Export Summary PDF
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -232,15 +262,21 @@ export default function DashboardPage() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    {selectedScanIds.length > 0 && (
-                      <Button
-                        variant="destructive"
-                        onClick={handleDeleteSelected}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete ({selectedScanIds.length})
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" onClick={handleExportAll}>
+                          <Download className="mr-2 h-4 w-4" />
+                          Export All
+                        </Button>
+                        {selectedScanIds.length > 0 && (
+                          <Button
+                            variant="destructive"
+                            onClick={handleDeleteSelected}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete ({selectedScanIds.length})
+                          </Button>
+                        )}
+                    </div>
                 </div>
                 <div className="rounded-lg border">
                     <ScrollArea className="h-[60vh]">
