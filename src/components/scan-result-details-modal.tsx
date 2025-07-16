@@ -124,10 +124,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
 
   const paginatedRows = table.getRowModel().rows;
   
-  if (!processedData || !scanGroup) return null;
-
-  const { stats, scanId } = processedData;
-
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'Success':
@@ -170,19 +166,19 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
             <div className="flex items-center justify-around text-center">
               <div>
                 <p className="text-sm text-muted-foreground">Scan ID</p>
-                <p className="font-semibold">{scanId}</p>
+                <p className="font-semibold">{processedData?.scanId}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Devices Run</p>
-                <Badge variant="secondary">{stats?.run || 0}</Badge>
+                <Badge variant="secondary">{processedData?.stats?.run || 0}</Badge>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Devices Passed</p>
-                <Badge className="bg-green-500 hover:bg-green-600">{stats?.passed || 0}</Badge>
+                <Badge className="bg-green-500 hover:bg-green-600">{processedData?.stats?.passed || 0}</Badge>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Devices Failed</p>
-                <Badge variant="destructive">{stats?.failed || 0}</Badge>
+                <Badge variant="destructive">{processedData?.stats?.failed || 0}</Badge>
               </div>
             </div>
           </CardContent>
@@ -283,7 +279,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                     <div className="flex items-center justify-around text-center">
                         <div>
                             <p className="text-sm text-muted-foreground">Scan ID</p>
-                            <p className="font-semibold">{scanId}</p>
+                            <p className="font-semibold">{processedData?.scanId}</p>
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">Device Name</p>
@@ -301,75 +297,77 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
         </div>
         
         <div className="flex-1 flex flex-col min-h-0 px-4 py-4">
-            <div className="flex-grow border rounded-lg overflow-hidden flex flex-col">
-                <ScrollArea className="flex-1">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Job</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Output</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedDeviceForDetails.results.map(result => (
-                        <TableRow 
-                            key={result.id}
+          <div className="flex-grow border rounded-lg overflow-hidden flex flex-col">
+            <ScrollArea className="flex-1">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Job</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Output</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedDeviceForDetails.results.map(result => (
+                    <TableRow 
+                        key={result.id}
+                        className={cn(
+                            "align-top transition-all",
+                            expandedRows.has(result.id) ? "h-64" : "h-16"
+                        )}
+                    >
+                      <TableCell className="font-medium align-top pt-3">{result.jobName}</TableCell>
+                      <TableCell className="align-top pt-3">
+                        <Badge className={cn(getStatusBadgeClass(result.status))}>
+                          {result.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="relative align-top pt-3">
+                        <p
+                            ref={el => outputRefs.current[result.id] = el}
                             className={cn(
-                                "align-top transition-all",
-                                expandedRows.has(result.id) ? "h-64" : "h-16"
+                              "overflow-hidden text-ellipsis pr-20",
+                              !expandedRows.has(result.id) && "whitespace-nowrap"
                             )}
-                        >
-                          <TableCell className="font-medium align-top pt-3">{result.jobName}</TableCell>
-                          <TableCell className="align-top pt-3">
-                            <Badge className={cn(getStatusBadgeClass(result.status))}>
-                              {result.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="relative align-top pt-3">
-                            <p
-                                ref={el => outputRefs.current[result.id] = el}
-                                className={cn(
-                                  "overflow-hidden text-ellipsis pr-20",
-                                  !expandedRows.has(result.id) && "whitespace-nowrap"
-                                )}
-                              >
-                                {result.message}
-                            </p>
-                             <div className="absolute top-1 right-1 flex items-center gap-1">
-                                {overflowingRows.has(result.id) && (
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-6 w-6"
-                                        onClick={() => toggleRowExpansion(result.id)}
-                                    >
-                                        <Maximize2 className="h-4 w-4" />
-                                        <span className="sr-only">Expand Row</span>
-                                    </Button>
-                                )}
+                          >
+                            {result.message}
+                        </p>
+                          <div className="absolute top-1 right-1 flex items-center gap-1">
+                            {overflowingRows.has(result.id) && (
                                 <Button 
                                     variant="ghost" 
                                     size="icon" 
                                     className="h-6 w-6"
-                                    onClick={() => handleCopyOutput(result.message)}
+                                    onClick={() => toggleRowExpansion(result.id)}
                                 >
-                                    <Copy className="h-4 w-4" />
-                                    <span className="sr-only">Copy Output</span>
+                                    <Maximize2 className="h-4 w-4" />
+                                    <span className="sr-only">Expand Row</span>
                                 </Button>
-                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
-             </div>
+                            )}
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6"
+                                onClick={() => handleCopyOutput(result.message)}
+                            >
+                                <Copy className="h-4 w-4" />
+                                <span className="sr-only">Copy Output</span>
+                            </Button>
+                          </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </div>
         </div>
       </div>
     );
   };
   
+  if (!processedData || !scanGroup) return null;
+
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseModal}>
       <DialogContent className="max-w-7xl w-[90vw] h-[80vh] flex flex-col p-0">
