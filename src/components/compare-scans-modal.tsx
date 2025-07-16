@@ -185,6 +185,7 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                                       const cellId = `${row.deviceId}-${scan.id}`;
                                       const isHoveringCell = hoveredCell === cellId;
                                       const status = row[scan.id];
+                                      const canShowView = (status === 'Success' || status === 'Failed');
 
                                       return (
                                         <TableCell 
@@ -193,16 +194,15 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                                           onMouseEnter={() => setHoveredCell(cellId)}
                                           onMouseLeave={() => setHoveredCell(null)}
                                         >
-                                            <div className="flex items-center justify-center gap-2">
+                                            {isHoveringCell && canShowView ? (
+                                              <Button variant="outline" size="sm" className="h-7">
+                                                View
+                                              </Button>
+                                            ) : (
                                               <Badge className={cn(getStatusBadgeClass(status))}>
                                                   {status}
                                               </Badge>
-                                              {isHoveringCell && (status === 'Success' || status === 'Failed') && (
-                                                <Button variant="outline" size="sm" className="h-7">
-                                                  View
-                                                </Button>
-                                              )}
-                                            </div>
+                                            )}
                                         </TableCell>
                                     )})}
                                 </TableRow>
