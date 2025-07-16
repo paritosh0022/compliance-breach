@@ -23,7 +23,7 @@ import { useDataTable } from "@/hooks/use-data-table";
 import { DataTablePagination } from "./data-table-pagination";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import { Tooltip, TooltipProvider, TooltipContent } from "./ui/tooltip";
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup, jobs = [], devices = [] }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -32,6 +32,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   const [overflowingRows, setOverflowingRows] = useState(new Set());
   const [devicePingStatus, setDevicePingStatus] = useState(new Map());
   const [hoveredDeviceId, setHoveredDeviceId] = useState(null);
+  const [isHoveringStatusCard, setIsHoveringStatusCard] = useState(false);
   const outputRefs = useRef({});
   const { toast } = useToast();
 
@@ -406,6 +407,8 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   const renderDeviceDetailView = () => {
     if (!selectedDeviceForDetails) return null;
     
+    const pingStatus = devicePingStatus.get(selectedDeviceForDetails.id) || { pingState: 'idle', reachability: 'Unreachable' };
+
     return (
       <>
         <DialogHeader className="p-4 border-b flex flex-row items-center gap-2">
@@ -418,7 +421,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
             <div className="px-4 py-3 border-b">
                  <Card className="bg-transparent shadow-none border">
                     <CardContent className="p-3">
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-center">
                             <div>
                                 <p className="text-sm text-muted-foreground">Scan ID</p>
                                 <p className="font-semibold">{processedData?.scanId}</p>
@@ -432,6 +435,36 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                             <div>
                                 <p className="text-sm text-muted-foreground">Device Name</p>
                                 <p className="font-semibold">{selectedDeviceForDetails.name}</p>
+                            </div>
+                            <div
+                              onMouseEnter={() => setIsHoveringStatusCard(true)}
+                              onMouseLeave={() => setIsHoveringStatusCard(false)}
+                            >
+                                <p className="text-sm text-muted-foreground">Device Status</p>
+                                <div className="mt-1">
+                                {isHoveringStatusCard ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7"
+                                    onClick={() => handlePingDevice(selectedDeviceForDetails.id)}
+                                    disabled={pingStatus.pingState === 'pinging'}
+                                  >
+                                    {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping Device'}
+                                  </Button>
+                                ) : (
+                                  <Badge variant={pingStatus.reachability === 'Reachable' ? 'default' : 'secondary'} className={cn('transition-opacity', pingStatus.reachability === 'Reachable' && 'bg-green-500 hover:bg-green-600')}>
+                                    {pingStatus.pingState === 'pinging' ? (
+                                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                    ) : pingStatus.reachability === 'Reachable' ? (
+                                      <Wifi className="mr-2 h-3 w-3" />
+                                    ) : (
+                                      <WifiOff className="mr-2 h-3 w-3" />
+                                    )}
+                                    {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
+                                  </Badge>
+                                )}
+                                </div>
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground">Compliance</p>
@@ -490,25 +523,43 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                             </p>
                               <div className="absolute top-2 right-2 flex items-center gap-1">
                                 {overflowingRows.has(result.id) && (
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-6 w-6"
-                                        onClick={() => toggleRowExpansion(result.id)}
-                                    >
-                                        <Maximize2 className="h-4 w-4" />
-                                        <span className="sr-only">Expand Row</span>
-                                    </Button>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-6 w-6"
+                                            onClick={() => toggleRowExpansion(result.id)}
+                                          >
+                                              <Maximize2 className="h-4 w-4" />
+                                              <span className="sr-only">Expand Row</span>
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Toggle Expansion</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
                                 )}
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-6 w-6"
-                                    onClick={() => handleCopyOutput(result.message)}
-                                >
-                                    <Copy className="h-4 w-4" />
-                                    <span className="sr-only">Copy Output</span>
-                                </Button>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-6 w-6"
+                                          onClick={() => handleCopyOutput(result.message)}
+                                      >
+                                          <Copy className="h-4 w-4" />
+                                          <span className="sr-only">Copy Output</span>
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Copy Output</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               </div>
                           </TableCell>
                         </TableRow>
