@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
-import { Download, Search, Eye, Trash2, Bot } from 'lucide-react';
+import { Download, Search, Eye, Trash2, Bot, Columns3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ReportModal from '@/components/compliance-log-modal';
 import React from 'react';
@@ -24,6 +24,7 @@ import useLocalStorageState from '@/hooks/use-local-storage-state';
 import { useDataTable } from '@/hooks/use-data-table';
 import { DataTablePagination } from '@/components/data-table-pagination';
 import RunComplianceModal from '@/components/run-compliance-modal';
+import CompareScansModal from '@/components/compare-scans-modal';
 
 export default function DashboardPage() {
     const { complianceLog, setComplianceLog, scheduledJobs, setScheduledJobs, isComplianceModalOpen, setIsComplianceModalOpen } = useDashboard();
@@ -33,6 +34,7 @@ export default function DashboardPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
     const [selectedScanGroup, setSelectedScanGroup] = useState(null);
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
@@ -95,6 +97,7 @@ export default function DashboardPage() {
 
     const paginatedRows = table.getRowModel().rows;
     const selectedScanIds = table.getSelectedRowModel().rows.map(row => row.original.id);
+    const selectedScans = table.getSelectedRowModel().rows.map(row => row.original);
 
     const handleViewDetails = (group) => {
         if (!group.results || group.results.length === 0) return;
@@ -165,10 +168,16 @@ export default function DashboardPage() {
         <>
             <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-semibold font-headline">Manage Job Compliance</h1>
-                <Button onClick={() => setIsComplianceModalOpen(true)}>
-                    <Bot className="mr-2 h-4 w-4" />
-                    Run Compliance
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button onClick={() => setIsCompareModalOpen(true)} disabled={selectedScans.length < 2}>
+                        <Columns3 className="mr-2 h-4 w-4" />
+                        Compare Scans
+                    </Button>
+                    <Button onClick={() => setIsComplianceModalOpen(true)}>
+                        <Bot className="mr-2 h-4 w-4" />
+                        Run Compliance
+                    </Button>
+                </div>
             </div>
             
             <Tabs defaultValue="history">
@@ -295,6 +304,12 @@ export default function DashboardPage() {
               scanGroup={selectedScanGroup}
               jobs={jobs}
               devices={devices}
+            />
+            <CompareScansModal
+                isOpen={isCompareModalOpen}
+                onOpenChange={setIsCompareModalOpen}
+                selectedScans={selectedScans}
+                devices={devices}
             />
             <ConfirmDeleteDialog
                 isOpen={isConfirmDialogOpen}
