@@ -18,7 +18,7 @@ export default function DashboardSidebar() {
   const pathname = usePathname();
 
   const menuItems = [
-    { href: "/dashboard", icon: <Server />, label: "Compliance Dashboard" },
+    { href: "/dashboard", icon: <Server />, label: "Compliance Report" },
     { href: "/dashboard/devices", icon: <Combine />, label: "Manage Devices" },
     { href: "/dashboard/jobs", icon: <Briefcase />, label: "Manage Jobs" },
   ];

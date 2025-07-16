@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
-import { Download, Search, Eye, Trash2, Bot, Columns3, Edit } from 'lucide-react';
+import { Download, Search, Eye, Trash2, Bot, Columns3, Edit, FileDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ReportModal from '@/components/compliance-log-modal';
 import React from 'react';
@@ -25,6 +25,7 @@ import { useDataTable } from '@/hooks/use-data-table';
 import { DataTablePagination } from '@/components/data-table-pagination';
 import RunComplianceModal from '@/components/run-compliance-modal';
 import CompareScansModal from '@/components/compare-scans-modal';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export default function DashboardPage() {
     const { complianceLog, setComplianceLog, scheduledJobs, setScheduledJobs, isComplianceModalOpen, setIsComplianceModalOpen, getNextScanId } = useDashboard();
@@ -183,7 +184,7 @@ export default function DashboardPage() {
       setJobToEdit(null);
     };
 
-    const handleExport = () => {
+    const handleExport = async (formatType) => {
         const rowsToExport = historyTable.table.getFilteredSelectedRowModel().rows;
         const dataToExport = (rowsToExport.length > 0 ? rowsToExport.map(r => r.original) : aggregatedLogs);
 
@@ -196,24 +197,46 @@ export default function DashboardPage() {
             return;
         }
 
-        const csvData = dataToExport.map(log => ({
-            'Scan ID': log.scanId,
-            'Last Run at': format(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss"),
-            'Devices Run Total': log.stats.run,
-            'Devices Passed Total': log.stats.passed,
-            'Devices Failed Total': log.stats.failed,
-        }));
-    
-        const csv = Papa.unparse(csvData);
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', 'scan_history_summary.csv');
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        if (formatType === 'csv') {
+          const csvData = dataToExport.map(log => ({
+              'Scan ID': log.scanId,
+              'Last Run at': format(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss"),
+              'Devices Run Total': log.stats.run,
+              'Devices Passed Total': log.stats.passed,
+              'Devices Failed Total': log.stats.failed,
+          }));
+      
+          const csv = Papa.unparse(csvData);
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement('a');
+          const url = URL.createObjectURL(blob);
+          link.setAttribute('href', url);
+          link.setAttribute('download', 'scan_history_summary.csv');
+          link.style.visibility = 'hidden';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else if (formatType === 'pdf') {
+            const { default: jsPDF } = await import('jspdf');
+            const { default: autoTable } = await import('jspdf-autotable');
+            const doc = new jsPDF();
+            
+            doc.text("Scan History Report", 14, 15);
+        
+            autoTable(doc, {
+              head: [['Scan ID', 'Last Run at', 'Run', 'Passed', 'Failed']],
+              body: dataToExport.map(log => [
+                    log.scanId,
+                    format(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss"),
+                    log.stats.run,
+                    log.stats.passed,
+                    log.stats.failed
+                ]),
+              startY: 22,
+            });
+        
+            doc.save('scan_history_summary.pdf');
+        }
     };
     
     const handleOpenComplianceModal = () => {
@@ -224,13 +247,13 @@ export default function DashboardPage() {
     return (
         <>
             <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-semibold font-headline">Manage Job Compliance</h1>
+                <h1 className="text-2xl font-semibold font-headline">Compliance Report</h1>
                  <div className="flex items-center gap-2">
                     {activeTab === 'history' && (
                         <Button
                             variant="outline"
                             onClick={() => setIsCompareModalOpen(true)}
-                            disabled={selectedHistoryScans.length < 2}
+                            disabled={selectedHistoryScans.length < 2 || selectedHistoryScans.length > 5}
                         >
                             <Columns3 className="mr-2 h-4 w-4" />
                             Compare Scans {selectedHistoryScans.length > 0 ? `(${selectedHistoryScans.length})` : ''}
@@ -272,10 +295,18 @@ export default function DashboardPage() {
                             Delete ({selectedHistoryScanIds.length})
                           </Button>
                         )}
-                        <Button variant="outline" onClick={handleExport}>
-                          <Download className="mr-2 h-4 w-4" />
-                           {selectedHistoryScanIds.length > 0 ? `Export (${selectedHistoryScanIds.length})` : 'Export All'}
-                        </Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline">
+                                    <FileDown className="mr-2 h-4 w-4" />
+                                    {selectedHistoryScanIds.length > 0 ? `Export (${selectedHistoryScanIds.length})` : 'Export All'}
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem onSelect={() => handleExport('csv')}>Export as CSV</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => handleExport('pdf')}>Export as PDF</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
                 <div className="rounded-lg border">
