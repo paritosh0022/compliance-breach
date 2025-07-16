@@ -223,25 +223,34 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
       let rawOutput = ``;
       const runResults = [];
       let overallSuccess = true;
-      let failedOutputs = [];
+      let logEntries = [];
       
       selectedDevices.forEach(deviceId => {
         const device = devices.find(d => d.id === deviceId);
         if(device) {
           selectedJobsList.forEach(job => {
               const isSuccess = Math.random() > 0.3;
+              const isSnmpCheck = job.name === 'SNMP Check';
+              const rule = isSnmpCheck ? 'SNMP_VERSION' : 'SNMP_ENABLE';
+              const expected = isSnmpCheck ? 'snmp-version-2c' : 'yes';
+              const actual = isSuccess ? expected : (isSnmpCheck ? 'snmp-version-3' : 'no');
+
               if (!isSuccess) {
                 overallSuccess = false;
-                const failureDetails = {
-                  device: device.name,
-                  job: job.name,
-                  rule: job.name === 'SNMP Check' ? 'SNMP_VERSION' : 'SNMP_ENABLE',
-                  expected: job.name === 'SNMP Check' ? 'snmp-version-2c' : 'yes',
-                  actual: job.name === 'SNMP Check' ? 'snmp-version-3' : 'no'
-                };
-                failedOutputs.push(failureDetails);
               }
-              const message = isSuccess ? `Compliance check passed.` : `One or more rules failed!`;
+              
+              const message = isSuccess ? `All rules passed.` : `One or more rules failed!`;
+              
+              const logEntry = {
+                status: isSuccess ? '[SUCCESS]' : '[FAILED]',
+                device: device.name,
+                job: job.name,
+                message,
+                rule,
+                expected,
+                actual
+              };
+              logEntries.push(logEntry);
 
               runResults.push({
                 deviceId: device.id,
@@ -255,16 +264,14 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
           });
         }
       });
-
-      if(failedOutputs.length > 0) {
-        failedOutputs.forEach(fail => {
-          rawOutput += `\n[FAILED] on ${fail.device} for job "${fail.job}"\n`;
-          rawOutput += `   MESSAGE: One or more rules failed!\n`;
-          rawOutput += `RULE    : '${fail.rule}'\n`;
-          rawOutput += `EXPECTED: '${fail.expected}'\n`;
-          rawOutput += `ACTUAL  : '${fail.actual}'\n`;
-        });
-      }
+      
+      logEntries.forEach(log => {
+          rawOutput += `\n${log.status} on ${log.device} for job "${log.job}"\n`;
+          rawOutput += `   MESSAGE: ${log.message}\n`;
+          rawOutput += `RULE    : '${log.rule}'\n`;
+          rawOutput += `EXPECTED: '${log.expected}'\n`;
+          rawOutput += `ACTUAL  : '${log.actual}'\n`;
+      });
       
       rawOutput += `\n--- COMPLIANCE RUN COMPLETE ---`;
       setOutput(prev => prev + rawOutput);
@@ -511,7 +518,7 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
                                 {scheduleDate ? format(scheduleDate, "PPP") : <span>Pick a date</span>}
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
+                        <PopoverContent className="w-auto p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                             <Calendar mode="single" selected={scheduleDate} onSelect={(newDate) => setScheduleDate(newDate || new Date())} initialFocus/>
                         </PopoverContent>
                     </Popover>
