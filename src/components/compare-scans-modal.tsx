@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
 import { Search, Loader2, Wifi, WifiOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useDataTable } from '@/hooks/use-data-table';
+import { DataTablePagination } from './data-table-pagination';
 
 export default function CompareScansModal({ isOpen, onOpenChange, selectedScans, devices, jobs, onViewDetails }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -59,17 +61,27 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
       });
       return row;
     });
-
-    const filteredRows = searchTerm
-      ? tableRows.filter(row => row.deviceName.toLowerCase().includes(searchTerm.toLowerCase()))
-      : tableRows;
-
+    
     return {
       scans: selectedScans.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)),
-      rows: filteredRows.sort((a, b) => a.deviceName.localeCompare(b.deviceName)),
+      rows: tableRows.sort((a, b) => a.deviceName.localeCompare(b.deviceName)),
     };
-  }, [selectedScans, devices, searchTerm]);
+  }, [selectedScans, devices]);
 
+  const filteredRows = useMemo(() => {
+    if (!comparisonData) return [];
+    if (!searchTerm) return comparisonData.rows;
+    return comparisonData.rows.filter(row => row.deviceName.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [comparisonData, searchTerm]);
+  
+  const { table } = useDataTable({
+    data: filteredRows,
+    columns: [], // Columns are defined directly in JSX
+    pageCount: Math.ceil(filteredRows.length / 10),
+  });
+
+  const paginatedRows = table.getRowModel().rows;
+  
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'Success':
@@ -87,6 +99,7 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
       setSearchTerm("");
       setDevicePingStatus(new Map());
       setHoveredCell(null);
+      table.setPageIndex(0);
     }
   }
 
@@ -122,25 +135,23 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
     <Dialog open={isOpen} onOpenChange={handleOpenChangeAndReset}>
       <DialogContent className="max-w-7xl h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Compare Scan Results</DialogTitle>
-          <DialogDescription>
-            Comparing {selectedScans.length} selected scans. Devices are listed vertically, and scan results horizontally.
-          </DialogDescription>
+          <DialogTitle>Compare Scans</DialogTitle>
         </DialogHeader>
 
-        <div className="relative max-w-xs my-4">
+        <div className="relative w-full my-4">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
                 placeholder="Search devices..."
                 className="pl-9"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => table.setPageIndex(0) & setSearchTerm(e.target.value)}
             />
         </div>
 
-        <div className="flex-1 min-h-0 border rounded-lg">
+        <div className="flex-1 min-h-0 border rounded-lg flex flex-col">
             {comparisonData ? (
-                <ScrollArea className="h-full">
+              <>
+                <ScrollArea className="flex-grow">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -152,45 +163,50 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {comparisonData.rows.length > 0 ? comparisonData.rows.map(row => {
-                                const pingStatus = devicePingStatus.get(row.deviceId) || { pingState: 'idle', reachability: 'Unreachable' };
+                            {paginatedRows.length > 0 ? paginatedRows.map(row => {
+                                const deviceRow = row.original;
+                                const pingStatus = devicePingStatus.get(deviceRow.deviceId) || { pingState: 'idle', reachability: 'Unreachable' };
 
                                 return (
                                 <TableRow 
-                                  key={row.deviceId}
+                                  key={deviceRow.deviceId}
+                                  className="group"
                                 >
-                                    <TableCell className="font-medium sticky left-0 bg-background z-10">{row.deviceName}</TableCell>
-                                    <TableCell
-                                      onMouseEnter={() => setHoveredCell(`ping-${row.deviceId}`)}
-                                      onMouseLeave={() => setHoveredCell(null)}
-                                    >
-                                      {hoveredCell === `ping-${row.deviceId}` ? (
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="h-7"
-                                            onClick={() => handlePingDevice(row.deviceId)}
-                                            disabled={pingStatus.pingState === 'pinging'}
-                                          >
-                                            {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping Device'}
-                                          </Button>
-                                        ) : (
-                                          <Badge variant={pingStatus.reachability === 'Reachable' ? 'default' : 'secondary'} className={cn('transition-opacity', pingStatus.reachability === 'Reachable' && 'bg-green-500 hover:bg-green-600')}>
-                                            {pingStatus.pingState === 'pinging' ? (
-                                              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                            ) : pingStatus.reachability === 'Reachable' ? (
-                                              <Wifi className="mr-2 h-3 w-3" />
-                                            ) : (
-                                              <WifiOff className="mr-2 h-3 w-3" />
+                                    <TableCell className="font-medium sticky left-0 bg-background z-10">{deviceRow.deviceName}</TableCell>
+                                    <TableCell>
+                                        <div 
+                                            onMouseEnter={() => setHoveredCell(`ping-${deviceRow.deviceId}`)}
+                                            onMouseLeave={() => setHoveredCell(null)}
+                                        >
+                                            {hoveredCell === `ping-${deviceRow.deviceId}` ? (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-7"
+                                                    onClick={() => handlePingDevice(deviceRow.deviceId)}
+                                                    disabled={pingStatus.pingState === 'pinging'}
+                                                >
+                                                    {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping Device'}
+                                                </Button>
+                                                ) : (
+                                                <Badge variant={pingStatus.reachability === 'Reachable' ? 'default' : 'secondary'} className={cn('transition-opacity', pingStatus.reachability === 'Reachable' && 'bg-green-500 hover:bg-green-600')}>
+                                                    {pingStatus.pingState === 'pinging' ? (
+                                                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                                    ) : pingStatus.reachability === 'Reachable' ? (
+                                                    <Wifi className="mr-2 h-3 w-3" />
+                                                    ) : (
+                                                    <WifiOff className="mr-2 h-3 w-3" />
+                                                    )}
+                                                    {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
+                                                </Badge>
                                             )}
-                                            {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
-                                          </Badge>
-                                        )}
+                                        </div>
                                     </TableCell>
                                     {comparisonData.scans.map(scan => {
-                                      const cellId = `${row.deviceId}-${scan.id}`;
-                                      const status = row[scan.id];
+                                      const cellId = `${deviceRow.deviceId}-${scan.id}`;
+                                      const status = deviceRow[scan.id];
                                       const canShowView = (status === 'Success' || status === 'Failed');
+                                      const isHovering = hoveredCell === cellId;
 
                                       return (
                                         <TableCell 
@@ -199,8 +215,8 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                                           onMouseEnter={() => setHoveredCell(cellId)}
                                           onMouseLeave={() => setHoveredCell(null)}
                                         >
-                                            {hoveredCell === cellId && canShowView ? (
-                                              <Button variant="outline" size="sm" className="h-7" onClick={() => handleViewDetailsClick(scan, row.deviceId)}>
+                                            {isHovering && canShowView ? (
+                                              <Button variant="outline" size="sm" className="h-7" onClick={() => handleViewDetailsClick(scan, deviceRow.deviceId)}>
                                                 View
                                               </Button>
                                             ) : (
@@ -222,6 +238,8 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                         </TableBody>
                     </Table>
                 </ScrollArea>
+                <DataTablePagination table={table} />
+              </>
             ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                     <p>Select at least two scans to compare.</p>
