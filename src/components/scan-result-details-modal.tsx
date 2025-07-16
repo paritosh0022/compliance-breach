@@ -2,19 +2,19 @@
 "use client";
 
 import { useMemo, useState, useLayoutEffect, useRef } from "react";
+import Papa from "papaparse";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Input } from "./ui/input";
-import { Search, Eye, ArrowLeft, Maximize2, Copy } from "lucide-react";
+import { Search, Eye, ArrowLeft, Maximize2, Copy, Download } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "./ui/checkbox";
@@ -122,6 +122,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   });
 
   const paginatedRows = table.getRowModel().rows;
+  const selectedRows = table.getFilteredSelectedRowModel().rows;
   
   const getStatusBadgeClass = (status) => {
     switch (status) {
@@ -152,6 +153,48 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
       title: "Copied!",
       description: "Job output has been copied to your clipboard.",
     });
+  };
+
+  const handleExport = () => {
+    const devicesToExport = selectedRows.length > 0
+      ? selectedRows.map(row => row.original)
+      : filteredDevices;
+
+    if (devicesToExport.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No Data",
+        description: "There is no data to export.",
+      });
+      return;
+    }
+
+    const csvData = devicesToExport.flatMap(device => {
+      const passedCount = device.results.filter(r => r.status === 'Success').length;
+      const failedCount = device.results.length - passedCount;
+
+      return device.results.map(result => ({
+        scan_id: scanGroup?.scanId || 'N/A',
+        device_name: device.name,
+        device_compliance_status: device.overallStatus,
+        device_jobs_passed: passedCount,
+        device_jobs_failed: failedCount,
+        job_name: result.jobName,
+        job_status: result.status,
+        job_output: result.message,
+      }));
+    });
+    
+    const csv = Papa.unparse(csvData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `scan-details-${scanGroup?.scanId}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const renderDeviceListView = () => (
@@ -194,6 +237,10 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        <Button variant="outline" onClick={handleExport}>
+          <Download className="mr-2 h-4 w-4" />
+          {selectedRows.length > 0 ? `Export (${selectedRows.length})` : 'Export All'}
+        </Button>
       </div>
        <div className="flex-1 min-h-0 px-4 pb-4 flex flex-col">
            <div className="flex-grow border rounded-lg overflow-hidden">
@@ -363,15 +410,16 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     );
   };
   
-  if (!processedData || !scanGroup) return null;
+  if (!scanGroup) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseModal}>
-      <DialogContent className="max-w-4xl w-[50vw] h-[80vh] flex flex-col p-0">
+      <DialogContent className={cn(
+          "h-[80vh] flex flex-col p-0 transition-all duration-300",
+          selectedDeviceForDetails ? "max-w-4xl w-[50vw]" : "max-w-4xl w-[50vw]"
+        )}>
         {selectedDeviceForDetails ? renderDeviceDetailView() : renderDeviceListView()}
       </DialogContent>
     </Dialog>
   );
 }
-
-    
