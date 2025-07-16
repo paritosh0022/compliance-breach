@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 export default function CompareScansModal({ isOpen, onOpenChange, selectedScans, devices }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [devicePingStatus, setDevicePingStatus] = useState(new Map());
-  const [hoveredDeviceId, setHoveredDeviceId] = useState(null);
+  const [hoveredPingWidgetId, setHoveredPingWidgetId] = useState(null);
   const [hoveredCell, setHoveredCell] = useState(null);
   const { toast } = useToast();
 
@@ -87,7 +87,7 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
     if (!open) {
       setSearchTerm("");
       setDevicePingStatus(new Map());
-      setHoveredDeviceId(null);
+      setHoveredPingWidgetId(null);
       setHoveredCell(null);
     }
   }
@@ -148,38 +148,41 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                         <TableBody>
                             {comparisonData.rows.length > 0 ? comparisonData.rows.map(row => {
                                 const pingStatus = devicePingStatus.get(row.deviceId) || { pingState: 'idle', reachability: 'Unreachable' };
-                                const isHoveringDevice = hoveredDeviceId === row.deviceId;
+                                const isHoveringPingWidget = hoveredPingWidgetId === row.deviceId;
 
                                 return (
                                 <TableRow 
                                   key={row.deviceId}
-                                  onMouseEnter={() => setHoveredDeviceId(row.deviceId)}
-                                  onMouseLeave={() => setHoveredDeviceId(null)}
                                 >
                                     <TableCell className="font-medium sticky left-0 bg-background z-10">{row.deviceName}</TableCell>
                                     <TableCell>
-                                      {isHoveringDevice ? (
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className="h-7"
-                                          onClick={() => handlePingDevice(row.deviceId)}
-                                          disabled={pingStatus.pingState === 'pinging'}
-                                        >
-                                          {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping Device'}
-                                        </Button>
-                                      ) : (
-                                        <Badge variant={pingStatus.reachability === 'Reachable' ? 'default' : 'secondary'} className={cn('transition-opacity', pingStatus.reachability === 'Reachable' && 'bg-green-500 hover:bg-green-600')}>
-                                          {pingStatus.pingState === 'pinging' ? (
-                                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                          ) : pingStatus.reachability === 'Reachable' ? (
-                                            <Wifi className="mr-2 h-3 w-3" />
-                                          ) : (
-                                            <WifiOff className="mr-2 h-3 w-3" />
-                                          )}
-                                          {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
-                                        </Badge>
-                                      )}
+                                      <div
+                                        onMouseEnter={() => setHoveredPingWidgetId(row.deviceId)}
+                                        onMouseLeave={() => setHoveredPingWidgetId(null)}
+                                      >
+                                        {isHoveringPingWidget ? (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7"
+                                            onClick={() => handlePingDevice(row.deviceId)}
+                                            disabled={pingStatus.pingState === 'pinging'}
+                                          >
+                                            {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping Device'}
+                                          </Button>
+                                        ) : (
+                                          <Badge variant={pingStatus.reachability === 'Reachable' ? 'default' : 'secondary'} className={cn('transition-opacity', pingStatus.reachability === 'Reachable' && 'bg-green-500 hover:bg-green-600')}>
+                                            {pingStatus.pingState === 'pinging' ? (
+                                              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                            ) : pingStatus.reachability === 'Reachable' ? (
+                                              <Wifi className="mr-2 h-3 w-3" />
+                                            ) : (
+                                              <WifiOff className="mr-2 h-3 w-3" />
+                                            )}
+                                            {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
+                                          </Badge>
+                                        )}
+                                      </div>
                                     </TableCell>
                                     {comparisonData.scans.map(scan => {
                                       const cellId = `${row.deviceId}-${scan.id}`;

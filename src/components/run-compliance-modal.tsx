@@ -67,7 +67,7 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
   const [viewMode, setViewMode] = useState('output'); // 'output' or 'schedule'
   const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false);
   const [devicePingStatus, setDevicePingStatus] = useState(new Map());
-  const [hoveredDeviceId, setHoveredDeviceId] = useState(null);
+  const [hoveredPingWidgetId, setHoveredPingWidgetId] = useState(null);
   
   // State for scheduling
   const [scheduleMode, setScheduleMode] = useState("once");
@@ -103,6 +103,7 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
         setSelectedJobIds([]);
         setViewMode('output');
         setDevicePingStatus(new Map());
+        setHoveredPingWidgetId(null);
       }
     }
   }, [isComplianceModalOpen, jobToEdit, isEditing]);
@@ -652,13 +653,11 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
                 <div className="space-y-1 p-2">
                   {filteredDevices.map((device) => {
                     const pingStatus = devicePingStatus.get(device.id) || { pingState: 'idle', reachability: 'Unreachable' };
-                    const isHovered = hoveredDeviceId === device.id;
+                    const isHoveringPingWidget = hoveredPingWidgetId === device.id;
                     return (
                     <div 
                         key={device.id} 
                         className="group flex items-center justify-between space-x-3 p-2 rounded-md hover:bg-muted"
-                        onMouseEnter={() => setHoveredDeviceId(device.id)}
-                        onMouseLeave={() => setHoveredDeviceId(null)}
                     >
                       <div className="flex items-center space-x-3 flex-1">
                         <Checkbox id={`comp-device-${device.id}`} checked={selectedDevices.includes(device.id)} onCheckedChange={() => handleDeviceSelection(device.id)} />
@@ -667,28 +666,33 @@ export default function RunComplianceModal({ devices, jobs, onScheduleJob, jobTo
                         </label>
                       </div>
                       <div className="flex items-center gap-2">
-                         {isHovered ? (
-                           <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7"
-                              onClick={() => handlePingDevice(device.id)}
-                              disabled={pingStatus.pingState === 'pinging'}
-                           >
-                            {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping Device'}
-                           </Button>
-                         ) : (
-                            <Badge variant={pingStatus.reachability === 'Reachable' ? 'default' : 'secondary'} className={cn('transition-opacity', pingStatus.reachability === 'Reachable' && 'bg-green-500 hover:bg-green-600')}>
-                                {pingStatus.pingState === 'pinging' ? (
-                                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                ) : pingStatus.reachability === 'Reachable' ? (
-                                    <Wifi className="mr-2 h-3 w-3" />
-                                ) : (
-                                    <WifiOff className="mr-2 h-3 w-3" />
-                                )}
-                                {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
-                           </Badge>
-                         )}
+                         <div 
+                            onMouseEnter={() => setHoveredPingWidgetId(device.id)}
+                            onMouseLeave={() => setHoveredPingWidgetId(null)}
+                         >
+                            {isHoveringPingWidget ? (
+                               <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7"
+                                  onClick={() => handlePingDevice(device.id)}
+                                  disabled={pingStatus.pingState === 'pinging'}
+                               >
+                                {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping Device'}
+                               </Button>
+                             ) : (
+                                <Badge variant={pingStatus.reachability === 'Reachable' ? 'default' : 'secondary'} className={cn('transition-opacity', pingStatus.reachability === 'Reachable' && 'bg-green-500 hover:bg-green-600')}>
+                                    {pingStatus.pingState === 'pinging' ? (
+                                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                    ) : pingStatus.reachability === 'Reachable' ? (
+                                        <Wifi className="mr-2 h-3 w-3" />
+                                    ) : (
+                                        <WifiOff className="mr-2 h-3 w-3" />
+                                    )}
+                                    {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
+                               </Badge>
+                             )}
+                         </div>
 
                         <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => { setViewedDevice(device); }}>
                           <Eye className="h-4 w-4" />

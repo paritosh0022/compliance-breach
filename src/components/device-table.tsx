@@ -61,7 +61,7 @@ export default function DeviceTable({
   devicePingStatus,
   onPingDevice
 }) {
-  const [hoveredDeviceId, setHoveredDeviceId] = useState(null);
+  const [hoveredPingWidgetId, setHoveredPingWidgetId] = useState(null);
 
   if (rows.length === 0) {
     return (
@@ -96,15 +96,13 @@ export default function DeviceTable({
           {rows.map((row) => {
             const device = row.original;
             const pingStatus = devicePingStatus.get(device.id) || { pingState: 'idle', reachability: 'Unreachable' };
-            const isHovered = hoveredDeviceId === device.id;
+            const isHoveringPingWidget = hoveredPingWidgetId === device.id;
 
             return (
               <TableRow 
                 key={device.id} 
                 data-state={row.getIsSelected() ? "selected" : ""} 
                 className="group"
-                onMouseEnter={() => setHoveredDeviceId(device.id)}
-                onMouseLeave={() => setHoveredDeviceId(null)}
               >
                 <TableCell>
                   <Checkbox
@@ -115,28 +113,33 @@ export default function DeviceTable({
                 </TableCell>
                 <TableCell className="font-medium">{device.name}</TableCell>
                 <TableCell>
-                  {isHovered ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7"
-                      onClick={() => onPingDevice(device.id)}
-                      disabled={pingStatus.pingState === 'pinging'}
-                    >
-                      {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping Device'}
-                    </Button>
-                  ) : (
-                    <Badge variant={pingStatus.reachability === 'Reachable' ? 'default' : 'secondary'} className={cn('transition-opacity', pingStatus.reachability === 'Reachable' && 'bg-green-500 hover:bg-green-600')}>
-                      {pingStatus.pingState === 'pinging' ? (
-                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                      ) : pingStatus.reachability === 'Reachable' ? (
-                        <Wifi className="mr-2 h-3 w-3" />
-                      ) : (
-                        <WifiOff className="mr-2 h-3 w-3" />
-                      )}
-                      {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
-                    </Badge>
-                  )}
+                  <div
+                    onMouseEnter={() => setHoveredPingWidgetId(device.id)}
+                    onMouseLeave={() => setHoveredPingWidgetId(null)}
+                  >
+                    {isHoveringPingWidget ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7"
+                        onClick={() => onPingDevice(device.id)}
+                        disabled={pingStatus.pingState === 'pinging'}
+                      >
+                        {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping Device'}
+                      </Button>
+                    ) : (
+                      <Badge variant={pingStatus.reachability === 'Reachable' ? 'default' : 'secondary'} className={cn('transition-opacity', pingStatus.reachability === 'Reachable' && 'bg-green-500 hover:bg-green-600')}>
+                        {pingStatus.pingState === 'pinging' ? (
+                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                        ) : pingStatus.reachability === 'Reachable' ? (
+                          <Wifi className="mr-2 h-3 w-3" />
+                        ) : (
+                          <WifiOff className="mr-2 h-3 w-3" />
+                        )}
+                        {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
+                      </Badge>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>{device.ipAddress}</TableCell>
                 <TableCell>{device.username}</TableCell>
