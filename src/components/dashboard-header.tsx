@@ -12,13 +12,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import MyAccountModal from './my-account-modal';
 
 export default function DashboardHeader() {
   const router = useRouter();
   const [user, setUser] = useState({ fullName: 'User', email: 'user@example.com' });
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('userAccount');
@@ -32,6 +34,10 @@ export default function DashboardHeader() {
     router.push('/login');
   };
   
+  const handleUserUpdate = (updatedUser) => {
+    setUser(updatedUser);
+  };
+
   return (
     <>
       <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
@@ -59,6 +65,10 @@ export default function DashboardHeader() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setIsAccountModalOpen(true)}>
+                <User className="mr-2 h-4 w-4" />
+                <span>My Account</span>
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
@@ -67,6 +77,11 @@ export default function DashboardHeader() {
           </DropdownMenu>
         </div>
       </header>
+      <MyAccountModal 
+        isOpen={isAccountModalOpen} 
+        onOpenChange={setIsAccountModalOpen}
+        onUserUpdate={handleUserUpdate}
+      />
     </>
   );
 }
