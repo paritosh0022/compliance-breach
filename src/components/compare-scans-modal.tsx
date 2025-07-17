@@ -14,19 +14,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
-import { Search, Loader2, Wifi, WifiOff } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Search } from 'lucide-react';
 import { useDataTable } from '@/hooks/use-data-table';
 import { DataTablePagination } from './data-table-pagination';
+import { Card, CardContent } from './ui/card';
 
 export default function CompareScansModal({ isOpen, onOpenChange, selectedScans, devices, jobs, onViewDetails }) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [devicePingStatus, setDevicePingStatus] = useState(new Map());
   const [hoveredCell, setHoveredCell] = useState(null);
-  const { toast } = useToast();
 
   const comparisonData = useMemo(() => {
-    if (!selectedScans || selectedScans.length < 2) return null;
+    if (!selectedScans || selectedScans.length < 1) return null;
 
     const allDeviceIds = new Set();
     selectedScans.forEach(scan => {
@@ -48,22 +46,42 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
       return acc;
     }, {});
 
+    let passedCount = 0;
+    let failedCount = 0;
+
     const tableRows = Array.from(allDeviceIds).map(deviceId => {
       const device = devicesMap[deviceId];
       const row = {
         deviceId,
         deviceName: device?.name || `Device ID: ${deviceId}`,
       };
+      let deviceFailed = false;
       selectedScans.forEach(scan => {
         const deviceStatus = scanResultsMap[scan.id]?.[deviceId];
         row[scan.id] = deviceStatus || 'N/A';
+        if (deviceStatus === 'Failed') {
+            deviceFailed = true;
+        }
       });
+
+      if (deviceFailed) {
+        failedCount++;
+      } else {
+        passedCount++;
+      }
+
       return row;
     });
     
     return {
       scans: selectedScans.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)),
       rows: tableRows.sort((a, b) => a.deviceName.localeCompare(b.deviceName)),
+      stats: {
+        scans: selectedScans.length,
+        devices: allDeviceIds.size,
+        passed: passedCount,
+        failed: failedCount,
+      }
     };
   }, [selectedScans, devices]);
 
@@ -96,31 +114,10 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
     onOpenChange(open);
     if (!open) {
       setSearchTerm("");
-      setDevicePingStatus(new Map());
       setHoveredCell(null);
       table.setPageIndex(0);
     }
   }
-
-  const handlePingDevice = (deviceId) => {
-    setDevicePingStatus(prev => new Map(prev).set(deviceId, { pingState: 'pinging' }));
-
-    setTimeout(() => {
-      const isSuccess = Math.random() > 0.3; // Simulate success/failure
-      
-      setDevicePingStatus(prev => new Map(prev).set(deviceId, { 
-        pingState: isSuccess ? 'success' : 'failed',
-        reachability: isSuccess ? 'Reachable' : 'Unreachable'
-      }));
-      
-      toast({
-        title: isSuccess ? "Ping Successful" : "Ping Failed",
-        description: isSuccess ? `Device is reachable.` : `Device could not be reached.`,
-        variant: isSuccess ? "default" : "destructive",
-      });
-
-    }, 2000);
-  };
   
   const handleViewDetailsClick = (scan, deviceId) => {
     const device = devices.find(d => d.id === deviceId);
@@ -137,8 +134,35 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
           <DialogTitle>Compare Scans</DialogTitle>
         </DialogHeader>
 
-        <div className="relative w-full my-4">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        {comparisonData && (
+          <div className="p-4">
+            <Card className="bg-transparent shadow-none border">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-around text-center flex-wrap gap-4">
+                   <div>
+                    <p className="text-sm text-muted-foreground">Number of Scans</p>
+                    <p className="font-semibold">{comparisonData.stats.scans}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Number of Devices</p>
+                    <p className="font-semibold">{comparisonData.stats.devices}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Devices Passed</p>
+                    <Badge className="bg-green-500 hover:bg-green-600">{comparisonData.stats.passed}</Badge>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Devices Failed</p>
+                    <Badge variant="destructive">{comparisonData.stats.failed}</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        <div className="relative w-full px-4 mb-4">
+            <Search className="absolute left-6 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
                 placeholder="Search devices..."
                 className="pl-9"
@@ -147,7 +171,7 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
             />
         </div>
 
-        <div className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col px-4 pb-4">
             {comparisonData ? (
               <>
                 <div className="flex-grow border rounded-lg overflow-hidden">
@@ -156,7 +180,6 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="sticky left-0 bg-background z-10 w-[200px]">Device</TableHead>
-                                    <TableHead className="w-[150px]">Device Status</TableHead>
                                     {comparisonData.scans.map(scan => (
                                         <TableHead key={scan.id} className="text-center">{scan.scanId}</TableHead>
                                     ))}
@@ -165,43 +188,12 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                             <TableBody>
                                 {paginatedRows.length > 0 ? paginatedRows.map(row => {
                                     const deviceRow = row.original;
-                                    const pingStatus = devicePingStatus.get(deviceRow.deviceId) || { pingState: 'idle', reachability: 'Unreachable' };
-
                                     return (
                                     <TableRow 
                                       key={deviceRow.deviceId}
                                       className="group"
                                     >
                                         <TableCell className="font-medium sticky left-0 bg-background z-10">{deviceRow.deviceName}</TableCell>
-                                        <TableCell>
-                                            <div 
-                                                onMouseEnter={() => setHoveredCell(`ping-${deviceRow.deviceId}`)}
-                                                onMouseLeave={() => setHoveredCell(null)}
-                                            >
-                                                {hoveredCell === `ping-${deviceRow.deviceId}` ? (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="h-7"
-                                                        onClick={() => handlePingDevice(deviceRow.deviceId)}
-                                                        disabled={pingStatus.pingState === 'pinging'}
-                                                    >
-                                                        {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping Device'}
-                                                    </Button>
-                                                    ) : (
-                                                    <Badge variant={pingStatus.reachability === 'Reachable' ? 'default' : 'secondary'} className={cn('transition-opacity', pingStatus.reachability === 'Reachable' && 'bg-green-500 hover:bg-green-600')}>
-                                                        {pingStatus.pingState === 'pinging' ? (
-                                                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                                        ) : pingStatus.reachability === 'Reachable' ? (
-                                                        <Wifi className="mr-2 h-3 w-3" />
-                                                        ) : (
-                                                        <WifiOff className="mr-2 h-3 w-3" />
-                                                        )}
-                                                        {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        </TableCell>
                                         {comparisonData.scans.map(scan => {
                                           const cellId = `${deviceRow.deviceId}-${scan.id}`;
                                           const status = deviceRow[scan.id];
@@ -230,7 +222,7 @@ export default function CompareScansModal({ isOpen, onOpenChange, selectedScans,
                                     )
                                 }) : (
                                     <TableRow>
-                                        <TableCell colSpan={comparisonData.scans.length + 2} className="text-center h-24">
+                                        <TableCell colSpan={comparisonData.scans.length + 1} className="text-center h-24">
                                             No devices found for your search.
                                         </TableCell>
                                     </TableRow>

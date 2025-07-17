@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Input } from "./ui/input";
-import { Search, Eye, ArrowLeft, Maximize2, Copy, FileDown, Wifi, WifiOff, Loader2 } from "lucide-react";
+import { Search, Eye, ArrowLeft, Maximize2, Copy, FileDown } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "./ui/checkbox";
@@ -25,13 +25,11 @@ import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
-export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup, initialSelectedDevice, jobs = [], devices = [] }) {
+export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup, initialSelectedDevice, jobs = [], devices = [], onBack, detailsModalSource }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDeviceForDetails, setSelectedDeviceForDetails] = useState(null);
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [overflowingRows, setOverflowingRows] = useState(new Set());
-  const [devicePingStatus, setDevicePingStatus] = useState(new Map());
-  const [hoveredPingWidgetId, setHoveredPingWidgetId] = useState(null);
   const outputRefs = useRef({});
   const { toast } = useToast();
 
@@ -113,8 +111,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
       setSearchTerm("");
       setExpandedRows(new Set());
       setOverflowingRows(new Set());
-      setDevicePingStatus(new Map());
-      setHoveredPingWidgetId(null);
       outputRefs.current = {};
     }, 300);
   };
@@ -231,25 +227,15 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     }
   };
 
-  const handlePingDevice = (deviceId) => {
-    setDevicePingStatus(prev => new Map(prev).set(deviceId, { pingState: 'pinging' }));
-
-    setTimeout(() => {
-      const isSuccess = Math.random() > 0.3; // Simulate success/failure
-      
-      setDevicePingStatus(prev => new Map(prev).set(deviceId, { 
-        pingState: isSuccess ? 'success' : 'failed',
-        reachability: isSuccess ? 'Reachable' : 'Unreachable'
-      }));
-      
-      toast({
-        title: isSuccess ? "Ping Successful" : "Ping Failed",
-        description: isSuccess ? `Device is reachable.` : `Device could not be reached.`,
-        variant: isSuccess ? "default" : "destructive",
-      });
-
-    }, 2000);
+  const handleBackClick = () => {
+    if (detailsModalSource === 'compare' && onBack) {
+        onBack();
+    } else {
+        setSelectedDeviceForDetails(null);
+        setExpandedRows(new Set());
+    }
   };
+
 
   const renderDeviceListView = () => (
     <>
@@ -329,7 +315,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                           />
                         </TableHead>
                         <TableHead>Device Name</TableHead>
-                        <TableHead>Device Status</TableHead>
                         <TableHead>Compliance Status</TableHead>
                         <TableHead className="text-right">View</TableHead>
                       </TableRow>
@@ -338,7 +323,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                       {paginatedRows.length > 0 ? (
                         paginatedRows.map((row) => {
                           const device = row.original;
-                          const pingStatus = devicePingStatus.get(device.id) || { pingState: 'idle', reachability: 'Unreachable' };
                           
                           return (
                             <TableRow 
@@ -357,35 +341,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                                   {device.name}
                               </TableCell>
                               <TableCell>
-                                <div
-                                  onMouseEnter={() => setHoveredPingWidgetId(device.id)}
-                                  onMouseLeave={() => setHoveredPingWidgetId(null)}
-                                >
-                                {hoveredPingWidgetId === device.id ? (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-7"
-                                      onClick={() => handlePingDevice(device.id)}
-                                      disabled={pingStatus.pingState === 'pinging'}
-                                    >
-                                      {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping Device'}
-                                    </Button>
-                                  ) : (
-                                    <Badge variant={pingStatus.reachability === 'Reachable' ? 'default' : 'secondary'} className={cn('transition-opacity', pingStatus.reachability === 'Reachable' && 'bg-green-500 hover:bg-green-600')}>
-                                      {pingStatus.pingState === 'pinging' ? (
-                                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                      ) : pingStatus.reachability === 'Reachable' ? (
-                                        <Wifi className="mr-2 h-3 w-3" />
-                                      ) : (
-                                        <WifiOff className="mr-2 h-3 w-3" />
-                                      )}
-                                      {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
-                                    </Badge>
-                                  )}
-                                  </div>
-                              </TableCell>
-                              <TableCell>
                                 <Badge className={cn(getStatusBadgeClass(device.overallStatus))}>
                                   {device.overallStatus}
                                 </Badge>
@@ -400,7 +355,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                         })
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={5} className="h-24 text-center">
+                          <TableCell colSpan={4} className="h-24 text-center">
                             No devices found for this search term.
                           </TableCell>
                         </TableRow>
@@ -417,13 +372,11 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
   
   const renderDeviceDetailView = () => {
     if (!selectedDeviceForDetails) return null;
-    
-    const pingStatus = devicePingStatus.get(selectedDeviceForDetails.id) || { pingState: 'idle', reachability: 'Unreachable' };
 
     return (
       <>
         <DialogHeader className="p-4 border-b flex flex-row items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedDeviceForDetails(null); setExpandedRows(new Set()); }}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleBackClick}>
                 <ArrowLeft className="h-4 w-4" />
             </Button>
             <DialogTitle className="text-lg">Compliance Details</DialogTitle>
@@ -432,7 +385,7 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
             <div className="px-4 py-3 border-b">
                  <Card className="bg-transparent shadow-none border">
                     <CardContent className="p-3">
-                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-center">
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 text-center">
                             <div>
                                 <p className="text-sm text-muted-foreground">Scan ID</p>
                                 <p className="font-semibold">{processedData?.scanId}</p>
@@ -446,36 +399,6 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
                             <div>
                                 <p className="text-sm text-muted-foreground">Device Name</p>
                                 <p className="font-semibold">{selectedDeviceForDetails.name}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground">Device Status</p>
-                                <div className="mt-1"
-                                    onMouseEnter={() => setHoveredPingWidgetId(selectedDeviceForDetails.id)}
-                                    onMouseLeave={() => setHoveredPingWidgetId(null)}
-                                >
-                                {hoveredPingWidgetId === selectedDeviceForDetails.id ? (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7"
-                                    onClick={() => handlePingDevice(selectedDeviceForDetails.id)}
-                                    disabled={pingStatus.pingState === 'pinging'}
-                                  >
-                                    {pingStatus.pingState === 'pinging' ? 'Pinging...' : 'Ping Device'}
-                                  </Button>
-                                ) : (
-                                  <Badge variant={pingStatus.reachability === 'Reachable' ? 'default' : 'secondary'} className={cn('transition-opacity', pingStatus.reachability === 'Reachable' && 'bg-green-500 hover:bg-green-600')}>
-                                    {pingStatus.pingState === 'pinging' ? (
-                                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                    ) : pingStatus.reachability === 'Reachable' ? (
-                                      <Wifi className="mr-2 h-3 w-3" />
-                                    ) : (
-                                      <WifiOff className="mr-2 h-3 w-3" />
-                                    )}
-                                    {pingStatus.pingState === 'pinging' ? 'Pinging...' : pingStatus.reachability}
-                                  </Badge>
-                                )}
-                                </div>
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground">Compliance</p>
@@ -598,5 +521,3 @@ export default function ScanResultDetailsModal({ isOpen, onOpenChange, scanGroup
     </Dialog>
   );
 }
-
-    
